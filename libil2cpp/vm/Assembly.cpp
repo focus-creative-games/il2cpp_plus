@@ -7,6 +7,12 @@
 #include "il2cpp-tabledefs.h"
 #include "il2cpp-class-internals.h"
 
+// ==={{ huatuo
+#include "Baselib.h"
+#include "Cpp/ReentrantLock.h"
+#include "os/Atomic.h"
+// ===}} huatuo
+
 #include <vector>
 #include <string>
 
@@ -14,16 +20,27 @@ namespace il2cpp
 {
 namespace vm
 {
-    static AssemblyVector s_Assemblies;
+    // ==={{ huatuo
+    static baselib::ReentrantLock s_assemblyLock;
+    // copy on write
+    static AssemblyVector s_emptyAssemblies;
+    static AssemblyVector* s_Assemblies = nullptr;
+    // ===}} huatuo
 
     AssemblyVector* Assembly::GetAllAssemblies()
     {
-        return &s_Assemblies;
+// ==={{ huatuo
+        AssemblyVector* assembly = os::Atomic::ReadPointer(&s_Assemblies);
+        return assembly ? assembly : &s_emptyAssemblies;
+// ===}} huatuo
     }
 
     const Il2CppAssembly* Assembly::GetLoadedAssembly(const char* name)
     {
-        for (AssemblyVector::const_iterator assembly = s_Assemblies.begin(); assembly != s_Assemblies.end(); ++assembly)
+// ==={{ huatuo
+        AssemblyVector& assemblies = *GetAllAssemblies();
+        for (AssemblyVector::const_iterator assembly = assemblies.begin(); assembly != assemblies.end(); ++assembly)
+// ===}} huatuo
         {
             if (strcmp((*assembly)->aname.name, name) == 0)
                 return *assembly;
@@ -62,17 +79,16 @@ namespace vm
 
     const Il2CppAssembly* Assembly::Load(const char* name)
     {
-        const size_t len = strlen(name);
-        utils::VmStringUtils::CaseInsensitiveComparer comparer;
-
-        for (AssemblyVector::const_iterator assembly = s_Assemblies.begin(); assembly != s_Assemblies.end(); ++assembly)
+// ==={{ huatuo
+        const Il2CppAssembly* loadedAssembly = MetadataCache::GetAssemblyByName(name);
+        if (loadedAssembly)
         {
-            if (comparer(name, (*assembly)->aname.name))
-                return *assembly;
+            return loadedAssembly;
         }
 
         if (!ends_with(name, ".dll") && !ends_with(name, ".exe"))
         {
+            const size_t len = strlen(name);
             char *tmp = new char[len + 5];
 
             memset(tmp, 0, len + 5);
@@ -80,38 +96,60 @@ namespace vm
             memcpy(tmp, name, len);
             memcpy(tmp + len, ".dll", 4);
 
-            const Il2CppAssembly* result = Load(tmp);
+            loadedAssembly = MetadataCache::GetAssemblyByName(tmp);
 
-            if (!result)
+            if (!loadedAssembly)
             {
                 memcpy(tmp + len, ".exe", 4);
-                result = Load(tmp);
+                loadedAssembly = MetadataCache::GetAssemblyByName(tmp);
             }
+
+            memcpy(tmp + len, ".dll", 4);
+            loadedAssembly = MetadataCache::LoadAssemblyByName(tmp);
 
             delete[] tmp;
 
-            return result;
+            return loadedAssembly;
         }
         else
         {
-            for (AssemblyVector::const_iterator assembly = s_Assemblies.begin(); assembly != s_Assemblies.end(); ++assembly)
-            {
-                if (comparer(name, (*assembly)->image->name))
-                    return *assembly;
-            }
-
-            return NULL;
+            return MetadataCache::LoadAssemblyByName(name);
         }
+// ===}} huatuo
     }
 
     void Assembly::Register(const Il2CppAssembly* assembly)
     {
-        s_Assemblies.push_back(assembly);
+// ==={{ huatuo
+        os::FastAutoLock lock(&s_assemblyLock);
+
+        AssemblyVector* oldAssemblies = s_Assemblies;
+
+        // TODO IL2CPP_MALLOC ???
+        AssemblyVector* newAssemblies = oldAssemblies ? new AssemblyVector(*oldAssemblies) : new AssemblyVector();
+        newAssemblies->push_back(assembly);
+
+        os::Atomic::FullMemoryBarrier();
+        os::Atomic::ExchangePointer(&s_Assemblies, newAssemblies);
+        if (oldAssemblies)
+        {
+            // can't delete
+            // delete oldAssemblies;
+        }
+// ===}} huatuo
     }
 
     void Assembly::ClearAllAssemblies()
     {
-        s_Assemblies.clear();
+// ==={{ huatuo
+        os::FastAutoLock lock(&s_assemblyLock);
+        AssemblyVector* oldAssemblies = s_Assemblies;
+        s_Assemblies = nullptr;
+        if (oldAssemblies)
+        {
+            // TODO ???
+        }
+// ===}} huatuo
     }
 
     void Assembly::Initialize()

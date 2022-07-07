@@ -9,6 +9,8 @@
 #include "vm-utils/NativeSymbol.h"
 #include "vm-utils/Debugger.h"
 
+#include "huatuo/interpreter/InterpreterModule.h"
+
 namespace il2cpp
 {
 namespace vm
@@ -245,6 +247,8 @@ namespace vm
             stackFrames->clear();
 
             os::StackTrace::WalkStack(&NativeMethodStack::GetStackFramesCallback, stackFrames, os::StackTrace::kFirstCalledToLastCalled);
+
+            huatuo::interpreter::InterpreterModule::GetCurrentThreadMachineState().CollectFrames(stackFrames);
 
             return stackFrames;
         }

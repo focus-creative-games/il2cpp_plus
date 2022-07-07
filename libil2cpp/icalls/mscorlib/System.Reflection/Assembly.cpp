@@ -330,19 +330,24 @@ namespace Reflection
     {
         IL2CPP_ASSERT(!refonly && "This icall is not supported by il2cpp when refonly=true");
 
+        // ==={{ huatuo 
         // Our implementation is going to behave a bit different.  We can't actually load any assembly.  If we didn't know about the assembly at conversion time,
         // then we won't be able to do anything.
         // On the other hand, if the name of the assembly matches the name of an assembly that we converted, then lets return the assembly that we know about.
         std::string utf8Path = utils::StringUtils::Utf16ToUtf8(utils::StringUtils::GetChars(assemblyFile));
-        std::string fileName = utils::PathUtils::BasenameNoExtension(utf8Path);
+        //std::string fileName = utils::PathUtils::BasenameNoExtension(utf8Path);
 
-        const Il2CppAssembly* foundAssembly = vm::MetadataCache::GetAssemblyByName(fileName.c_str());
+        //const Il2CppAssembly* foundAssembly = vm::MetadataCache::GetAssemblyByName(fileName.c_str());
+
+        const Il2CppAssembly* foundAssembly = vm::Assembly::Load(utf8Path.c_str());
 
         if (!foundAssembly)
         {
-            vm::Exception::Raise(vm::Exception::GetFileLoadException(fileName.c_str()));
-            IL2CPP_UNREACHABLE;
+            /*vm::Exception::Raise(vm::Exception::GetFileLoadException(utf8Path.c_str()));
+            IL2CPP_UNREACHABLE;*/
+            return nullptr;
         }
+        // ===}} huatuo
 
         return vm::Reflection::GetAssemblyObject(foundAssembly);
     }

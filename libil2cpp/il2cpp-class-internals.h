@@ -370,6 +370,10 @@ typedef struct MethodInfo
     uint8_t is_inflated : 1; /* true if declaring_type is a generic instance or if method is a generic instance*/
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t is_marshaled_from_native : 1; /* a fake MethodInfo wrapping a native function pointer */
+
+    // ==={{ huatuo
+    void* huatuoData;
+    // ===}} huatuo
 } MethodInfo;
 
 typedef struct Il2CppRuntimeInterfaceOffsetPair

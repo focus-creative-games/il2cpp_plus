@@ -34,6 +34,11 @@
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 
+// ==={{ huatuo
+#include "huatuo/metadata/Assembly.h"
+#include "huatuo/metadata/MetadataModule.h"
+// ===}} huatuo
+
 typedef std::map<Il2CppClass*, Il2CppClass*> PointerTypeMap;
 
 typedef Il2CppHashSet<const Il2CppGenericMethod*, il2cpp::metadata::Il2CppGenericMethodHash, il2cpp::metadata::Il2CppGenericMethodCompare> Il2CppGenericMethodSet;
@@ -106,6 +111,10 @@ struct PairToKeyConverter
 
 typedef il2cpp::utils::collections::ArrayValueMap<const Il2CppGuid*, std::pair<const Il2CppGuid*, Il2CppClass*>, PairToKeyConverter<const Il2CppGuid*, Il2CppClass*> > GuidToClassMap;
 static GuidToClassMap s_GuidToNonImportClassMap;
+
+// ==={{ huatuo 
+static il2cpp::utils::dynamic_array<Il2CppAssembly*> s_cliAssemblies;
+// ===}} huatuo
 
 void il2cpp::vm::MetadataCache::Register(const Il2CppCodeRegistration* const codeRegistration, const Il2CppMetadataRegistration* const metadataRegistration, const Il2CppCodeGenOptions* const codeGenOptions)
 {
@@ -679,6 +688,12 @@ static int CompareIl2CppTokenAdjustorThunkPair(const void* pkey, const void* pel
 
 Il2CppMethodPointer il2cpp::vm::MetadataCache::GetAdjustorThunk(const Il2CppImage* image, uint32_t token)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(image->token))
+    {
+        return huatuo::metadata::MetadataModule::GetAdjustorThunk(image, token);
+    }
+    // ===}} huatuo
     if (image->codeGenModule->adjustorThunkCount == 0)
         return NULL;
 
@@ -702,6 +717,13 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetMethodPointer(const Il2CppImag
     if (rid == 0)
         return NULL;
 
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterImage(image))
+    {
+        return huatuo::metadata::MetadataModule::GetMethodPointer(image, token);
+    }
+    // ===}} huatuo
+
     IL2CPP_ASSERT(rid <= image->codeGenModule->methodPointerCount);
 
     return image->codeGenModule->methodPointers[rid - 1];
@@ -713,7 +735,12 @@ InvokerMethod il2cpp::vm::MetadataCache::GetMethodInvoker(const Il2CppImage* ima
     uint32_t table = GetTokenType(token);
     if (rid == 0)
         return NULL;
-
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterImage(image))
+    {
+        return huatuo::metadata::MetadataModule::GetMethodInvoker(image, token);
+    }
+    // ===}} huatuo
     int32_t index = image->codeGenModule->invokerIndices[rid - 1];
 
     if (index == kMethodIndexInvalid)
@@ -849,20 +876,94 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyFromIndex(AssemblyIn
     return s_AssembliesTable + index;
 }
 
+// ==={{ huatuo
 const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyByName(const char* nameToFind)
 {
+    return GetOrLoadAssemblyByName(nameToFind, false);
+}
+
+const Il2CppAssembly* il2cpp::vm::MetadataCache::GetOrLoadAssemblyByName(const char* assemblyNameOrPath, bool tryLoad)
+{
+    const char* assemblyName = huatuo::GetAssemblyNameFromPath(assemblyNameOrPath);
+
+    il2cpp::utils::VmStringUtils::CaseInsensitiveComparer comparer;
+
     for (int i = 0; i < s_AssembliesCount; i++)
     {
         const Il2CppAssembly* assembly = s_AssembliesTable + i;
 
-        const char* assemblyName = assembly->aname.name;
-
-        if (strcmp(assemblyName, nameToFind) == 0)
+        if (comparer(assembly->aname.name, assemblyName) || comparer(assembly->image->name, assemblyName))
             return assembly;
     }
 
-    return NULL;
+    il2cpp::os::FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
+
+    for (auto assembly : s_cliAssemblies)
+    {
+        if (comparer(assembly->aname.name, assemblyName) || comparer(assembly->image->name, assemblyName))
+            return assembly;
+    }
+
+    if (tryLoad)
+    {
+        Il2CppAssembly* newAssembly = huatuo::metadata::Assembly::LoadFromFile(assemblyNameOrPath);
+        if (newAssembly)
+        {
+            il2cpp::vm::Assembly::Register(newAssembly);
+            s_cliAssemblies.push_back(newAssembly);
+            return newAssembly;
+        }
+    }
+
+    return nullptr;
 }
+
+const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyFromBytes(const char* assemblyBytes, size_t length)
+{
+    il2cpp::os::FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
+
+    Il2CppAssembly* newAssembly = huatuo::metadata::Assembly::LoadFromBytes(assemblyBytes, length, true);
+    if (newAssembly)
+    {
+        // avoid register placeholder assembly twicely.
+        for (Il2CppAssembly* ass : s_cliAssemblies)
+        {
+            if (ass == newAssembly)
+            {
+                return ass;
+            }
+        }
+        il2cpp::vm::Assembly::Register(newAssembly);
+        s_cliAssemblies.push_back(newAssembly);
+        return newAssembly;
+    }
+
+    return nullptr;
+}
+
+const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyByName(const char* nameToFind)
+{
+    return GetOrLoadAssemblyByName(nameToFind, true);
+}
+
+const Il2CppGenericMethod* il2cpp::vm::MetadataCache::FindGenericMethod(std::function<bool(const Il2CppGenericMethod*)> predic)
+{
+    for (auto e : s_MethodTableMap)
+    {
+        if (predic(e.first))
+        {
+            return e.first;
+        }
+    }
+    return nullptr;
+}
+
+void il2cpp::vm::MetadataCache::FixThreadLocalStaticOffsetForFieldLocked(FieldInfo* field, int32_t offset, const il2cpp::os::FastAutoLock& lock)
+{
+    s_ThreadLocalStaticOffsetMap[field] = offset;
+}
+
+// ===}} huatuo
 
 Il2CppImage* il2cpp::vm::MetadataCache::GetImageFromIndex(ImageIndex index)
 {

@@ -604,6 +604,23 @@ namespace vm
         return FromNameMsg(Image::GetCorlib(), "System.IO", "FileNotFoundException", msg);
     }
 
+    // ==={{ huatuo
+    Il2CppException* Exception::GetStackOverflowException(const char* msg)
+    {
+        return FromNameMsg(Image::GetCorlib(), "System", "StackOverflowException", msg);
+    }
+
+    Il2CppException* Exception::GetBadImageFormatException(const char* msg)
+    {
+        return FromNameMsg(Image::GetCorlib(), "System", "BadImageFormatException", msg);
+    }
+
+    Il2CppException* Exception::GetMissingFieldException(const char* msg)
+    {
+        return FromNameMsg(Image::GetCorlib(), "System", "MissingFieldException", msg);
+    }
+    // ===}} huatuo
+
     void Exception::StoreExceptionInfo(Il2CppException* ex, Il2CppString* exceptionString)
     {
         // To do: try retrieving IRestrictedErrorInfo here

@@ -240,7 +240,10 @@ namespace Reflection
         Il2CppObject *result = il2cpp::vm::Runtime::InvokeArray(m, obj, params, &exception);
 
         if (exception)
+        {
+            *exc = exception;
             vm::Exception::Raise(exception);
+        }
 
         return result;
     }

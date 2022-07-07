@@ -41,6 +41,12 @@ typedef enum Il2CppTypeEnum
     IL2CPP_TYPE_MODIFIER   = 0x40,       /* Or with the following types */
     IL2CPP_TYPE_SENTINEL   = 0x41,       /* Sentinel for varargs method signature */
     IL2CPP_TYPE_PINNED     = 0x45,       /* Local var that points to pinned object */
+    // ==={{ huatuo
+    IL2CPP_TYPE_SYSTEM_TYPE = 0x50,
+    IL2CPP_TYPE_BOXED_OBJECT    = 0x51,
+    IL2CPP_TYPE_FIELD       = 0x53,
+    IL2CPP_TYPE_PROPERTY    = 0x54,
+    // ===}} huatuo
 
     IL2CPP_TYPE_ENUM       = 0x55        /* an enumeration */
 } Il2CppTypeEnum;

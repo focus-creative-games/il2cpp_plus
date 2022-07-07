@@ -53,6 +53,10 @@
 
 #include "GlobalMetadataFileInternals.h"
 
+// ==={{ huatuo
+#include "huatuo/metadata/MetadataUtil.h"
+#include "huatuo/metadata/MetadataModule.h"
+// ===huatuo}}
 #if IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_OSX
 #include <dlfcn.h>
 #define nullptr NULL
@@ -60,14 +64,7 @@
 
 #define SHIELDCODE 0
 
-typedef struct Il2CppImageGlobalMetadata
-{
-    TypeDefinitionIndex typeStart;
-    TypeDefinitionIndex exportedTypeStart;
-    CustomAttributeIndex customAttributeStart;
-    MethodIndex entryPointIndex;
-    const Il2CppImage* image;
-} Il2CppImageGlobalMetadata;
+
 
 static int32_t s_MetadataImagesCount = 0;
 static Il2CppImageGlobalMetadata* s_MetadataImagesTable = NULL;
@@ -75,10 +72,8 @@ static Il2CppImageGlobalMetadata* s_MetadataImagesTable = NULL;
 static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2CppCustomAttributeTypeRange* typeRange);
 static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2CppImageGlobalMetadata* image, CustomAttributeIndex index);
 static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppTypeDefinition* typeDefinition);
-static Il2CppClass* GetTypeInfoFromTypeDefinitionIndex(TypeDefinitionIndex index);
-static Il2CppClass* FromTypeDefinition(TypeDefinitionIndex index);
 static GenericParameterIndex GetIndexForGenericParameter(Il2CppMetadataGenericParameterHandle handle);
-static Il2CppMetadataGenericParameterHandle GetGenericParameterFromIndexInternal(GenericParameterIndex index);
+static const MethodInfo* GetMethodInfoFromEncodedIndex(EncodedMethodIndex methodIndex);
 
 static void* s_GlobalMetadata;
 static const Il2CppGlobalMetadataHeader* s_GlobalMetadataHeader;
@@ -97,17 +92,6 @@ static const Il2CppMetadataRegistration * s_Il2CppMetadataRegistration;
 
 static Il2CppClass** s_TypeInfoTable = NULL;
 static Il2CppClass** s_TypeInfoDefinitionTable = NULL;
-
-static const int kBitIsValueType = 1;
-static const int kBitIsEnum = 2;
-static const int kBitHasFinalizer = 3;
-static const int kBitHasStaticConstructor = 4;
-static const int kBitIsBlittable = 5;
-static const int kBitIsImportOrWindowsRuntime = 6;
-static const int kPackingSize = 7;     // This uses 4 bits from bit 7 to bit 10
-static const int kPackingSizeIsDefault = 11;
-static const int kClassSizeIsDefault = 12;
-static const int kSpecifiedPackingSize = 13; // This uses 4 bits from bit 13 to bit 16
 
 template<typename T>
 static T MetadataOffset(const void* metadata, size_t sectionOffset, size_t itemIndex)
@@ -175,8 +159,14 @@ bool il2cpp::vm::GlobalMetadata::il2cpp_plugin_init()
 
 #endif
 
-static const char* GetStringFromIndex(StringIndex index)
+const char* il2cpp::vm::GlobalMetadata::GetStringFromIndex(StringIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetStringFromEncodeIndex(index);
+    }
+    // ===}} huatuo
     IL2CPP_ASSERT(index <= s_GlobalMetadataHeader->stringSize);
     const char* strings = MetadataOffset<const char*>(s_GlobalMetadata, s_GlobalMetadataHeader->stringOffset, index);
     #if __ENABLE_UNITY_PLUGIN__
@@ -194,20 +184,31 @@ static const char* GetWindowsRuntimeStringFromIndex(StringIndex index)
     return MetadataOffset<const char*>(s_GlobalMetadata, s_GlobalMetadataHeader->windowsRuntimeStringsOffset, index);
 }
 
-static const Il2CppMethodDefinition* GetMethodDefinitionFromIndex(MethodIndex index)
+const Il2CppMethodDefinition* il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromIndex(MethodIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetMethodDefinitionFromIndex(index);
+    }
+    // ===}} huatuo
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->methodsSize / sizeof(Il2CppMethodDefinition));
-    return MetadataOffset<const Il2CppMethodDefinition*>(s_GlobalMetadata, s_GlobalMetadataHeader->methodsOffset, index);
-}
+    return MetadataOffset<const Il2CppMethodDefinition*>(s_GlobalMetadata, s_GlobalMetadataHeader->methodsOffset, index);}
 
 static const MethodInfo* GetMethodInfoFromMethodDefinitionIndex(MethodIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetMethodInfoFromMethodDefinitionIndex(index);
+    }
+    // ===}} huatuo
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->methodsSize / sizeof(Il2CppMethodDefinition));
 
     if (!s_MethodInfoDefinitionTable[index])
     {
-        const Il2CppMethodDefinition* methodDefinition = GetMethodDefinitionFromIndex(index);
-        Il2CppClass* typeInfo = GetTypeInfoFromTypeDefinitionIndex(methodDefinition->declaringType);
+        const Il2CppMethodDefinition* methodDefinition = il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromIndex(index);
+        Il2CppClass* typeInfo = il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(methodDefinition->declaringType);
         il2cpp::vm::Class::SetupMethods(typeInfo);
         const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(typeInfo->typeMetadataHandle);
         s_MethodInfoDefinitionTable[index] = typeInfo->methods[index - typeDefinition->methodStart];
@@ -230,12 +231,101 @@ static const Il2CppPropertyDefinition* GetPropertyDefinitionFromIndex(const Il2C
     return properties + index;
 }
 
-static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppImage* image, ParameterIndex index)
+    // ==={{ huatuo
+const Il2CppParameterDefinition* il2cpp::vm::GlobalMetadata::GetParameterDefinitionFromIndex(const Il2CppImage* image, ParameterIndex index)
 {
+    if (huatuo::metadata::IsInterpreterImage(image))
+    {
+        return huatuo::metadata::MetadataModule::GetParameterDefinitionFromIndex(image, index);
+    }
+    IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->parametersSize / sizeof(Il2CppParameterDefinition));    const Il2CppParameterDefinition* parameters = (const Il2CppParameterDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->parametersOffset);
+    return parameters + index;
+}
+
+
+const Il2CppParameterDefinition* il2cpp::vm::GlobalMetadata::GetParameterDefinitionFromIndex(const Il2CppMethodDefinition* methodDef, ParameterIndex index)
+{    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(methodDef->nameIndex))
+    {
+        return huatuo::metadata::MetadataModule::GetParameterDefinitionFromIndex(huatuo::metadata::MetadataModule::GetImage(methodDef)->GetIl2CppImage(), index);
+    }
+    // ===}} huatuo
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->parametersSize / sizeof(Il2CppParameterDefinition));
     const Il2CppParameterDefinition* parameters = (const Il2CppParameterDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->parametersOffset);
     return parameters + index;
 }
+
+static const Il2CppMethodDefinition* GetMethodDefinitionFromEncodedIndex(EncodedMethodIndex methodIndex)
+{
+    const MethodInfo* method = GetMethodInfoFromEncodedIndex(methodIndex);
+    if (!method)
+    {
+        return nullptr;
+    }
+    if (method->is_inflated)
+    {
+        method = method->genericMethod->methodDefinition;
+    }
+    return (const Il2CppMethodDefinition *)method->methodMetadataHandle;
+}
+
+uint8_t il2cpp::vm::GlobalMetadata::ConvertPackingSizeEnumToValue(PackingSize packingSize)
+{
+    switch (packingSize)
+    {
+    case Zero:
+        return 0;
+    case One:
+        return 1;
+    case Two:
+        return 2;
+    case Four:
+        return 4;
+    case Eight:
+        return 8;
+    case Sixteen:
+        return 16;
+    case ThirtyTwo:
+        return 32;
+    case SixtyFour:
+        return 64;
+    case OneHundredTwentyEight:
+        return 128;
+    default:
+        Assert(0 && "Invalid packing size!");
+        return 0;
+    }
+}
+
+il2cpp::vm::PackingSize il2cpp::vm::GlobalMetadata::ConvertPackingSizeToEnum(uint8_t packingSize)
+{
+    switch (packingSize)
+    {
+    case 0:
+        return PackingSize::Zero;
+    case 1:
+        return PackingSize::One;
+    case 2:
+        return PackingSize::Two;
+    case 4:
+        return PackingSize::Four;
+    case 8:
+        return PackingSize::Eight;
+    case 16:
+        return PackingSize::Sixteen;
+    case 32:
+        return PackingSize::ThirtyTwo;
+    case 64:
+        return PackingSize::SixtyFour;
+    case 128:
+        return OneHundredTwentyEight;
+    default:
+        Assert(0 && "Invalid packing size!");
+        return PackingSize::Zero;
+    }
+}
+
+    // ===}} huatuo
 
 static const Il2CppGenericMethod* GetGenericMethodFromIndex(GenericMethodIndex index)
 {
@@ -320,10 +410,12 @@ void il2cpp::vm::GlobalMetadata::Register(const Il2CppCodeRegistration* const co
 
 typedef void (*Il2CppTypeUpdater)(Il2CppType*);
 
-static void InitializeTypeHandle(Il2CppType* type)
+// ==={{ huatuo
+void il2cpp::vm::GlobalMetadata::InitializeTypeHandle(Il2CppType* type)
 {
     type->data.typeHandle = il2cpp::vm::GlobalMetadata::GetTypeHandleFromIndex(type->data.__klassIndex);
 }
+// ===}} huatuo
 
 static void ClearTypeHandle(Il2CppType* type)
 {
@@ -332,7 +424,7 @@ static void ClearTypeHandle(Il2CppType* type)
 
 static void InitializeGenericParameterHandle(Il2CppType* type)
 {
-    type->data.genericParameterHandle = GetGenericParameterFromIndexInternal(type->data.__genericParameterIndex);
+    type->data.genericParameterHandle = il2cpp::vm::GlobalMetadata::GetGenericParameterFromIndexInternal(type->data.__genericParameterIndex);
 }
 
 static void ClearGenericParameterHandle(Il2CppType* type)
@@ -423,7 +515,6 @@ bool il2cpp::vm::GlobalMetadata::Initialize(int32_t* imagesCount, int32_t* assem
     s_GenericMethodTable = (const Il2CppGenericMethod**)IL2CPP_CALLOC(s_Il2CppMetadataRegistration->methodSpecsCount, sizeof(Il2CppGenericMethod*));
 
     ProcessIl2CppTypeDefinitions(InitializeTypeHandle, InitializeGenericParameterHandle);
-
     return true;
 }
 
@@ -628,9 +719,12 @@ void il2cpp::vm::GlobalMetadata::BuildIl2CppAssembly(Il2CppAssembly* assembly, A
     Il2CppAssemblyName* assemblyName = &assembly->aname;
     const Il2CppAssemblyNameDefinition* assemblyNameDefinition = &assemblyDefinition->aname;
 
+    // ==={{ huatuo
+    Il2CppImage* image = il2cpp::vm::MetadataCache::GetImageFromIndex(assemblyDefinition->imageIndex);
     assemblyName->name = GetStringFromIndex(assemblyNameDefinition->nameIndex);
     assemblyName->culture = GetStringFromIndex(assemblyNameDefinition->cultureIndex);
     assemblyName->public_key = (const uint8_t*)GetStringFromIndex(assemblyNameDefinition->publicKeyIndex);
+    // ===}} huatuo
     assemblyName->hash_alg = assemblyNameDefinition->hash_alg;
     assemblyName->hash_len = assemblyNameDefinition->hash_len;
     assemblyName->flags = assemblyNameDefinition->flags;
@@ -660,6 +754,13 @@ const MethodInfo* il2cpp::vm::GlobalMetadata::GetAssemblyEntryPoint(const Il2Cpp
 
 Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyTypeHandle(const Il2CppImage* image, AssemblyTypeIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(image->token))
+    {
+        return huatuo::metadata::MetadataModule::GetAssemblyTypeHandleFromRawIndex(image, index);
+    }
+    // ===}} huatuo
+
     const Il2CppImageGlobalMetadata* imageMetadata = GetImageMetadata(image);
 
     IL2CPP_ASSERT(index >= 0 && index < static_cast<AssemblyTypeIndex>(image->typeCount));
@@ -670,6 +771,10 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyTypeHandle(const
 const Il2CppAssembly* il2cpp::vm::GlobalMetadata::GetReferencedAssembly(const Il2CppAssembly* assembly, int32_t referencedAssemblyTableIndex, const Il2CppAssembly assembliesTable[], int assembliesCount)
 {
     IL2CPP_ASSERT(referencedAssemblyTableIndex < assembly->referencedAssemblyCount);
+    if (huatuo::metadata::IsInterpreterImage(assembly->image))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(assembly->image)->GetReferencedAssembly(referencedAssemblyTableIndex, assembliesTable, assembliesCount);
+    }
 
     referencedAssemblyTableIndex = assembly->referencedAssemblyStart + referencedAssemblyTableIndex;
 
@@ -680,6 +785,13 @@ const Il2CppAssembly* il2cpp::vm::GlobalMetadata::GetReferencedAssembly(const Il
 
 Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyExportedTypeHandle(const Il2CppImage* image, AssemblyExportedTypeIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetAssemblyExportedTypeHandleFromEncodeIndex(index);
+    }
+    // ===}} huatuo
+
     if (index == kTypeDefinitionIndexInvalid)
         return NULL;
 
@@ -700,6 +812,12 @@ static const Il2CppTypeDefinition* GetTypeDefinitionForIndex(TypeDefinitionIndex
 {
     if (index == kTypeDefinitionIndexInvalid)
         return NULL;
+    // ==={{ huatuo 
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return (const Il2CppTypeDefinition*)huatuo::metadata::MetadataModule::GetAssemblyTypeHandleFromEncodeIndex(index);
+    }
+    // ===}} huatuo
 
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) < s_GlobalMetadataHeader->typeDefinitionsSize / sizeof(Il2CppTypeDefinition));
     const Il2CppTypeDefinition* typeDefinitions = (const Il2CppTypeDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->typeDefinitionsOffset);
@@ -709,6 +827,13 @@ static const Il2CppTypeDefinition* GetTypeDefinitionForIndex(TypeDefinitionIndex
 static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppTypeDefinition* typeDefinition)
 {
     IL2CPP_ASSERT(typeDefinition);
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterType(typeDefinition))
+    {
+        return static_cast<TypeDefinitionIndex>(huatuo::metadata::MetadataModule::GetTypeEncodeIndex(typeDefinition));
+    }
+    // ===}} huatuo
+
     const Il2CppTypeDefinition* typeDefinitions = (const Il2CppTypeDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->typeDefinitionsOffset);
 
     IL2CPP_ASSERT(typeDefinition >= typeDefinitions && typeDefinition < typeDefinitions + s_GlobalMetadataHeader->typeDefinitionsSize / sizeof(Il2CppTypeDefinition));
@@ -718,8 +843,14 @@ static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppTypeDef
     return static_cast<TypeDefinitionIndex>(index);
 }
 
-static Il2CppClass* GetTypeInfoFromTypeDefinitionIndex(TypeDefinitionIndex index)
+Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(TypeDefinitionIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetTypeInfoFromTypeDefinitionEncodeIndex(index);
+    }
+    // ===}} huatuo
     if (index == kTypeIndexInvalid)
         return NULL;
 
@@ -748,11 +879,21 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromType(const Il2CppType* t
     return GetTypeInfoFromHandle(type->data.typeHandle);
 }
 
+// ==={{ huatuo
 const Il2CppType* il2cpp::vm::GlobalMetadata::GetInterfaceFromOffset(const Il2CppClass* klass, TypeInterfaceIndex offset)
 {
     const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
 
+    return GetInterfaceFromOffset(typeDefinition, offset);
+}
+
+const Il2CppType* il2cpp::vm::GlobalMetadata::GetInterfaceFromOffset(const Il2CppTypeDefinition* typeDefinition, TypeInterfaceIndex offset)
+{
     IL2CPP_ASSERT(offset >= 0 && offset < typeDefinition->interfaces_count);
+    if (huatuo::metadata::IsInterpreterType(typeDefinition))
+    {
+        return huatuo::metadata::MetadataModule::GetInterfaceFromOffset(typeDefinition, offset);
+    }
 
     InterfacesIndex index = typeDefinition->interfacesStart + offset;
 
@@ -765,19 +906,31 @@ const Il2CppType* il2cpp::vm::GlobalMetadata::GetInterfaceFromOffset(const Il2Cp
 Il2CppInterfaceOffsetInfo il2cpp::vm::GlobalMetadata::GetInterfaceOffsetInfo(const Il2CppClass* klass, TypeInterfaceOffsetIndex index)
 {
     const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
+    return GetInterfaceOffsetInfo(typeDefinition, index);
+}
 
-    IL2CPP_ASSERT(index >= 0 && index < typeDefinition->interface_offsets_count);
+Il2CppInterfaceOffsetInfo il2cpp::vm::GlobalMetadata::GetInterfaceOffsetInfo(const Il2CppTypeDefinition* typeDefine, TypeInterfaceOffsetIndex index)
+{
+    IL2CPP_ASSERT(index >= 0 && index < typeDefine->interface_offsets_count);
 
-    index = index + typeDefinition->interfaceOffsetsStart;
+    // === huatuo
+    if (huatuo::metadata::IsInterpreterType(typeDefine))
+    {
+        return huatuo::metadata::MetadataModule::GetInterfaceOffsetInfo(typeDefine, index);
+    }
+    // === huatuo
+
+    index = index + typeDefine->interfaceOffsetsStart;
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->interfaceOffsetsSize / sizeof(Il2CppInterfaceOffsetPair));
     const Il2CppInterfaceOffsetPair* interfaceOffsets = (const Il2CppInterfaceOffsetPair*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->interfaceOffsetsOffset);
 
     return
-        {
-            GetIl2CppTypeFromIndex(interfaceOffsets[index].interfaceTypeIndex),
-            interfaceOffsets[index].offset
-        };
+    {
+        GetIl2CppTypeFromIndex(interfaceOffsets[index].interfaceTypeIndex),
+        interfaceOffsets[index].offset
+    };
 }
+// ===}} huatuo
 
 Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetTypeHandleFromIndex(TypeDefinitionIndex typeIndex)
 {
@@ -826,6 +979,13 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetNestedTypeFromOffset(const Il2CppCla
 
     IL2CPP_ASSERT(offset >= 0 && offset < typeDefinition->nested_type_count);
 
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterType(klass))
+    {
+        return huatuo::metadata::MetadataModule::GetNestedTypeFromOffset(klass, offset);
+    }
+    // ===}} huatuo
+
     NestedTypeIndex index = typeDefinition->nestedTypesStart + offset;
 
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->nestedTypesSize / sizeof(TypeDefinitionIndex));
@@ -841,6 +1001,12 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetNestedTypes(Il2CppMetada
         return NULL;
 
     const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(handle);
+	// ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterType(typeDefinition))
+    {
+        return huatuo::metadata::MetadataModule::GetNestedTypes(handle, iter);
+    }
+	// ===}} huatuo
 
     const TypeDefinitionIndex* nestedTypeIndices = (const TypeDefinitionIndex*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->nestedTypesOffset);
 
@@ -886,6 +1052,13 @@ static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2Cpp
 {
     if (index == kCustomAttributeIndexInvalid || imageMetadata == NULL)
         return NULL;
+
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterImage(imageMetadata->image))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(imageMetadata->image)->GenerateCustomAttributesCacheInternal(index);
+    }
+    // ===}} huatuo
 
     il2cpp::utils::CallOnce(s_CustomAttributesOnceFlag, &InitializeCustomAttributesCaches, NULL);
 
@@ -949,6 +1122,13 @@ static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2Cpp
     if (typeRange == NULL)
         return NULL;
 
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(typeRange->start))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(huatuo::metadata::DecodeImageIndex(typeRange->start))->GenerateCustomAttributesCacheInternal(typeRange);
+    }
+    // ===}} huatuo
+
     const Il2CppCustomAttributeTypeRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeTypeRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributesInfoOffset, 0);
 
     CustomAttributeIndex index = (CustomAttributeIndex)(typeRange - attributeTypeRange);
@@ -965,6 +1145,12 @@ CustomAttributesCache* il2cpp::vm::GlobalMetadata::GenerateCustomAttributesCache
 
 Il2CppMetadataCustomAttributeHandle il2cpp::vm::GlobalMetadata::GetCustomAttributeTypeToken(const Il2CppImage* image, uint32_t token)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterImage(image))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(image)->GetCustomAttributeTypeToken(token);
+    }
+    // ===}} huatuo
     const Il2CppCustomAttributeTypeRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeTypeRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributesInfoOffset, 0);
 
     Il2CppCustomAttributeTypeRange key;
@@ -979,6 +1165,12 @@ Il2CppMetadataCustomAttributeHandle il2cpp::vm::GlobalMetadata::GetCustomAttribu
 
 static CustomAttributeIndex GetCustomAttributeIndex(const Il2CppImage* image, uint32_t token)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterImage(image))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(image)->GetCustomAttributeIndex(token);
+    }
+    // ===}} huatuo
     const Il2CppCustomAttributeTypeRange* res = reinterpret_cast<const Il2CppCustomAttributeTypeRange*>(il2cpp::vm::GlobalMetadata::GetCustomAttributeTypeToken(image, token));
 
     if (res == NULL)
@@ -999,6 +1191,10 @@ CustomAttributesCache* il2cpp::vm::GlobalMetadata::GenerateCustomAttributesCache
 
 static bool HasAttributeFromTypeRange(const Il2CppCustomAttributeTypeRange* typeRange, Il2CppClass* attribute)
 {
+    if (huatuo::metadata::IsInterpreterIndex(typeRange->start))
+    {
+        return huatuo::metadata::MetadataModule::GetImageByEncodedIndex(typeRange->start)->HasAttribute(typeRange, attribute);
+    }
     for (int32_t i = 0; i < typeRange->count; i++)
     {
         IL2CPP_ASSERT(typeRange->start + i < s_GlobalMetadataHeader->attributeTypesSize / (int32_t)sizeof(TypeIndex));
@@ -1023,6 +1219,12 @@ bool il2cpp::vm::GlobalMetadata::HasAttribute(Il2CppMetadataCustomAttributeHandl
 
 bool il2cpp::vm::GlobalMetadata::HasAttribute(const Il2CppImage* image, uint32_t token, Il2CppClass* attribute)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterImage(image))
+    {
+        return huatuo::metadata::MetadataModule::HasAttribute(image, token, attribute);
+    }
+    // ===}} huatuo
     CustomAttributeIndex index = GetCustomAttributeIndex(image, token);
     if (index == kCustomAttributeIndexInvalid)
         return false;
@@ -1033,8 +1235,40 @@ bool il2cpp::vm::GlobalMetadata::HasAttribute(const Il2CppImage* image, uint32_t
     return HasAttributeFromTypeRange(attributeTypeRange, attribute);
 }
 
+// ==={{ huatuo
+const Il2CppMethodDefinition* il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromVTableSlot(const Il2CppTypeDefinition* typeDefinition, int32_t vTableSlot)
+{
+    if (huatuo::metadata::IsInterpreterType(typeDefinition))
+    {
+        return huatuo::metadata::MetadataModule::GetMethodDefinitionFromVTableSlot(typeDefinition, vTableSlot);
+    }
+
+    //const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
+
+    uint32_t index = typeDefinition->vtableStart + vTableSlot;
+    IL2CPP_ASSERT(index >= 0 && index <= s_GlobalMetadataHeader->vtableMethodsSize / sizeof(EncodedMethodIndex));
+    const EncodedMethodIndex* vTableMethodReferences = (const EncodedMethodIndex*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->vtableMethodsOffset);
+    EncodedMethodIndex vTableMethodReference = vTableMethodReferences[index];
+
+    if (vTableMethodReference == 0)
+    {
+        return nullptr;
+    }
+
+    IL2CPP_ASSERT(vTableMethodReference != 0);
+
+    return GetMethodDefinitionFromEncodedIndex(vTableMethodReference);
+}
+// ===}} huatuo
+
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromVTableSlot(const Il2CppClass* klass, int32_t vTableSlot)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterType(klass))
+    {
+        return huatuo::metadata::MetadataModule::GetMethodInfoFromVTableSlot(klass, vTableSlot);
+    }
+    // ===}} huatuo
     const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
 
     uint32_t index = typeDefinition->vtableStart + vTableSlot;
@@ -1057,6 +1291,13 @@ static const Il2CppFieldDefaultValue* GetFieldDefaultValueEntry(const FieldInfo*
 
     fieldIndex += reinterpret_cast<const Il2CppTypeDefinition*>(parent->typeMetadataHandle)->fieldStart;
 
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex((uint32_t)fieldIndex))
+    {
+        return huatuo::metadata::MetadataModule::GetFieldDefaultValueEntry((uint32_t)fieldIndex);
+    }
+    // ===}} huatuo
+
     const Il2CppFieldDefaultValue *start = (const Il2CppFieldDefaultValue*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldDefaultValuesOffset);
     const Il2CppFieldDefaultValue *entry = start;
     while (entry < start + s_GlobalMetadataHeader->fieldDefaultValuesSize / sizeof(Il2CppFieldDefaultValue))
@@ -1075,6 +1316,12 @@ static const uint8_t* GetFieldOrParameterDefalutValue(uint32_t index)
 {
     if (index == kDefaultValueIndexNull)
         return NULL;
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetFieldOrParameterDefalutValue(index);
+    }
+    // ===}} huatuo
 
     IL2CPP_ASSERT(index >= 0 && index <= s_GlobalMetadataHeader->fieldAndParameterDefaultValueDataSize / sizeof(uint8_t));
     const uint8_t* defaultValuesData =  (const uint8_t*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldAndParameterDefaultValueDataOffset);
@@ -1134,7 +1381,7 @@ const uint8_t* il2cpp::vm::GlobalMetadata::GetParameterDefaultValue(const Method
     return NULL;
 }
 
-static TypeDefinitionIndex GetIndexForTypeDefinition(const Il2CppClass* klass)
+TypeDefinitionIndex il2cpp::vm::GlobalMetadata::GetIndexForTypeDefinition(const Il2CppClass* klass)
 {
     const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
     return GetIndexForTypeDefinitionInternal(typeDefinition);
@@ -1142,6 +1389,12 @@ static TypeDefinitionIndex GetIndexForTypeDefinition(const Il2CppClass* klass)
 
 uint32_t il2cpp::vm::GlobalMetadata::GetFieldOffset(const Il2CppClass* klass, int32_t fieldIndexInType, FieldInfo* field)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterType(klass))
+    {
+        return huatuo::metadata::MetadataModule::GetFieldOffset(klass, fieldIndexInType, field);
+    }
+    // ===}} huatuo
     uint32_t typeIndex = GetIndexForTypeDefinition(klass);
     IL2CPP_ASSERT(typeIndex <= static_cast<uint32_t>(s_Il2CppMetadataRegistration->typeDefinitionsSizesCount));
     int32_t offset = s_Il2CppMetadataRegistration->fieldOffsets[typeIndex][fieldIndexInType];
@@ -1166,12 +1419,24 @@ int il2cpp::vm::GlobalMetadata::GetFieldMarshaledSizeForField(const FieldInfo* f
     return -1;
 }
 
-static const Il2CppFieldDefinition* GetFieldDefinitionFromIndex(const Il2CppImage* image, FieldIndex index)
+static const Il2CppFieldDefinition* GetFieldDefinitionFromIndex(FieldIndex index)
 {
-    IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->fieldsSize / sizeof(Il2CppFieldDefinition));
-    const Il2CppFieldDefinition* fields = (const Il2CppFieldDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldsOffset);
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetFieldDefinitionFromEncodeIndex(index);
+    }
+    // ===}} huatuo
+    IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->fieldsSize / sizeof(Il2CppFieldDefinition));    const Il2CppFieldDefinition* fields = (const Il2CppFieldDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldsOffset);
     return fields + index;
 }
+
+// ==={{ huatuo
+const Il2CppFieldDefinition* il2cpp::vm::GlobalMetadata::GetFieldDefinitionFromTypeDefAndFieldIndex(const Il2CppTypeDefinition* typeDef, FieldIndex index)
+{
+    return GetFieldDefinitionFromIndex(typeDef->fieldStart + index);
+}
+// ===}} huatuo
 
 Il2CppMetadataFieldInfo il2cpp::vm::GlobalMetadata::GetFieldInfo(const Il2CppClass* klass, TypeFieldIndex fieldIndex)
 {
@@ -1181,7 +1446,7 @@ Il2CppMetadataFieldInfo il2cpp::vm::GlobalMetadata::GetFieldInfo(const Il2CppCla
     IL2CPP_ASSERT(fieldIndex >= 0 && fieldIndex < typeDefinition->field_count);
     IL2CPP_ASSERT(typeDefinition->fieldStart != kFieldIndexInvalid);
 
-    const Il2CppFieldDefinition* fieldDefinition = GetFieldDefinitionFromIndex(klass->image, typeDefinition->fieldStart + fieldIndex);
+    const Il2CppFieldDefinition* fieldDefinition = GetFieldDefinitionFromIndex(typeDefinition->fieldStart + fieldIndex);
 
     return {
             GetIl2CppTypeFromIndex(fieldDefinition->typeIndex),
@@ -1230,6 +1495,12 @@ Il2CppMetadataParameterInfo il2cpp::vm::GlobalMetadata::GetParameterInfo(const I
 
 Il2CppMetadataPropertyInfo il2cpp::vm::GlobalMetadata::GetPropertyInfo(const Il2CppClass* klass, TypePropertyIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterType(klass))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(klass)->GetPropertyInfo(klass, index);
+    }
+    // ===}} huatuo
     const Il2CppTypeDefinition* typeDefintion = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(typeDefintion != NULL);
@@ -1249,6 +1520,12 @@ Il2CppMetadataPropertyInfo il2cpp::vm::GlobalMetadata::GetPropertyInfo(const Il2
 
 Il2CppMetadataEventInfo il2cpp::vm::GlobalMetadata::GetEventInfo(const Il2CppClass* klass, TypeEventIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterType(klass))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(klass)->GetEventInfo(klass, index);
+    }
+    // ===}} huatuo
     const Il2CppTypeDefinition* typeDefintion = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(typeDefintion != NULL);
@@ -1271,12 +1548,17 @@ static const Il2CppGenericContainer* GetGenericContainerFromIndexInternal(Generi
     if (index == kGenericContainerIndexInvalid)
         return NULL;
 
-    IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->genericContainersSize / sizeof(Il2CppGenericContainer));
-    const Il2CppGenericContainer* genericContainers = (const Il2CppGenericContainer*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->genericContainersOffset);
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetGenericContainerFromEncodeIndex(index);
+    }
+    // ===}} huatuo
+    IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->genericContainersSize / sizeof(Il2CppGenericContainer));    const Il2CppGenericContainer* genericContainers = (const Il2CppGenericContainer*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->genericContainersOffset);
     return genericContainers + index;
 }
 
-static Il2CppMetadataGenericContainerHandle GetGenericContainerFromIndex(GenericContainerIndex index)
+Il2CppMetadataGenericContainerHandle il2cpp::vm::GlobalMetadata::GetGenericContainerFromIndex(GenericContainerIndex index)
 {
     const Il2CppGenericContainer* container = GetGenericContainerFromIndexInternal(index);
     return reinterpret_cast<Il2CppMetadataGenericContainerHandle>(container);
@@ -1299,7 +1581,7 @@ const Il2CppGenericMethod* il2cpp::vm::GlobalMetadata::GetGenericMethodFromToken
     return GetGenericMethodFromIndex(tuple->__genericMethodIndex);
 }
 
-static Il2CppMetadataGenericParameterHandle GetGenericParameterFromIndexInternal(GenericParameterIndex index)
+Il2CppMetadataGenericParameterHandle il2cpp::vm::GlobalMetadata::GetGenericParameterFromIndexInternal(GenericParameterIndex index)
 {
     if (index == kGenericParameterIndexInvalid)
         return NULL;
@@ -1342,6 +1624,13 @@ Il2CppMetadataGenericParameterHandle il2cpp::vm::GlobalMetadata::GetGenericParam
     const Il2CppGenericContainer* genericContainer = reinterpret_cast<const Il2CppGenericContainer*>(handle);
 
     IL2CPP_ASSERT(index >= 0 && index < genericContainer->type_argc);
+
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(genericContainer->ownerIndex))
+    {
+        return (Il2CppMetadataGenericParameterHandle)huatuo::metadata::MetadataModule::GetImage(huatuo::metadata::DecodeImageIndex(genericContainer->ownerIndex))->GetGenericParameterByRawIndex(genericContainer, index);
+    }
+    // ===}} huatuo
 
     return GetGenericParameterFromIndexInternal(genericContainer->genericParameterStart + index);
 }
@@ -1400,47 +1689,6 @@ const Il2CppGenericMethod* il2cpp::vm::GlobalMetadata::GetGenericMethodFromRgctx
     return GetGenericMethodFromIndex(rgctxDef->data.__methodIndex);
 }
 
-enum PackingSize
-{
-    Zero,
-    One,
-    Two,
-    Four,
-    Eight,
-    Sixteen,
-    ThirtyTwo,
-    SixtyFour,
-    OneHundredTwentyEight
-};
-
-static uint8_t ConvertPackingSizeEnumToValue(PackingSize packingSize)
-{
-    switch (packingSize)
-    {
-        case Zero:
-            return 0;
-        case One:
-            return 1;
-        case Two:
-            return 2;
-        case Four:
-            return 4;
-        case Eight:
-            return 8;
-        case Sixteen:
-            return 16;
-        case ThirtyTwo:
-            return 32;
-        case SixtyFour:
-            return 64;
-        case OneHundredTwentyEight:
-            return 128;
-        default:
-            Assert(0 && "Invalid packing size!");
-            return 0;
-    }
-}
-
 int32_t il2cpp::vm::GlobalMetadata::StructLayoutPack(Il2CppMetadataTypeHandle handle)
 {
     return ConvertPackingSizeEnumToValue(static_cast<PackingSize>((reinterpret_cast<const Il2CppTypeDefinition*>(handle)->bitfield >> (kSpecifiedPackingSize - 1)) & 0xF));
@@ -1448,6 +1696,12 @@ int32_t il2cpp::vm::GlobalMetadata::StructLayoutPack(Il2CppMetadataTypeHandle ha
 
 static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex index)
 {
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetImage(huatuo::metadata::DecodeImageIndex(index))->GetIl2CppImage();
+    }
+    // ===}} huatuo
     for (int32_t imageIndex = 0; imageIndex < s_MetadataImagesCount; imageIndex++)
     {
         const Il2CppImageGlobalMetadata* imageMetadata = s_MetadataImagesTable + imageIndex;
@@ -1460,17 +1714,29 @@ static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex ind
     return NULL;
 }
 
-static Il2CppClass* FromTypeDefinition(TypeDefinitionIndex index)
+Il2CppClass* il2cpp::vm::GlobalMetadata::FromTypeDefinition(TypeDefinitionIndex index)
 {
-    IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) < s_GlobalMetadataHeader->typeDefinitionsSize / sizeof(Il2CppTypeDefinition));
-    const Il2CppTypeDefinition* typeDefinitions = (const Il2CppTypeDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->typeDefinitionsOffset);
-    const Il2CppTypeDefinition* typeDefinition = typeDefinitions + index;
-    const Il2CppTypeDefinitionSizes* typeDefinitionSizes = s_Il2CppMetadataRegistration->typeDefinitionsSizes[index];
+    // ==={{ huatuo
+    const Il2CppTypeDefinition* typeDefinition;
+    const Il2CppTypeDefinitionSizes* typeDefinitionSizes;
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        typeDefinition = (const Il2CppTypeDefinition *)huatuo::metadata::MetadataModule::GetAssemblyTypeHandleFromEncodeIndex(index);
+        typeDefinitionSizes = huatuo::metadata::MetadataModule::GetTypeDefinitionSizesFromEncodeIndex(index);
+    }
+    else
+    {
+        IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) < s_GlobalMetadataHeader->typeDefinitionsSize / sizeof(Il2CppTypeDefinition));
+        const Il2CppTypeDefinition* typeDefinitions = (const Il2CppTypeDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->typeDefinitionsOffset);
+        typeDefinition = typeDefinitions + index;
+        typeDefinitionSizes = s_Il2CppMetadataRegistration->typeDefinitionsSizes[index];
+    }
+    // ===}} huatuo
     Il2CppClass* typeInfo = (Il2CppClass*)IL2CPP_CALLOC(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * typeDefinition->vtable_count));
     typeInfo->klass = typeInfo;
     typeInfo->image = GetImageForTypeDefinitionIndex(index);
-    typeInfo->name = GetStringFromIndex(typeDefinition->nameIndex);
-    typeInfo->namespaze = GetStringFromIndex(typeDefinition->namespaceIndex);
+    typeInfo->name = il2cpp::vm::GlobalMetadata::GetStringFromIndex(typeDefinition->nameIndex);
+    typeInfo->namespaze = il2cpp::vm::GlobalMetadata::GetStringFromIndex(typeDefinition->namespaceIndex);
     typeInfo->byval_arg = *il2cpp::vm::GlobalMetadata::GetIl2CppTypeFromIndex(typeDefinition->byvalTypeIndex);
     typeInfo->this_arg = typeInfo->byval_arg;
     typeInfo->this_arg.byref = true;
@@ -1519,7 +1785,12 @@ const Il2CppType* il2cpp::vm::GlobalMetadata::GetIl2CppTypeFromIndex(TypeIndex i
 {
     if (index == kTypeIndexInvalid)
         return NULL;
-
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return huatuo::metadata::MetadataModule::GetIl2CppTypeFromEncodeIndex(index);
+    }
+    // ===}} huatuo
     IL2CPP_ASSERT(index < s_Il2CppMetadataRegistration->typesCount && "Invalid type index ");
 
     return s_Il2CppMetadataRegistration->types[index];
@@ -1599,6 +1870,13 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(TypeIndex inde
     if (index == kTypeIndexInvalid)
         return NULL;
 
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(index))
+    {
+        return il2cpp::vm::Class::FromIl2CppType(huatuo::metadata::MetadataModule::GetIl2CppTypeFromEncodeIndex(index));
+    }
+    // ===}} huatuo
+
     IL2CPP_ASSERT(index < s_Il2CppMetadataRegistration->typesCount && "Invalid type index ");
 
     if (s_TypeInfoTable[index])
@@ -1618,6 +1896,12 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(TypeIndex inde
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle)
 {
     const Il2CppMethodDefinition* methodDefinition = reinterpret_cast<const Il2CppMethodDefinition*>(handle);
+    // ==={{ huatuo
+    if (huatuo::metadata::IsInterpreterIndex(methodDefinition->nameIndex))
+    {
+        return huatuo::metadata::MetadataModule::GetMethodInfoFromMethodDefinition(methodDefinition);
+    }
+    // ===}} huatuo
     const Il2CppMethodDefinition* methods = (const Il2CppMethodDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->methodsOffset);
 
     const MethodIndex index = static_cast<MethodIndex>(methodDefinition - methods);
