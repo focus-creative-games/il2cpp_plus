@@ -1,5 +1,8 @@
 #pragma once
 
+#include "utils/Expected.h"
+#include "utils/Il2CppError.h"
+
 #include <stdint.h>
 
 struct Il2CppObject;
@@ -21,14 +24,13 @@ namespace gc
     public:
         // external
         static uint32_t New(Il2CppObject *obj, bool pinned);
-        static uint32_t NewWeakref(Il2CppObject *obj, bool track_resurrection);
+        static utils::Expected<uint32_t> NewWeakref(Il2CppObject *obj, bool track_resurrection);
         static Il2CppObject* GetTarget(uint32_t gchandle);
         static GCHandleType GetHandleType(uint32_t gcHandle);
         static void Free(uint32_t gchandle);
     public:
         //internal
-        static int32_t GetTargetHandle(Il2CppObject * obj, int32_t handle, int32_t type);
-
+        static utils::Expected<uint32_t> GetTargetHandle(Il2CppObject * obj, int32_t handle, int32_t type);
         typedef void(*WalkGCHandleTargetsCallback)(Il2CppObject* obj, void* context);
         static void WalkStrongGCHandleTargets(WalkGCHandleTargetsCallback callback, void* context);
     };

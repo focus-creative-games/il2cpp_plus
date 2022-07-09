@@ -2,6 +2,7 @@
 #include "gc/GCHandle.h"
 #include "utils/Memory.h"
 #include "vm/CCW.h"
+#include "vm/Exception.h"
 #include "vm/ScopedThreadAttacher.h"
 #include "WeakReference.h"
 #include "utils/New.h"
@@ -16,10 +17,12 @@ il2cpp_hresult_t il2cpp::vm::WeakReference::Create(Il2CppObject* managedObject, 
     return IL2CPP_S_OK;
 }
 
-il2cpp::vm::WeakReference::WeakReference(Il2CppObject* managedObject) :
-    m_GCHandle(gc::GCHandle::NewWeakref(managedObject, false)),
-    m_RefCount(1)
+il2cpp::vm::WeakReference::WeakReference(Il2CppObject* managedObject)
 {
+    auto weakRef = gc::GCHandle::NewWeakref(managedObject, false);
+    vm::Exception::RaiseIfError(weakRef.GetError());
+    m_GCHandle = weakRef.Get();
+    m_RefCount = 1;
 }
 
 il2cpp_hresult_t STDCALL il2cpp::vm::WeakReference::QueryInterface(const Il2CppGuid& iid, void** object)

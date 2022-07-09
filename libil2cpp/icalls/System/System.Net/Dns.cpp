@@ -4,6 +4,7 @@
 
 #include "il2cpp-class-internals.h"
 #include "il2cpp-object-internals.h"
+#include "gc/GarbageCollector.h"
 #include "vm/Array.h"
 #include "vm/String.h"
 #include "os/Socket.h"
@@ -20,7 +21,7 @@ namespace System
 {
 namespace Net
 {
-    bool Dns::GetHostByAddr(Il2CppString* addr, Il2CppString** h_name, Il2CppArray** h_aliases, Il2CppArray** h_addr_list)
+    bool Dns::GetHostByAddr_icall(Il2CppString* addr, Il2CppString** h_name, Il2CppArray** h_aliases, Il2CppArray** h_addr_list, int32_t hint)
     {
         std::string name;
         std::vector<std::string> aliases;
@@ -54,7 +55,7 @@ namespace Net
         return (result != kWaitStatusFailure);
     }
 
-    bool Dns::GetHostByName(Il2CppString* host, Il2CppString** h_name, Il2CppArray** h_aliases, Il2CppArray** h_addr_list)
+    bool Dns::GetHostByName_icall(Il2CppString* host, Il2CppString** h_name, Il2CppArray** h_aliases, Il2CppArray** h_addr_list, int32_t hint)
     {
         std::string name;
         std::vector<std::string> aliases;
@@ -64,8 +65,11 @@ namespace Net
         const os::WaitStatus result = os::Socket::GetHostByName(host_name, name, aliases, addr_list);
 
         *h_name = vm::String::New(name.c_str());
+        il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)h_name);
         *h_aliases = vm::Array::New(il2cpp_defaults.string_class, (il2cpp_array_size_t)aliases.size());
+        il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)h_aliases);
         *h_addr_list = vm::Array::New(il2cpp_defaults.string_class, (il2cpp_array_size_t)addr_list.size());
+        il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)h_addr_list);
 
         int32_t index = 0;
 
@@ -88,25 +92,18 @@ namespace Net
         return (result != kWaitStatusFailure);
     }
 
-    bool Dns::GetHostName(Il2CppString** name)
+    bool Dns::GetHostName_icall(Il2CppString** h_name)
     {
         std::string host_name;
 
-        *name = (os::Socket::GetHostName(host_name) != kWaitStatusFailure)
+        *h_name = (os::Socket::GetHostName(host_name) != kWaitStatusFailure)
             ? vm::String::New(host_name.c_str())
             : NULL;
 
-        return *name != NULL;
-    }
 
-    bool Dns::GetHostByAddr40(Il2CppString* addr, Il2CppString** h_name, Il2CppArray** h_aliases, Il2CppArray** h_addr_list, int32_t hint)
-    {
-        return GetHostByAddr(addr, h_name, h_aliases, h_addr_list);
-    }
+        il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)h_name);
 
-    bool Dns::GetHostByName40(Il2CppString* addr, Il2CppString** h_name, Il2CppArray** h_aliases, Il2CppArray** h_addr_list, int32_t hint)
-    {
-        return GetHostByName(addr, h_name, h_aliases, h_addr_list);
+        return *h_name != NULL;
     }
 } /* namespace Net */
 } /* namespace System */

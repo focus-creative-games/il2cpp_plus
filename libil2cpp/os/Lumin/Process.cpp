@@ -11,7 +11,6 @@
 #include "os/Process.h"
 #include "utils/Logging.h"
 
-#include "il2cpp-vm-support.h"
 
 struct ProcessHandle
 {
@@ -145,7 +144,7 @@ namespace os
         return getpid();
     }
 
-    ProcessHandle* Process::GetProcess(int processId)
+    utils::Expected<ProcessHandle*> Process::GetProcess(int processId)
     {
         // If/when we implement the CreateProcess_internal icall we will likely
         // need to so something smarter here to find the process if we did
@@ -159,7 +158,7 @@ namespace os
         // We have nothing to do here.
     }
 
-    std::string Process::GetProcessName(ProcessHandle* handle)
+    utils::Expected<std::string> Process::GetProcessName(ProcessHandle* handle)
     {
         intptr_t pid = (intptr_t)handle;
         ProcessStatInfo psi;
@@ -244,6 +243,11 @@ namespace os
             }
         }
 
+        return 0;
+    }
+
+    intptr_t Process::GetMainWindowHandle(int32_t pid)
+    {
         return 0;
     }
 }

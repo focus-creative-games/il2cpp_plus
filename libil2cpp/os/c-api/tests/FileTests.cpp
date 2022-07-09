@@ -66,12 +66,12 @@ SUITE(File)
     {
         il2cpp::os::FileHandle* handle = il2cpp::os::File::GetStdInput();
 
-        CHECK_EQUAL((int32_t)il2cpp::os::File::Isatty(handle), UnityPalIsatty(handle));
+        CHECK_EQUAL((int32_t)il2cpp::os::File::Isatty(handle).Get(), UnityPalIsatty(handle));
     }
 
     TEST_FIXTURE(FileFixture, FileIsAttyWithValidButNoTTYMatchesClass)
     {
-        CHECK_EQUAL((int32_t)il2cpp::os::File::Isatty(handle), UnityPalIsatty(handle));
+        CHECK_EQUAL((int32_t)il2cpp::os::File::Isatty(handle).Get(), UnityPalIsatty(handle));
     }
 
 #endif
@@ -1592,7 +1592,7 @@ SUITE(File)
         il2cpp::os::File::Close(read_handle, &error);
         il2cpp::os::File::Close(write_handle, &error);
 
-        bool class_result = il2cpp::os::File::CreatePipe(&read_handle, &write_handle);
+        bool class_result = il2cpp::os::File::CreatePipe(&read_handle, &write_handle).Get();
         il2cpp::os::File::Close(read_handle, &error);
         il2cpp::os::File::Close(write_handle, &error);
 

@@ -4,9 +4,9 @@
 
 #include "il2cpp-class-internals.h"
 #include "il2cpp-string-types.h"
-#include "il2cpp-vm-support.h"
 #include "os/WindowsRuntime.h"
-#include "utils/Il2CppHStringReference.h"
+#include "utils/Expected.h"
+#include "utils/Il2CppError.h"
 #include "utils/StringUtils.h"
 #include "vm/CCW.h"
 #include "WindowsHeaders.h"
@@ -154,7 +154,7 @@ namespace os
 #endif
     }
 
-    const Il2CppChar* WindowsRuntime::GetHStringBuffer(Il2CppHString hstring, uint32_t* length)
+    utils::Expected<const Il2CppChar*> WindowsRuntime::GetHStringBuffer(Il2CppHString hstring, uint32_t* length)
     {
 #if LINK_TO_WINDOWSRUNTIME_LIBS
         return WindowsGetStringRawBuffer(reinterpret_cast<HSTRING>(hstring), length);
@@ -167,29 +167,19 @@ namespace os
             WindowsGetStringRawBuffer = ResolveAPI<WindowsGetStringRawBufferFunc>(L"api-ms-win-core-winrt-string-l1-1-0.dll", "WindowsGetStringRawBuffer");
 
             if (WindowsGetStringRawBuffer == NULL)
-                IL2CPP_VM_NOT_SUPPORTED(GetHStringBuffer, "Marshaling HSTRINGs is not supported on current platform.");
+                return utils::Il2CppError(utils::NotSupported, "Marshaling HSTRINGs is not supported on current platform.");
         }
 
         return WindowsGetStringRawBuffer(hstring, length);
 #endif
     }
 
-    const Il2CppNativeChar* WindowsRuntime::GetNativeHStringBuffer(Il2CppHString hstring, uint32_t* length)
+    utils::Expected<const Il2CppNativeChar*> WindowsRuntime::GetNativeHStringBuffer(Il2CppHString hstring, uint32_t* length)
     {
         return GetHStringBuffer(hstring, length);
     }
 
-    Il2CppString* WindowsRuntime::HStringToManagedString(Il2CppHString hstring)
-    {
-        if (hstring == NULL)
-            return IL2CPP_VM_STRING_EMPTY();
-
-        uint32_t length;
-        const wchar_t* ptr = GetHStringBuffer(hstring, &length);
-        return IL2CPP_VM_STRING_NEW_UTF16(ptr, length);
-    }
-
-    il2cpp_hresult_t WindowsRuntime::PreallocateHStringBuffer(uint32_t length, Il2CppNativeChar** mutableBuffer, void** bufferHandle)
+    utils::Expected<il2cpp_hresult_t> WindowsRuntime::PreallocateHStringBuffer(uint32_t length, Il2CppNativeChar** mutableBuffer, void** bufferHandle)
     {
 #if LINK_TO_WINDOWSRUNTIME_LIBS
         return WindowsPreallocateStringBuffer(length, mutableBuffer, reinterpret_cast<HSTRING_BUFFER*>(bufferHandle));
@@ -202,14 +192,14 @@ namespace os
             WindowsPreallocateStringBuffer = ResolveAPI<WindowsPreallocateStringBufferFunc>(L"api-ms-win-core-winrt-string-l1-1-0.dll", "WindowsPreallocateStringBuffer");
 
             if (WindowsPreallocateStringBuffer == NULL)
-                IL2CPP_VM_NOT_SUPPORTED(PreallocateHStringBuffer, "Marshaling HSTRINGs is not supported on current platform.");
+                return utils::Il2CppError(utils::NotSupported, "Marshaling HSTRINGs is not supported on current platform.");
         }
 
         return WindowsPreallocateStringBuffer(length, mutableBuffer, bufferHandle);
 #endif
     }
 
-    il2cpp_hresult_t WindowsRuntime::PromoteHStringBuffer(void* bufferHandle, Il2CppHString* hstring)
+    utils::Expected<il2cpp_hresult_t> WindowsRuntime::PromoteHStringBuffer(void* bufferHandle, Il2CppHString* hstring)
     {
 #if LINK_TO_WINDOWSRUNTIME_LIBS
         return WindowsPromoteStringBuffer(static_cast<HSTRING_BUFFER>(bufferHandle), reinterpret_cast<HSTRING*>(hstring));
@@ -222,14 +212,14 @@ namespace os
             WindowsPromoteStringBuffer = ResolveAPI<WindowsPromoteStringBufferFunc>(L"api-ms-win-core-winrt-string-l1-1-0.dll", "WindowsPromoteStringBuffer");
 
             if (WindowsPromoteStringBuffer == NULL)
-                IL2CPP_VM_NOT_SUPPORTED(PromoteHStringBuffer, "Marshaling HSTRINGs is not supported on current platform.");
+                return utils::Il2CppError(utils::NotSupported, "Marshaling HSTRINGs is not supported on current platform.");
         }
 
         return WindowsPromoteStringBuffer(bufferHandle, hstring);
 #endif
     }
 
-    il2cpp_hresult_t WindowsRuntime::DeleteHStringBuffer(void* bufferHandle)
+    utils::Expected<il2cpp_hresult_t> WindowsRuntime::DeleteHStringBuffer(void* bufferHandle)
     {
 #if LINK_TO_WINDOWSRUNTIME_LIBS
         return WindowsDeleteStringBuffer(static_cast<HSTRING_BUFFER>(bufferHandle));
@@ -242,7 +232,7 @@ namespace os
             WindowsDeleteStringBuffer = ResolveAPI<WindowsDeleteStringBufferFunc>(L"api-ms-win-core-winrt-string-l1-1-0.dll", "WindowsDeleteStringBuffer");
 
             if (WindowsDeleteStringBuffer == NULL)
-                IL2CPP_VM_NOT_SUPPORTED(DeleteHStringBuffer, "Marshaling HSTRINGs is not supported on current platform.");
+                return utils::Il2CppError(utils::NotSupported, "Marshaling HSTRINGs is not supported on current platform.");
         }
 
         return WindowsDeleteStringBuffer(bufferHandle);
@@ -279,7 +269,7 @@ namespace os
 
 // Fallback path for desktop in case we're running on below Windows 8.1
 // Also used for Xbox One as it has no RoOriginateLanguageException
-    static inline void OriginateErrorNoLanguageException(Il2CppException* ex, Il2CppHString message)
+    static inline void OriginateErrorNoLanguageException(il2cpp_hresult_t hresult, Il2CppHString message)
     {
 #if !LINK_TO_WINDOWSRUNTIME_LIBS
         typedef BOOL(STDAPICALLTYPE * RoOriginateErrorFunc)(il2cpp_hresult_t error, Il2CppHString message);
@@ -296,15 +286,15 @@ namespace os
             }
         }
 
-        RoOriginateError(ex->hresult, message);
+        RoOriginateError(hresult, message);
 #else
-        RoOriginateError(ex->hresult, reinterpret_cast<HSTRING>(message));
+        RoOriginateError(hresult, reinterpret_cast<HSTRING>(message));
 #endif
     }
 
 #if !IL2CPP_TARGET_XBOXONE
 
-    inline void OriginateLanguageExceptionWithFallback(Il2CppException* ex, Il2CppHString message)
+    inline void OriginateLanguageExceptionWithFallback(il2cpp_hresult_t hresult, Il2CppException* ex, Il2CppHString message, WindowsRuntime::GetOrCreateFunc createCCWCallback)
     {
 #if !LINK_TO_WINDOWSRUNTIME_LIBS
         typedef BOOL(STDAPICALLTYPE * RoOriginateLanguageExceptionFunc)(il2cpp_hresult_t error, Il2CppHString message, Il2CppIUnknown* languageException);
@@ -317,18 +307,18 @@ namespace os
             if (RoOriginateLanguageException == NULL)
             {
                 // We're running on Win8 or below. Fallback to RoOriginateError
-                OriginateErrorNoLanguageException(ex, message);
+                OriginateErrorNoLanguageException(hresult, message);
                 return;
             }
         }
 #endif
 
-        Il2CppIUnknown* exceptionCCW = IL2CPP_VM_GET_CREATE_CCW_EXCEPTION(ex);
+        Il2CppIUnknown* exceptionCCW = createCCWCallback(reinterpret_cast<Il2CppObject*>(ex), Il2CppIUnknown::IID);
 
 #if LINK_TO_WINDOWSRUNTIME_LIBS
-        RoOriginateLanguageException(ex->hresult, reinterpret_cast<HSTRING>(static_cast<Il2CppHString>(message)), reinterpret_cast<IUnknown*>(exceptionCCW));
+        RoOriginateLanguageException(hresult, reinterpret_cast<HSTRING>(static_cast<Il2CppHString>(message)), reinterpret_cast<IUnknown*>(exceptionCCW));
 #else
-        RoOriginateLanguageException(ex->hresult, message, exceptionCCW);
+        RoOriginateLanguageException(hresult, message, exceptionCCW);
 #endif
 
         exceptionCCW->Release();
@@ -336,15 +326,17 @@ namespace os
 
 #endif // !IL2CPP_TARGET_XBOXONE
 
-    void WindowsRuntime::OriginateLanguageException(Il2CppException* ex, Il2CppString* exceptionString)
+    void WindowsRuntime::OriginateLanguageException(il2cpp_hresult_t hresult, Il2CppException* ex, Il2CppString* exceptionString, GetOrCreateFunc createCCWCallback)
     {
         utils::StringView<Il2CppNativeChar> message(utils::StringUtils::GetChars(exceptionString), utils::StringUtils::GetLength(exceptionString));
-        utils::Il2CppHStringReference messageHString(message);
+        Il2CppHString messageHString;
+        Il2CppHStringHeader unused;
+        CreateHStringReference(message, &unused, &messageHString);
 
 #if IL2CPP_TARGET_XBOXONE
-        OriginateErrorNoLanguageException(ex, messageHString);
+        OriginateErrorNoLanguageException(hresult, messageHString);
 #else
-        OriginateLanguageExceptionWithFallback(ex, messageHString);
+        OriginateLanguageExceptionWithFallback(hresult, ex, messageHString, createCCWCallback);
 #endif
     }
 

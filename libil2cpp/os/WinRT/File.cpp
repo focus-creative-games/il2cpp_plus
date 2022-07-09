@@ -4,9 +4,10 @@
 
 #include <io.h>
 
-#include "il2cpp-vm-support.h"
 #include "os/File.h"
 #include "os/Win32/WindowsHeaders.h"
+#include "utils/Expected.h"
+#include "utils/Il2CppError.h"
 
 namespace il2cpp
 {
@@ -46,10 +47,9 @@ namespace os
 #endif
     }
 
-    bool File::Isatty(FileHandle* fileHandle)
+    utils::Expected<bool> File::Isatty(FileHandle* fileHandle)
     {
-        IL2CPP_VM_NOT_IMPLEMENTED(File::IsAtty);
-        return false;
+        return utils::Il2CppError(utils::NotSupported, "File::Isatty is not supported on WinRT");
     }
 
     FileHandle* File::GetStdInput()

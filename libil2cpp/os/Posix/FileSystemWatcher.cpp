@@ -13,12 +13,7 @@ namespace FileSystemWatcher
 {
     int IsSupported()
     {
-#if IL2CPP_TARGET_IOS
-        return 0; // Not supported on iOS
-#else
-        IL2CPP_NOT_IMPLEMENTED_ICALL(FileSystemWatcher::IsSupported);
         return 0;
-#endif
     }
 }
 }

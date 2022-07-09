@@ -2,7 +2,8 @@
 
 #include <stdint.h>
 #include <vector>
-#include "metadata/Il2CppTypeVector.h"
+
+typedef bool (FieldInfoFilter)(FieldInfo*);
 
 namespace il2cpp
 {
@@ -27,7 +28,7 @@ namespace metadata
             uint8_t naturalAlignment;
         };
 
-        static void LayoutFields(size_t parentSize, size_t actualParentSize, size_t parentAlignment, uint8_t packing, const Il2CppTypeVector& fieldTypes, FieldLayoutData& data);
+        static void LayoutFields(const Il2CppClass* klass, FieldInfoFilter filter, size_t parentSize, size_t actualParentSize, size_t parentAlignment, uint8_t packing, FieldLayoutData& data);
         static SizeAndAlignment GetTypeSizeAndAlignment(const Il2CppType* type);
     };
 } /* namespace metadata */

@@ -11,8 +11,8 @@
 #endif
 
 #include "os/Process.h"
-
-#include "il2cpp-vm-support.h"
+#include "utils/Expected.h"
+#include "utils/Il2CppError.h"
 
 struct ProcessHandle
 {
@@ -28,7 +28,7 @@ namespace os
         return getpid();
     }
 
-    ProcessHandle* Process::GetProcess(int processId)
+    utils::Expected<ProcessHandle*> Process::GetProcess(int processId)
     {
         // If/when we implement the CreateProcess_internal icall we will likely
         // need to so something smarter here to find the process if we did
@@ -42,7 +42,7 @@ namespace os
         // We have nothing to do here.
     }
 
-    std::string Process::GetProcessName(ProcessHandle* handle)
+    utils::Expected<std::string> Process::GetProcessName(ProcessHandle* handle)
     {
 #if IL2CPP_TARGET_LINUX
         char pathBuffer[32];
@@ -73,9 +73,13 @@ namespace os
 
         return processName;
 #else
-        IL2CPP_VM_NOT_SUPPORTED(Process::GetProcessName, "GetProcessName is not supported for non-Windows/OSX/Linux desktop platforms");
-        return std::string();
+        return utils::Il2CppError(utils::NotSupported, "GetProcessName is not supported for non-Windows/OSX/Linux desktop platforms");
 #endif
+    }
+
+    intptr_t Process::GetMainWindowHandle(int32_t pid)
+    {
+        return 0;
     }
 }
 }

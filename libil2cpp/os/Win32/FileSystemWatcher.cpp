@@ -13,8 +13,7 @@ namespace FileSystemWatcher
 {
     int IsSupported()
     {
-        IL2CPP_NOT_IMPLEMENTED_ICALL(FileSystemWatcher::IsSupported);
-        return 0;
+        return 1;
     }
 }
 }

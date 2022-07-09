@@ -13,14 +13,19 @@
 #include "utils/PathUtils.h"
 #include "utils/MemoryMappedFile.h"
 #include "utils/Runtime.h"
+#include "vm-utils/MethodDefinitionKey.h"
 #include <string>
 #include <cstdlib>
+
+#if RUNTIME_TINY
+#include "vm/DebugMetadata.h"
+#endif
 
 namespace il2cpp
 {
 namespace utils
 {
-#if IL2CPP_ENABLE_NATIVE_STACKTRACES
+#if (IL2CPP_ENABLE_NATIVE_STACKTRACES && (!RUNTIME_TINY || IL2CPP_TINY_DEBUG_METADATA))
 
     static Il2CppMethodPointer MaskSpareBits(const Il2CppMethodPointer method)
     {
@@ -223,7 +228,11 @@ namespace utils
             NativeMethodMap::iterator iter = s_NativeMethods.find_first(MaskSpareBits(nativeMethod));
             if (iter != s_NativeMethods.end())
             {
-                return IL2CPP_VM_METHOD_METADATA_FROM_METHOD_KEY(iter);
+#if RUNTIME_TINY
+                return tiny::vm::DebugMetadata::GetMethodNameFromMethodDefinitionIndex(iter->methodIndex);
+#else
+                return il2cpp::vm::MetadataCache::GetMethodInfoFromMethodHandle(iter->methodHandle);
+#endif
             }
         }
         else
@@ -249,7 +258,11 @@ namespace utils
             if (methodAfterNativeMethod != s_NativeMethods.begin())
                 methodAfterNativeMethod--;
 
-            return IL2CPP_VM_METHOD_METADATA_FROM_METHOD_KEY(methodAfterNativeMethod);
+#if RUNTIME_TINY
+            return tiny::vm::DebugMetadata::GetMethodNameFromMethodDefinitionIndex(methodAfterNativeMethod->methodIndex);
+#else
+            return il2cpp::vm::MetadataCache::GetMethodInfoFromMethodHandle(methodAfterNativeMethod->methodHandle);
+#endif
         }
 
         return NULL;
@@ -257,7 +270,7 @@ namespace utils
 
     bool NativeSymbol::GetMethodDebugInfo(const MethodInfo *method, Il2CppMethodDebugInfo* methodDebugInfo)
     {
-        Il2CppMethodPointer nativeMethod = method->methodPointer;
+        Il2CppMethodPointer nativeMethod = method->virtualMethodPointer;
 
         if (il2cpp::os::Image::ManagedSectionExists())
         {
@@ -277,7 +290,7 @@ namespace utils
 
         if (methodDebugInfo != NULL)
         {
-            methodDebugInfo->methodPointer = method->methodPointer;
+            methodDebugInfo->methodPointer = method->virtualMethodPointer;
             methodDebugInfo->code_size = codeSize;
             methodDebugInfo->file = NULL;
         }

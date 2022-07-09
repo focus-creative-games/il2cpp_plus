@@ -1,5 +1,6 @@
 #pragma once
 #include "il2cpp-config.h"
+#include "utils/Expected.h"
 #include <string>
 #include <stdint.h>
 #include <vector>
@@ -27,9 +28,9 @@ namespace os
         static std::vector<std::string> GetLogicalDrives();
         static void Exit(int result);
         static NORETURN void Abort();
-        static std::string GetWindowsFolderPath(int32_t folder);
+        static utils::Expected<std::string> GetWindowsFolderPath(int32_t folder);
 
-        static bool Is64BitOs();
+        static utils::Expected<bool> Is64BitOs();
     };
 }
 }

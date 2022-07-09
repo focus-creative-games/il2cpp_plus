@@ -32,6 +32,24 @@ using namespace il2cpp::vm;
 #error "Write Barrier Validation is specific to Boehm GC"
 #endif
 
+#if IL2CPP_TINY && !IL2CPP_TINY_DEBUGGER
+
+#define IL2CPP_TINY_BACKEND 1
+
+uint8_t* Il2CppGetTinyTypeUniverse();
+
+typedef void* StackFrames;
+
+struct StackTrace
+{
+    static StackFrames* GetStackFrames()
+    {
+        return NULL;
+    }
+};
+
+#endif
+
 namespace il2cpp
 {
 namespace gc
@@ -165,8 +183,20 @@ namespace gc
     static std::string ObjectName(void* object, AllocationKind kind)
     {
         if (kind != kObject)
-            return "?";
+        {
+            switch (kind)
+            {
+                case kPtrFree: return "Kind: kPtrFree";
+                case kNormal: return "Kind: kNormal";
+                case kUncollectable: return "Kind: kUncollectable";
+                default: return "?";
+            }
+        }
 
+#if IL2CPP_TINY_BACKEND
+        ptrdiff_t typeOffset = reinterpret_cast<uint8_t*>(((Il2CppObject*)object)->klass) - Il2CppGetTinyTypeUniverse();
+        return "Tiny Type Offset:" + std::to_string(typeOffset);
+#else
         Il2CppClass* klass = il2cpp_object_get_class((Il2CppObject*)(object));
 
         if (klass == NULL)
@@ -182,10 +212,14 @@ namespace gc
         }
 
         return std::string(il2cpp_class_get_namespace(klass)) + "::" + name;
+#endif
     }
 
     static std::string GetReadableStackTrace(const StackFrames &stackTrace)
     {
+#if IL2CPP_TINY_BACKEND
+        return "No managed stack traces in Tiny";
+#else
         std::string str;
         for (StackFrames::const_iterator i = stackTrace.begin(); i != stackTrace.end(); i++)
         {
@@ -198,6 +232,7 @@ namespace gc
             str += '\n';
         }
         return str;
+#endif
     }
 
     static std::string LogError(std::pair<void*, AllocationInfo> const & object, void** reference, void *refObject)
@@ -286,7 +321,7 @@ namespace gc
                         if (trackedRef == g_References.end())
                         {
                             char chbuf[1024];
-                            snprintf(chbuf, 1024, "%p looks like a reference to %p, but was not found in tracked references\n", ptr, ref);
+                            snprintf(chbuf, 1024, "\n%p looks like a reference to %p, but was not found in tracked references\n", ptr, ref);
                             msg += chbuf;
                             errors++;
                             msg += LogError(*i, ptr, j->first);
@@ -294,7 +329,7 @@ namespace gc
                         else if (trackedRef->second != ref)
                         {
                             char chbuf[1024];
-                            snprintf(chbuf, 1024, "%p does not match tracked value (%p!=%p).\n", ptr, trackedRef->second, ref);
+                            snprintf(chbuf, 1024, "\n%p does not match tracked value (%p!=%p).\n", ptr, trackedRef->second, ref);
                             msg += chbuf;
                             errors++;
                             msg += LogError(*i, ptr, j->first);

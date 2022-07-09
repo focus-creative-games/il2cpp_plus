@@ -33,7 +33,6 @@
 #include "gc/GarbageCollector.h"
 #include "gc/GCHandle.h"
 #include "gc/WriteBarrier.h"
-#include "icalls/mscorlib/System.Threading/ThreadPool.h"
 #include "icalls/mscorlib/System.Runtime.Remoting.Messaging/MonoMethodMessage.h"
 #include "mono/ThreadPool/threadpool-ms.h"
 #include "mono/ThreadPool/threadpool-ms-io.h"
@@ -57,8 +56,8 @@
 #include "vm/Runtime.h"
 #include "vm/String.h"
 #include "vm/Thread.h"
-#include "vm/ThreadPool.h"
 #include "vm/WaitHandle.h"
+#include <icalls/mscorlib/System.Runtime.Remoting.Messaging/MonoMethodMessage.h>
 
 #ifndef CLAMP
 #define CLAMP(a,low,high) (((a) < (low)) ? (low) : (((a) > (high)) ? (high) : (a)))
@@ -118,7 +117,7 @@ mono_method_call_message_new(MethodInfo *method, void* *params, MethodInfo *invo
 
 			vpos = params[i];
 
-		klass = il2cpp_class_from_type(method->parameters[i].parameter_type);
+		klass = il2cpp_class_from_type(method->parameters[i]);
 		arg = (Il2CppObject*)vpos;
 
 		il2cpp_array_setref(msg->args, i, arg);
@@ -153,7 +152,8 @@ ThreadPool::ThreadPool() :
     limit_io_min(0),
     limit_io_max(0),
     cpu_usage(0),
-    suspended(false)
+    suspended(false),
+    parked_threads_cond(active_threads_lock)
 {
     counters.as_int64_t = 0;
     cpu_usage_state = cpu_info_create();
@@ -244,16 +244,16 @@ static void cleanup (void)
 
 	std::vector<Il2CppInternalThread*> working_threads;
 
-	g_ThreadPool->active_threads_lock.Lock();
+	g_ThreadPool->active_threads_lock.Acquire();
 	working_threads = g_ThreadPool->working_threads;
-	g_ThreadPool->active_threads_lock.Unlock();
+	g_ThreadPool->active_threads_lock.Release();
 
 	/* stop all threadpool->working_threads */
 	for (i = 0; i < working_threads.size(); ++i)
 		worker_kill (working_threads[i]);
 
 	/* unpark all g_ThreadPool->parked_threads */
-	g_ThreadPool->parked_threads_cond.Broadcast();
+	g_ThreadPool->parked_threads_cond.NotifyAll();
 }
 
 bool threadpool_ms_enqueue_work_item (Il2CppDomain *domain, Il2CppObject *work_item)
@@ -307,13 +307,16 @@ static ThreadPoolDomain* domain_get(Il2CppDomain *domain, bool create)
 
 bool worker_try_unpark()
 {
-	il2cpp::os::FastAutoLockOld lock(&g_ThreadPool->active_threads_lock);
+	bool worker_unparked = true;
 
-	if (g_ThreadPool->parked_threads_count == 0)
-		return false;
-
-	g_ThreadPool->parked_threads_cond.Signal();
-	return true;
+	g_ThreadPool->active_threads_lock.AcquireScoped([&worker_unparked] {
+		if (g_ThreadPool->parked_threads_count == 0)
+			worker_unparked = false;
+		else
+			g_ThreadPool->parked_threads_cond.Notify(1);
+	});
+	
+	return worker_unparked;
 }
 
 static bool worker_request (Il2CppDomain *domain)
@@ -711,7 +714,7 @@ Il2CppAsyncResult* threadpool_ms_begin_invoke (Il2CppDomain *domain, Il2CppObjec
 
 	if (async_callback)
 	{
-		IL2CPP_OBJECT_SETREF (async_call, cb_method, (MethodInfo*)il2cpp::vm::Runtime::GetDelegateInvoke(il2cpp::vm::Object::GetClass((Il2CppObject*)async_callback)));
+		IL2CPP_OBJECT_SETREF (async_call, cb_method, const_cast<MethodInfo*>(il2cpp::vm::Runtime::GetDelegateInvoke(il2cpp::vm::Object::GetClass((Il2CppObject*)async_callback))));
 		IL2CPP_OBJECT_SETREF (async_call, cb_target, async_callback);
 	}
 
@@ -923,4 +926,9 @@ bool  ves_icall_System_Threading_ThreadPool_BindIOCompletionCallbackNative (void
 bool ves_icall_System_Threading_ThreadPool_IsThreadPoolHosted (void)
 {
 	return false;
+}
+
+void ves_icall_System_Threading_ThreadPool_NotifyWorkItemQueued (void)
+{
+	// We don't need an implementation here. The Mono code only uses this method to increment a performance counter that we don't have in IL2CPP.
 }

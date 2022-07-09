@@ -14,7 +14,7 @@ namespace System
 {
 namespace Diagnostics
 {
-    void DefaultTraceListener::WriteWindowsDebugString(Il2CppString* message)
+    void DefaultTraceListener::WriteWindowsDebugString(Il2CppChar* message)
     {
         DECLARE_IL2CPP_STRING_AS_STRING_VIEW_OF_NATIVE_CHARS(messageNative, message);
         il2cpp::os::Debug::WriteString(messageNative);

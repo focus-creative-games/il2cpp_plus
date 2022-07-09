@@ -1,6 +1,6 @@
 #pragma once
 
-#if IL2CPP_THREADS_PTHREAD && !RUNTIME_TINY
+#if IL2CPP_THREADS_PTHREAD
 
 #include "os/ErrorCodes.h"
 #include "utils/NonCopyable.h"

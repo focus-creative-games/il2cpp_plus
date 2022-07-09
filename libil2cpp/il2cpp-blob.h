@@ -42,5 +42,6 @@ typedef enum Il2CppTypeEnum
     IL2CPP_TYPE_SENTINEL   = 0x41,       /* Sentinel for varargs method signature */
     IL2CPP_TYPE_PINNED     = 0x45,       /* Local var that points to pinned object */
 
-    IL2CPP_TYPE_ENUM       = 0x55        /* an enumeration */
+    IL2CPP_TYPE_ENUM       = 0x55,        /* an enumeration */
+    IL2CPP_TYPE_IL2CPP_TYPE_INDEX       = 0xff        /* an index into IL2CPP type metadata table */
 } Il2CppTypeEnum;

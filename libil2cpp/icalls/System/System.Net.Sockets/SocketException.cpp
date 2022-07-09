@@ -16,7 +16,7 @@ namespace Net
 {
 namespace Sockets
 {
-    int32_t SocketException::WSAGetLastError()
+    int32_t SocketException::WSAGetLastError_icall()
     {
         IL2CPP_NOT_IMPLEMENTED_ICALL_NO_ASSERT(SocketException::WSAGetLastError, "Ignore this for now");
 

@@ -11,6 +11,7 @@ namespace vm
     {
     public:
         static uint32_t GetLastError();
+        static void SetLastError(uint32_t error);
         static void StoreLastError();
 
         static void InitializeLastErrorThreadStatic();

@@ -13,9 +13,10 @@
 #undef CreatePipe
 
 #include "os/File.h"
+#include "utils/Expected.h"
+#include "utils/Il2CppError.h"
 #include "utils/StringUtils.h"
 #include "utils/PathUtils.h"
-#include "il2cpp-vm-support.h"
 
 #if IL2CPP_TARGET_WINRT
 #include "os/WinRT/BrokeredFileSystem.h"
@@ -33,17 +34,16 @@ namespace il2cpp
 namespace os
 {
 #if IL2CPP_TARGET_WINDOWS_DESKTOP
-    bool File::Isatty(FileHandle* fileHandle)
+    utils::Expected<bool> File::Isatty(FileHandle* fileHandle)
     {
         DWORD mode;
         return GetConsoleMode((HANDLE)fileHandle, &mode) != 0;
     }
 
 #elif IL2CPP_TARGET_WINDOWS_GAMES
-    bool File::Isatty(FileHandle* fileHandle)
+    utils::Expected<bool> File::Isatty(FileHandle* fileHandle)
     {
-        IL2CPP_VM_NOT_SUPPORTED("Isatty", "Console functions are not supported on Windows Games platforms.");
-        return false;
+        return utils::Il2CppError(utils::NotSupported, "Console functions are not supported on Windows Games platforms.");
     }
 
 #endif
@@ -66,13 +66,13 @@ namespace os
 
 #endif // IL2CPP_TARGET_WINDOWS_DESKTOP || IL2CPP_TARGET_WINDOWS_GAMES
 
-    bool File::CreatePipe(FileHandle** read_handle, FileHandle** write_handle)
+    utils::Expected<bool> File::CreatePipe(FileHandle** read_handle, FileHandle** write_handle)
     {
         int error;
         return CreatePipe(read_handle, write_handle, &error);
     }
 
-    bool File::CreatePipe(FileHandle** read_handle, FileHandle** write_handle, int* error)
+    utils::Expected<bool> File::CreatePipe(FileHandle** read_handle, FileHandle** write_handle, int* error)
     {
 #if IL2CPP_TARGET_WINDOWS_DESKTOP || IL2CPP_TARGET_WINDOWS_GAMES
         SECURITY_ATTRIBUTES attr;
@@ -92,8 +92,7 @@ namespace os
 
         return true;
 #else // IL2CPP_TARGET_WINDOWS_DESKTOP || IL2CPP_TARGET_WINDOWS_GAMES
-        IL2CPP_VM_NOT_SUPPORTED("CreatePipe", "Pipes are not supported on WinRT based platforms.");
-        return false;
+        return utils::Il2CppError(utils::NotSupported, "Pipes are not supported on WinRT based platforms.");
 #endif // IL2CPP_TARGET_WINDOWS_DESKTOP || IL2CPP_TARGET_WINDOWS_GAMES
     }
 
@@ -496,10 +495,6 @@ namespace os
         if (!::ReadFile(handle, dest, count, &bytesRead, NULL))
             *error = FileWin32ErrorToErrorCode(::GetLastError());
 
-#if IL2CPP_ENABLE_PROFILER
-        IL2CPP_VM_PROFILE_FILEIO(IL2CPP_PROFILE_FILEIO_READ, count);
-#endif
-
         return bytesRead;
     }
 
@@ -540,9 +535,6 @@ namespace os
                 return -1;
             }
         }
-#if IL2CPP_ENABLE_PROFILER
-        IL2CPP_VM_PROFILE_FILEIO(IL2CPP_PROFILE_FILEIO_WRITE, count);
-#endif
 
         return written;
     }
@@ -618,9 +610,14 @@ namespace os
         return false;
     }
 
-    bool File::IsExecutable(const std::string& path)
+    utils::Expected<bool> File::IsExecutable(const std::string& path)
     {
         return ends_with(path, "exe");
+    }
+
+    bool File::Cancel(FileHandle* handle)
+    {
+        return CancelIoEx((HANDLE)handle, NULL);
     }
 }
 }

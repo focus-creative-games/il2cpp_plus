@@ -73,6 +73,7 @@ typedef enum Il2CppRGCTXDataType
     IL2CPP_RGCTX_DATA_CLASS,
     IL2CPP_RGCTX_DATA_METHOD,
     IL2CPP_RGCTX_DATA_ARRAY,
+    IL2CPP_RGCTX_DATA_CONSTRAINED,
 } Il2CppRGCTXDataType;
 
 typedef union Il2CppRGCTXDefinitionData
@@ -82,10 +83,16 @@ typedef union Il2CppRGCTXDefinitionData
     TypeIndex __typeIndex;
 } Il2CppRGCTXDefinitionData;
 
+typedef struct Il2CppRGCTXConstrainedData
+{
+    TypeIndex __typeIndex;
+    uint32_t __encodedMethodIndex;
+} Il2CppRGCTXConstrainedData;
+
 typedef struct Il2CppRGCTXDefinition
 {
     Il2CppRGCTXDataType type;
-    Il2CppRGCTXDefinitionData data;
+    const void* data;
 } Il2CppRGCTXDefinition;
 
 typedef struct

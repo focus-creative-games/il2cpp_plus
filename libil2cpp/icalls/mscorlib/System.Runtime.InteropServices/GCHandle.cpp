@@ -105,7 +105,9 @@ namespace InteropServices
             vm::Exception::Raise(ex);
         }
 
-        return gc::GCHandle::GetTargetHandle(obj, handle, type);
+        auto targetHandle = gc::GCHandle::GetTargetHandle(obj, handle, type);
+        vm::Exception::RaiseIfError(targetHandle.GetError());
+        return targetHandle.Get();
     }
 } /* namespace InteropServices */
 } /* namespace Runtime */

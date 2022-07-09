@@ -2,11 +2,10 @@
 #include "os/Mutex.h"
 #include "os/Thread.h"
 #include "os/ThreadLocalValue.h"
-#include "os/StackTrace.h"
+#include "os/Time.h"
 #include "os/Semaphore.h"
 #include "vm/Domain.h"
 #include "vm/Exception.h"
-#include "vm/Object.h"
 #include "vm/Object.h"
 #include "vm/Profiler.h"
 #include "vm/Runtime.h"
@@ -23,7 +22,6 @@
 #include "il2cpp-class-internals.h"
 #include "il2cpp-object-internals.h"
 #include <algorithm>
-#include <map>
 
 #include "Baselib.h"
 #include "Cpp/Atomic.h"
@@ -44,7 +42,7 @@ namespace vm
 
     typedef std::vector<Il2CppThread*, il2cpp::gc::Allocator<Il2CppThread*> > GCTrackedThreadVector;
 
-// we need to allocate this ourselves so the CRT does not initialize it and try to allocate GC memory on startup before the GC is initialized
+    // we need to allocate this ourselves so the CRT does not initialize it and try to allocate GC memory on startup before the GC is initialized
     static GCTrackedThreadVector* s_AttachedThreads;
 
     static bool s_BlockNewThreads = false;
@@ -105,10 +103,10 @@ namespace vm
 
     Il2CppThread* Thread::Attach(Il2CppDomain *domain)
     {
-        Il2CppThread* thread = Current();
+        Il2CppThread* managedThread = Current();
 
-        if (thread != NULL)
-            return thread;
+        if (managedThread != NULL)
+            return managedThread;
 
         int temp = 0;
         if (!gc::GarbageCollector::RegisterThread(&temp))
@@ -122,31 +120,37 @@ namespace vm
         os::Thread* osThread = os::Thread::GetOrCreateCurrentThread();
 
         // Create managed object representing the current thread.
+        managedThread = (Il2CppThread*)Object::New(il2cpp_defaults.thread_class);
+        SetupInternalManagedThread(managedThread, osThread);
 
-        thread = (Il2CppThread*)Object::New(il2cpp_defaults.thread_class);
-        gc::WriteBarrier::GenericStore(&thread->internal_thread, Object::New(il2cpp_defaults.internal_thread_class));
-        thread->GetInternalThread()->handle = osThread;
-        thread->GetInternalThread()->state = kThreadStateRunning;
-        thread->GetInternalThread()->tid = osThread->Id();
-        thread->GetInternalThread()->managed_id = GetNewManagedId();
-        Setup(thread);
+        managedThread->GetInternalThread()->state = kThreadStateRunning;
 
-        Initialize(thread, domain);
+        InitializeManagedThread(managedThread, domain);
 
-        return thread;
+        return managedThread;
     }
 
-    void Thread::Setup(Il2CppThread* thread)
+    void Thread::SetupInternalManagedThread(Il2CppThread* thread, os::Thread* osThread)
     {
-        thread->GetInternalThread()->synch_cs = new baselib::ReentrantLock;
-        thread->GetInternalThread()->apartment_state = il2cpp::os::kApartmentStateUnknown;
+        Il2CppInternalThread* internalManagedThread = (Il2CppInternalThread*)Object::New(il2cpp_defaults.internal_thread_class);
+        internalManagedThread->handle = osThread;
+        internalManagedThread->tid = osThread->Id();
+        internalManagedThread->managed_id = GetNewManagedId();
+
+        // The synch_cs object is deallocated in the InternalThread::Thread_free_internal icall, which
+        // is called from the managed thread finalizer.
+        internalManagedThread->longlived = (Il2CppLongLivedThreadData*)IL2CPP_MALLOC(sizeof(Il2CppLongLivedThreadData));
+        internalManagedThread->longlived->synch_cs = new baselib::ReentrantLock;
+
+        internalManagedThread->apartment_state = il2cpp::os::kApartmentStateUnknown;
+        gc::WriteBarrier::GenericStore(&thread->internal_thread, internalManagedThread);
     }
 
-    void Thread::Initialize(Il2CppThread* thread, Il2CppDomain* domain)
+    void Thread::InitializeManagedThread(Il2CppThread* thread, Il2CppDomain* domain)
     {
 #if IL2CPP_SUPPORT_THREADS
         IL2CPP_ASSERT(thread->GetInternalThread()->handle != NULL);
-        IL2CPP_ASSERT(thread->GetInternalThread()->synch_cs != NULL);
+        IL2CPP_ASSERT(thread->GetInternalThread()->longlived->synch_cs != NULL);
 #endif
 
 #if IL2CPP_MONO_DEBUGGER
@@ -169,9 +173,9 @@ namespace vm
 #endif
 
         // Sync thread name.
-        if (thread->GetInternalThread()->name)
+        if (thread->GetInternalThread()->name.chars)
         {
-            std::string utf8Name = il2cpp::utils::StringUtils::Utf16ToUtf8(thread->GetInternalThread()->name);
+            std::string utf8Name = il2cpp::utils::StringUtils::Utf16ToUtf8(thread->GetInternalThread()->name.chars);
             thread->GetInternalThread()->handle->SetName(utf8Name.c_str());
         }
 
@@ -189,7 +193,7 @@ namespace vm
             RequestInterrupt(thread);
     }
 
-    void Thread::Uninitialize(Il2CppThread *thread)
+    void Thread::UninitializeManagedThread(Il2CppThread *thread)
     {
 #if IL2CPP_HAS_NATIVE_THREAD_CLEANUP
         // unregister from special cleanup since we are doing it now
@@ -242,7 +246,7 @@ namespace vm
         return &(*s_AttachedThreads)[0];
     }
 
-    static void STDCALL TerminateBackgroundThread(void* context)
+    static void STDCALL TerminateThread(void* context)
     {
         // We throw a dummy exception to make sure things clean up properly
         // and we don't leave any locks behind (such as global locks in the allocator which
@@ -260,7 +264,9 @@ namespace vm
 #endif
     }
 
-    void Thread::KillAllBackgroundThreadsAndWaitForForegroundThreads()
+    // This function requests that all threads exit
+    // If a thread is in a non-alertable wait it may not have exited when this method exits
+    void Thread::AbortAllThreads()
     {
 #if IL2CPP_SUPPORT_THREADS
         Il2CppThread* gcFinalizerThread = NULL;
@@ -277,8 +283,7 @@ namespace vm
         gc::GarbageCollector::SetWriteBarrier((void**)attachedThreadsCopy.data(), sizeof(Il2CppThread*) * attachedThreadsCopy.size());
         s_ThreadMutex.Release();
 
-        std::vector<os::Thread*> backgroundThreads;
-        std::vector<os::Thread*> foregroundThreads;
+        std::vector<os::Thread*> activeThreads;
 
         // Kill all threads but the finalizer and current one. We temporarily flush out
         // the entire list and then just put the two threads back.
@@ -294,16 +299,9 @@ namespace vm
             }
             else if (thread != currentThread && !IsDebuggerThread(osThread))
             {
-                // If it's a background thread, request it to kill itself.
-                if (GetState(thread) & kThreadStateBackground)
-                {
-                    ////TODO: use Thread.Abort() instead
-                    osThread->QueueUserAPC(TerminateBackgroundThread, NULL);
-
-                    backgroundThreads.push_back(osThread);
-                }
-                else
-                    foregroundThreads.push_back(osThread);
+                ////TODO: use Thread.Abort() instead
+                osThread->QueueUserAPC(TerminateThread, NULL);
+                activeThreads.push_back(osThread);
             }
 
             attachedThreadsCopy.pop_back();
@@ -316,23 +314,18 @@ namespace vm
         ////FIXME: While we don't have stable thread abortion in place yet, work around problems in
         ////    the current implementation by repeatedly requesting threads to terminate. This works around
         ////    race condition to some extent.
-        while (backgroundThreads.size())
+        while (activeThreads.size())
         {
-            os::Thread* osThread = backgroundThreads.back();
+            os::Thread* osThread = activeThreads.back();
 
             // Wait for the thread.
             if (osThread->Join(10) == kWaitStatusSuccess)
-                backgroundThreads.pop_back();
+                activeThreads.pop_back();
             else
             {
                 ////TODO: use Thread.Abort() instead
-                osThread->QueueUserAPC(TerminateBackgroundThread, NULL);
+                osThread->QueueUserAPC(TerminateThread, NULL);
             }
-        }
-
-        for (unsigned i = 0; i < foregroundThreads.size(); ++i)
-        {
-            foregroundThreads[i]->Join();
         }
 
 
@@ -353,7 +346,7 @@ namespace vm
     {
         IL2CPP_ASSERT(thread != NULL && "Cannot detach a NULL thread");
 
-        Uninitialize(thread);
+        UninitializeManagedThread(thread);
         il2cpp::vm::StackTrace::CleanupStackTracesForCurrentThread();
     }
 
@@ -370,31 +363,31 @@ namespace vm
 
     void Thread::SetState(Il2CppThread *thread, ThreadState value)
     {
-        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->longlived->synch_cs);
         thread->GetInternalThread()->state |= value;
     }
 
     void Thread::ClrState(Il2CppInternalThread* thread, ThreadState clr)
     {
-        il2cpp::os::FastAutoLock lock(thread->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->longlived->synch_cs);
         thread->state &= ~clr;
     }
 
     void Thread::SetState(Il2CppInternalThread *thread, ThreadState value)
     {
-        il2cpp::os::FastAutoLock lock(thread->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->longlived->synch_cs);
         thread->state |= value;
     }
 
     ThreadState Thread::GetState(Il2CppInternalThread *thread)
     {
-        il2cpp::os::FastAutoLock lock(thread->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->longlived->synch_cs);
         return (ThreadState)thread->state;
     }
 
     bool Thread::TestState(Il2CppInternalThread* thread, ThreadState value)
     {
-        il2cpp::os::FastAutoLock lock(thread->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->longlived->synch_cs);
         return (thread->state & value) != 0;
     }
 
@@ -405,13 +398,13 @@ namespace vm
 
     ThreadState Thread::GetState(Il2CppThread *thread)
     {
-        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->longlived->synch_cs);
         return (ThreadState)thread->GetInternalThread()->state;
     }
 
     void Thread::ClrState(Il2CppThread* thread, ThreadState state)
     {
-        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->longlived->synch_cs);
         thread->GetInternalThread()->state &= ~state;
     }
 
@@ -491,7 +484,7 @@ namespace vm
     {
         AUTO_LOCK_THREADS();
         if (s_BlockNewThreads)
-            TerminateBackgroundThread(NULL);
+            TerminateThread(NULL);
         else
         {
             s_AttachedThreads->push_back(thread);
@@ -521,48 +514,48 @@ namespace vm
 
     std::string Thread::GetName(Il2CppInternalThread* thread)
     {
-        if (thread->name == NULL)
+        if (thread->name.chars == NULL)
             return std::string();
 
-        return utils::StringUtils::Utf16ToUtf8(thread->name);
+        return utils::StringUtils::Utf16ToUtf8(thread->name.chars);
     }
 
     void Thread::SetName(Il2CppThread* thread, Il2CppString* name)
     {
-        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->longlived->synch_cs);
 
         // Throw if already set.
-        if (thread->GetInternalThread()->name_len != 0)
+        if (thread->GetInternalThread()->name.length != 0)
             il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetInvalidOperationException("Thread name can only be set once."));
 
         // Store name.
-        thread->GetInternalThread()->name_len = utils::StringUtils::GetLength(name);
-        thread->GetInternalThread()->name = il2cpp::utils::StringUtils::StringDuplicate(utils::StringUtils::GetChars(name), thread->GetInternalThread()->name_len);
+        thread->GetInternalThread()->name.length = utils::StringUtils::GetLength(name);
+        thread->GetInternalThread()->name.chars = il2cpp::utils::StringUtils::StringDuplicate(utils::StringUtils::GetChars(name), thread->GetInternalThread()->name.length);
 
         // Hand over to OS layer, if thread has been started already.
         if (thread->GetInternalThread()->handle)
         {
-            std::string utf8Name = il2cpp::utils::StringUtils::Utf16ToUtf8(thread->GetInternalThread()->name);
+            std::string utf8Name = il2cpp::utils::StringUtils::Utf16ToUtf8(thread->GetInternalThread()->name.chars);
             thread->GetInternalThread()->handle->SetName(utf8Name.c_str());
         }
     }
 
     void Thread::SetName(Il2CppInternalThread* thread, Il2CppString* name)
     {
-        il2cpp::os::FastAutoLock lock(thread->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->longlived->synch_cs);
 
         // Throw if already set.
-        if (thread->name_len != 0)
+        if (thread->name.length != 0)
             il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetInvalidOperationException("Thread name can only be set once."));
 
         // Store name.
-        thread->name_len = utils::StringUtils::GetLength(name);
-        thread->name = il2cpp::utils::StringUtils::StringDuplicate(utils::StringUtils::GetChars(name), thread->name_len);
+        thread->name.length = utils::StringUtils::GetLength(name);
+        thread->name.chars = il2cpp::utils::StringUtils::StringDuplicate(utils::StringUtils::GetChars(name), thread->name.length);
 
         // Hand over to OS layer, if thread has been started already.
         if (thread->handle)
         {
-            std::string utf8Name = il2cpp::utils::StringUtils::Utf16ToUtf8(thread->name);
+            std::string utf8Name = il2cpp::utils::StringUtils::Utf16ToUtf8(thread->name.chars);
             thread->handle->SetName(utf8Name.c_str());
         }
     }
@@ -574,7 +567,7 @@ namespace vm
 
     void Thread::RequestInterrupt(Il2CppThread* thread)
     {
-        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->longlived->synch_cs);
 
         thread->GetInternalThread()->interruption_requested = true;
 
@@ -590,7 +583,7 @@ namespace vm
         if (!currentThread)
             return;
 
-        il2cpp::os::FastAutoLock lock(currentThread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(currentThread->GetInternalThread()->longlived->synch_cs);
 
         // Don't throw if thread is not currently in waiting state or if there's
         // no pending interrupt.
@@ -613,7 +606,7 @@ namespace vm
 
     bool Thread::RequestAbort(Il2CppThread* thread)
     {
-        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->GetInternalThread()->longlived->synch_cs);
 
         ThreadState state = il2cpp::vm::Thread::GetState(thread);
         if (state & kThreadStateAbortRequested || state & kThreadStateStopped || state & kThreadStateStopRequested)
@@ -637,7 +630,7 @@ namespace vm
 
     bool Thread::RequestAbort(Il2CppInternalThread* thread)
     {
-        il2cpp::os::FastAutoLock lock(thread->synch_cs);
+        il2cpp::os::FastAutoLock lock(thread->longlived->synch_cs);
 
         ThreadState state = il2cpp::vm::Thread::GetState(thread);
         if (state & kThreadStateAbortRequested || state & kThreadStateStopped || state & kThreadStateStopRequested)
@@ -662,14 +655,14 @@ namespace vm
     void Thread::SetPriority(Il2CppThread* thread, int32_t priority)
     {
         Il2CppInternalThread* internalThread = thread->GetInternalThread();
-        il2cpp::os::FastAutoLock lock(internalThread->synch_cs);
+        il2cpp::os::FastAutoLock lock(internalThread->longlived->synch_cs);
         internalThread->handle->SetPriority((il2cpp::os::ThreadPriority)priority);
     }
 
     int32_t Thread::GetPriority(Il2CppThread* thread)
     {
         Il2CppInternalThread* internalThread = thread->GetInternalThread();
-        il2cpp::os::FastAutoLock lock(internalThread->synch_cs);
+        il2cpp::os::FastAutoLock lock(internalThread->longlived->synch_cs);
         return internalThread->handle->GetPriority();
     }
 
@@ -698,7 +691,7 @@ namespace vm
             bool attachSuccessful = false;
             try
             {
-                il2cpp::vm::Thread::Initialize(startData->m_Thread, startData->m_Domain);
+                il2cpp::vm::Thread::InitializeManagedThread(startData->m_Thread, startData->m_Domain);
                 il2cpp::vm::Thread::SetState(startData->m_Thread, kThreadStateRunning);
 
                 attachSuccessful = true;
@@ -727,7 +720,7 @@ namespace vm
             il2cpp::vm::Thread::ClrState(startData->m_Thread, kThreadStateRunning);
             il2cpp::vm::Thread::SetState(startData->m_Thread, kThreadStateStopped);
             if (attachSuccessful)
-                il2cpp::vm::Thread::Uninitialize(startData->m_Thread);
+                il2cpp::vm::Thread::UninitializeManagedThread(startData->m_Thread);
 
             il2cpp::vm::StackTrace::CleanupStackTracesForCurrentThread();
         }
@@ -738,29 +731,27 @@ namespace vm
 
     Il2CppInternalThread* Thread::CreateInternal(void(*func)(void*), void* arg, bool threadpool_thread, uint32_t stack_size)
     {
+        // The os::Thread object is deallocated in the InternalThread::Thread_free_internal icall, which
+        // is called from the managed thread finalizer.
         os::Thread* osThread = new os::Thread();
+        Il2CppThread* managedThread = (Il2CppThread*)Object::New(il2cpp_defaults.thread_class);
 
-        Il2CppThread* thread = (Il2CppThread*)Object::New(il2cpp_defaults.thread_class);
-        Il2CppInternalThread* internal = (Il2CppInternalThread*)Object::New(il2cpp_defaults.internal_thread_class);
+        SetupInternalManagedThread(managedThread, osThread);
+        Il2CppInternalThread* internalManagedThread = managedThread->GetInternalThread();
 
-        gc::WriteBarrier::GenericStore(&thread->internal_thread, internal);
-
-        internal->state = kThreadStateUnstarted;
-        internal->handle = osThread;
-        internal->synch_cs = new baselib::ReentrantLock;
-        internal->apartment_state = il2cpp::os::kApartmentStateUnknown;
-        internal->threadpool_thread = threadpool_thread;
+        internalManagedThread->state = kThreadStateUnstarted;
+        internalManagedThread->threadpool_thread = threadpool_thread;
 
         // use fixed GC memory since we are storing managed object pointers
         StartDataInternal* startData = (StartDataInternal*)gc::GarbageCollector::AllocateFixed(sizeof(StartDataInternal), NULL);
-        gc::WriteBarrier::GenericStore(&startData->m_Thread, thread);
+        gc::WriteBarrier::GenericStore(&startData->m_Thread, managedThread);
         gc::WriteBarrier::GenericStore(&startData->m_Domain, Domain::GetCurrent());
         startData->m_Delegate = (void*)func;
         startData->m_StartArg = arg;
         startData->m_Semaphore = new il2cpp::os::Semaphore(0);
 
         osThread->SetStackSize(stack_size);
-        osThread->SetExplicitApartment(static_cast<il2cpp::os::ApartmentState>(internal->apartment_state));
+        osThread->SetExplicitApartment(static_cast<il2cpp::os::ApartmentState>(managedThread->GetInternalThread()->apartment_state));
         il2cpp::os::ErrorCode status = osThread->Run(&ThreadStart, startData);
         if (status != il2cpp::os::kErrorCodeSuccess)
         {
@@ -768,13 +759,11 @@ namespace vm
             return NULL;
         }
 
-        internal->state &= ~kThreadStateUnstarted;
-        internal->tid = osThread->Id();
-        internal->managed_id = GetNewManagedId();
+        internalManagedThread->state &= ~kThreadStateUnstarted;
 
         startData->m_Semaphore->Post(1, NULL);
 
-        return internal;
+        return internalManagedThread;
     }
 
     void Thread::Stop(Il2CppInternalThread* thread)
@@ -794,7 +783,7 @@ namespace vm
             if (GetState(thread) & kThreadStateBackground)
             {
                 ////TODO: use Thread.Abort() instead
-                osThread->QueueUserAPC(TerminateBackgroundThread, NULL);
+                osThread->QueueUserAPC(TerminateThread, NULL);
             }
 
             // Wait for the thread.
@@ -826,7 +815,7 @@ namespace vm
         if (!currentThread)
             return;
 
-        il2cpp::os::FastAutoLock lock(currentThread->GetInternalThread()->synch_cs);
+        il2cpp::os::FastAutoLock lock(currentThread->GetInternalThread()->longlived->synch_cs);
 
         ThreadState state = il2cpp::vm::Thread::GetState(currentThread);
         if (!(state & kThreadStateAbortRequested))
@@ -834,7 +823,7 @@ namespace vm
 
         // Throw interrupt exception.
         Il2CppException* abortException = il2cpp::vm::Exception::GetThreadAbortException();
-        IL2CPP_OBJECT_SETREF(currentThread->GetInternalThread(), abort_exc, (Il2CppObject*)abortException);
+        IL2CPP_OBJECT_SETREF(currentThread->GetInternalThread(), abort_exc, abortException);
         il2cpp::vm::Exception::Raise(abortException);
     }
 

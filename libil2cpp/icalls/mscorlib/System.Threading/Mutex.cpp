@@ -13,7 +13,14 @@ namespace System
 {
 namespace Threading
 {
-    intptr_t Mutex::CreateMutex_internal(bool initiallyOwned, Il2CppString* name, bool* created)
+    bool Mutex::ReleaseMutex_internal(intptr_t handle)
+    {
+        il2cpp::os::MutexHandle* mutex = (il2cpp::os::MutexHandle*)handle;
+        mutex->Get()->Unlock();
+        return true;
+    }
+
+    intptr_t Mutex::CreateMutex_icall(bool initiallyOwned, Il2CppChar* name, int32_t name_length, bool* created)
     {
         *created = true;
         il2cpp::os::Mutex* mutex = NULL;
@@ -33,14 +40,7 @@ namespace Threading
         return reinterpret_cast<intptr_t>(new il2cpp::os::MutexHandle(mutex));
     }
 
-    bool Mutex::ReleaseMutex_internal(intptr_t handle)
-    {
-        il2cpp::os::MutexHandle* mutex = (il2cpp::os::MutexHandle*)handle;
-        mutex->Get()->Unlock();
-        return true;
-    }
-
-    intptr_t Mutex::OpenMutex_internal(Il2CppString* name, MutexRights rights, MonoIOError* error)
+    intptr_t Mutex::OpenMutex_icall(Il2CppChar* name, int32_t name_length, int32_t rights, int32_t* error)
     {
         IL2CPP_NOT_IMPLEMENTED_ICALL(Mutex::OpenMutex_internal);
 

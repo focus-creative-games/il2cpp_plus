@@ -38,10 +38,10 @@ namespace vm
                 return utils::Read16(ptr);
 
             case IL2CPP_TYPE_I4: // Sign extend
-                return static_cast<int64_t>(static_cast<int32_t>(utils::Read32(ptr)));
+                return static_cast<int64_t>(static_cast<int32_t>(utils::ReadCompressedInt32(&ptr)));
 
             case IL2CPP_TYPE_U4:
-                return utils::Read32(ptr);
+                return utils::ReadCompressedUInt32(&ptr);
 
             case IL2CPP_TYPE_U8:
             case IL2CPP_TYPE_I8:

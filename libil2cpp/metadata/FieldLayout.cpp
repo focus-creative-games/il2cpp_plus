@@ -108,7 +108,7 @@ namespace metadata
                 Il2CppGenericClass* gclass = type->data.generic_class;
                 Il2CppClass* container_class = GenericClass::GetTypeDefinition(gclass);
 
-                if (container_class != NULL && container_class->valuetype)
+                if (container_class != NULL && container_class->byval_arg.valuetype)
                 {
                     if (container_class->enumtype)
                     {
@@ -147,16 +147,19 @@ namespace metadata
         return size;
     }
 
-    void FieldLayout::LayoutFields(size_t parentSize, size_t actualParentSize, size_t parentAlignment, uint8_t packing, const metadata::Il2CppTypeVector& fieldTypes, FieldLayoutData& data)
+    void FieldLayout::LayoutFields(const Il2CppClass* klass, FieldInfoFilter filter,  size_t parentSize, size_t actualParentSize, size_t parentAlignment, uint8_t packing, FieldLayoutData& data)
     {
         data.classSize = parentSize;
         data.actualClassSize = actualParentSize;
         IL2CPP_ASSERT(parentAlignment <= std::numeric_limits<uint8_t>::max());
         data.minimumAlignment = static_cast<uint8_t>(parentAlignment);
         data.naturalAlignment = 0;
-        for (Il2CppTypeVector::const_iterator iter = fieldTypes.begin(); iter != fieldTypes.end(); ++iter)
+        for (uint16_t i = 0; i < klass->field_count; i++)
         {
-            SizeAndAlignment sa = GetTypeSizeAndAlignment(*iter);
+            if (!filter(klass->fields + i))
+                continue;
+
+            SizeAndAlignment sa = GetTypeSizeAndAlignment(klass->fields[i].type);
 
             // For fields, we might not want to take the actual alignment of the type - that might account for
             // packing. When a type is used as a field, we should not care about its alignment with packing,

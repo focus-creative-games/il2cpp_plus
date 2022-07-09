@@ -14,7 +14,7 @@ extern "C"
 
     int32_t UnityPalNativeGetExitCodeProcess(UnityPalProcessHandle* handle, int32_t* exitCode)
     {
-        return il2cpp::os::NativeMethods::GetExitCodeProcess(handle, exitCode);
+        return il2cpp::os::NativeMethods::GetExitCodeProcess(handle, exitCode).Get();
     }
 
     int32_t UnityPalNativeGetCurrentProcessId()
@@ -24,7 +24,7 @@ extern "C"
 
     UnityPalProcessHandle* UnityPalNativeGetCurrentProcess()
     {
-        return il2cpp::os::NativeMethods::GetCurrentProcess();
+        return il2cpp::os::NativeMethods::GetCurrentProcess().Get();
     }
 }
 

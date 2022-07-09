@@ -1,7 +1,7 @@
 #pragma once
-#include "il2cpp-vm-support.h"
 #include "os/WindowsRuntime.h"
 #include "vm/Exception.h"
+#include "vm/String.h"
 #include "utils/StringView.h"
 
 struct Il2CppIActivationFactory;
@@ -18,14 +18,14 @@ namespace vm
         static inline void CreateHStringReference(const utils::StringView<Il2CppNativeChar>& str, Il2CppHStringHeader* header, Il2CppHString* hstring)
         {
             il2cpp_hresult_t hr = os::WindowsRuntime::CreateHStringReference(str, header, hstring);
-            IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+            vm::Exception::RaiseIfFailed(hr, false);
         }
 
         static inline Il2CppHString CreateHString(Il2CppString* str)
         {
             Il2CppHString result;
             il2cpp_hresult_t hr = os::WindowsRuntime::CreateHString(utils::StringView<Il2CppChar>(str->chars, str->length), &result);
-            IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+            vm::Exception::RaiseIfFailed(hr, false);
             return result;
         }
 
@@ -33,39 +33,47 @@ namespace vm
         {
             Il2CppHString result;
             il2cpp_hresult_t hr = os::WindowsRuntime::CreateHString(str, &result);
-            IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+            vm::Exception::RaiseIfFailed(hr, false);
             return result;
         }
 
         static inline void DeleteHString(Il2CppHString hstring)
         {
             il2cpp_hresult_t hr = os::WindowsRuntime::DeleteHString(hstring);
-            IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+            vm::Exception::RaiseIfFailed(hr, false);
         }
 
         static inline Il2CppString* HStringToManagedString(Il2CppHString hstring)
         {
-            return os::WindowsRuntime::HStringToManagedString(hstring);
+            if (hstring == NULL)
+                return vm::String::Empty();
+
+            uint32_t length;
+            auto result = os::WindowsRuntime::GetHStringBuffer(hstring, &length);
+            vm::Exception::RaiseIfError(result.GetError());
+            return vm::String::NewUtf16(result.Get(), length);
         }
 
         static inline void* PreallocateHStringBuffer(uint32_t length, Il2CppNativeChar** buffer)
         {
             void* bufferHandle;
-            il2cpp_hresult_t hr = os::WindowsRuntime::PreallocateHStringBuffer(length, buffer, &bufferHandle);
-            IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+            auto hr = os::WindowsRuntime::PreallocateHStringBuffer(length, buffer, &bufferHandle);
+            vm::Exception::RaiseIfError(hr.GetError());
+            vm::Exception::RaiseIfFailed(hr.Get(), false);
             return bufferHandle;
         }
 
         static inline Il2CppHString PromoteHStringBuffer(void* bufferHandle)
         {
             Il2CppHString hstring;
-            il2cpp_hresult_t hr = os::WindowsRuntime::PromoteHStringBuffer(bufferHandle, &hstring);
+            auto hr = os::WindowsRuntime::PromoteHStringBuffer(bufferHandle, &hstring);
+            vm::Exception::RaiseIfError(hr.GetError());
 
-            if (IL2CPP_HR_FAILED(hr))
+            if (IL2CPP_HR_FAILED(hr.Get()))
             {
                 // Prevent memory leaks by deleting the hstring buffer that was supposed to be promoted before raising an exception
                 os::WindowsRuntime::DeleteHStringBuffer(bufferHandle);
-                IL2CPP_VM_RAISE_COM_EXCEPTION(hr, false);
+                vm::Exception::Raise(hr.Get(), false);
             }
 
             return hstring;

@@ -8,6 +8,7 @@
 #include "gc/GarbageCollector.h"
 #include "metadata/FieldLayout.h"
 #include "os/Atomic.h"
+#include "os/MarshalStringAlloc.h"
 #include "vm/Array.h"
 #include "vm/CCW.h"
 #include "vm/Class.h"
@@ -25,6 +26,7 @@
 #include "utils/StringUtils.h"
 #include <string>
 #include <deque>
+#include <algorithm>
 
 namespace il2cpp
 {
@@ -237,7 +239,7 @@ namespace InteropServices
             if (typeType == IL2CPP_TYPE_CLASS)
             {
                 typedef void (*Constructor)(Il2CppObject*);
-                Constructor ctor = reinterpret_cast<Constructor>(vm::Class::GetMethodFromName(type, ".ctor", 0)->methodPointer);
+                Constructor ctor = reinterpret_cast<Constructor>(vm::Class::GetMethodFromName(type, ".ctor", 0)->virtualMethodPointer);
                 ctor(result);
                 utils::MarshalingUtils::MarshalStructFromNative(reinterpret_cast<void*>(ptr), result, type->interopData);
             }
@@ -398,28 +400,25 @@ namespace InteropServices
         return reinterpret_cast<intptr_t>(vm::PlatformInvoke::MarshalCSharpStringToCppBString(s));
     }
 
-    intptr_t Marshal::StringToHGlobalUni(Il2CppString* s)
+    intptr_t Marshal::StringToHGlobalAnsi(Il2CppChar* s, int32_t length)
     {
         if (s == NULL)
             return 0;
 
-        int32_t size = utils::StringUtils::GetLength(s);
-        const Il2CppChar* utf16 = utils::StringUtils::GetChars(s);
-        size_t bytes = (size + 1) * 2;
-        Il2CppChar* cstr = static_cast<Il2CppChar*>(vm::MarshalAlloc::AllocateHGlobal(bytes));
-        memcpy(cstr, utf16, bytes);
+        std::string str = il2cpp::utils::StringUtils::Utf16ToUtf8(s);
+        char *cstr = (char*)vm::MarshalAlloc::AllocateHGlobal(str.size() + 1);
+        strcpy(cstr, str.c_str());
         return reinterpret_cast<intptr_t>(cstr);
     }
 
-    intptr_t Marshal::StringToHGlobalAnsi(Il2CppString* s)
+    intptr_t Marshal::StringToHGlobalUni(Il2CppChar* s, int32_t length)
     {
         if (s == NULL)
             return 0;
 
-        const Il2CppChar* utf16 = utils::StringUtils::GetChars(s);
-        std::string str = il2cpp::utils::StringUtils::Utf16ToUtf8(utf16);
-        char *cstr = (char*)vm::MarshalAlloc::AllocateHGlobal(str.size() + 1);
-        strcpy(cstr, str.c_str());
+        size_t bytes = (length + 1) * 2;
+        Il2CppChar* cstr = static_cast<Il2CppChar*>(vm::MarshalAlloc::AllocateHGlobal(bytes));
+        memcpy(cstr, s, bytes);
         return reinterpret_cast<intptr_t>(cstr);
     }
 
@@ -538,6 +537,11 @@ namespace InteropServices
         return vm::LastError::GetLastError();
     }
 
+    void Marshal::SetLastWin32Error(uint32_t error)
+    {
+        vm::LastError::SetLastError(error);
+    }
+
     static size_t RoundUpToMultiple(size_t numToRound, size_t multiple)
     {
         if (multiple == 0)
@@ -650,10 +654,11 @@ namespace InteropServices
         return reinterpret_cast<intptr_t>(il2cpp_array_addr_with_size(arr, il2cpp_array_element_size(arr->klass), index));
     }
 
-    intptr_t Marshal::BufferToBSTR(Il2CppArray* ptr, int32_t slen)
+    intptr_t Marshal::BufferToBSTR(Il2CppChar* ptr, int32_t slen)
     {
-        IL2CPP_NOT_IMPLEMENTED_ICALL(Marshal::BufferToBSTR);
-        IL2CPP_UNREACHABLE;
+        Il2CppChar* bstr = NULL;
+        os::MarshalStringAlloc::AllocateBStringLength(ptr, slen, &bstr);
+        return (intptr_t)bstr;
     }
 
     int32_t Marshal::GetHRForException_WinRT(Il2CppException* e)
@@ -680,6 +685,18 @@ namespace InteropServices
         intptr_t result;
         result = (intptr_t)vm::MarshalAlloc::Allocate(sizet);
         return result;
+    }
+
+    void Marshal::copy_from_unmanaged_fixed(intptr_t source, int32_t startIndex, Il2CppArray* destination, int32_t length, void* fixed_destination_element)
+    {
+        uint32_t element_size = (uint32_t)il2cpp_array_element_size(destination->klass);
+        memcpy(il2cpp_array_addr_with_size(destination, element_size, startIndex), reinterpret_cast<void*>(source), length * element_size);
+    }
+
+    void Marshal::copy_to_unmanaged_fixed(Il2CppArray* source, int32_t startIndex, intptr_t destination, int32_t length, void* fixed_source_element)
+    {
+        uint32_t element_size = (uint32_t)il2cpp_array_element_size(source->klass);
+        memcpy(reinterpret_cast<void*>(destination), il2cpp_array_addr_with_size(source, element_size, startIndex), length * element_size);
     }
 } /* namespace InteropServices */
 } /* namespace Runtime */

@@ -1,5 +1,4 @@
 #include "il2cpp-config.h"
-#include "il2cpp-vm-support.h"
 
 #if IL2CPP_TARGET_LUMIN
 #include "il2cpp-class-internals.h"

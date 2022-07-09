@@ -59,6 +59,7 @@ namespace os
         static bool UnmapView(MemoryMappedFileHandle memoryMappedFileData, int64_t length);
         static bool Close(FileHandle* file);
         static void ConfigureHandleInheritability(FileHandle* file, bool inheritability);
+        static bool OwnsDuplicatedFileHandle(FileHandle* file);
     };
 }
 }

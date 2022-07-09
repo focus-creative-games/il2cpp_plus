@@ -17,19 +17,34 @@ namespace mscorlib
 {
 namespace System
 {
-    double Math::Acos(double val)
+    double Math::Abs(double value)
     {
-        return acos(val);
+        return fabs(value);
     }
 
-    double Math::Asin(double val)
+    double Math::Acos(double d)
     {
-        return asin(val);
+        return acos(d);
     }
 
-    double Math::Atan(double val)
+    double Math::Acosh(double d)
     {
-        return atan(val);
+        return acosh(d);
+    }
+
+    double Math::Asin(double d)
+    {
+        return asin(d);
+    }
+
+    double Math::Asinh(double d)
+    {
+        return asinh(d);
+    }
+
+    double Math::Atan(double d)
+    {
+        return atan(d);
     }
 
     double Math::Atan2(double y, double x)
@@ -37,42 +52,67 @@ namespace System
         return atan2(y, x);
     }
 
-    double Math::Cos(double val)
+    double Math::Atanh(double d)
     {
-        return cos(val);
+        return atanh(d);
     }
 
-    double Math::Cosh(double val)
+    double Math::Cbrt(double d)
     {
-        return cosh(val);
+        return cbrt(d);
     }
 
-    double Math::Exp(double val)
+    double Math::Ceiling(double a)
     {
-        return exp(val);
+        return ceil(a);
     }
 
-    double Math::Floor(double x)
+    double Math::Cos(double d)
     {
-        return floor(x);
+        return cos(d);
     }
 
-    double Math::Log(double x)
+    double Math::Cosh(double value)
+    {
+        return cosh(value);
+    }
+
+    double Math::Exp(double d)
+    {
+        return exp(d);
+    }
+
+    double Math::Floor(double d)
+    {
+        return floor(d);
+    }
+
+    double Math::FMod(double x, double y)
+    {
+        return fmod(x, y);
+    }
+
+    double Math::Log(double d)
     {
         IL2CPP_NOT_IMPLEMENTED_ICALL_NO_ASSERT(Math::Log, "Determin what value of NAN to use");
 
-        if (x == 0)
+        if (d == 0)
             return -HUGE_VAL;
-        else if (x < 0)
+        else if (d < 0)
             return std::numeric_limits<double>::signaling_NaN();
         //return NAN;
 
-        return log(x);
+        return log(d);
     }
 
-    double Math::Log10(double val)
+    double Math::Log10(double d)
     {
-        return log10(val);
+        return log10(d);
+    }
+
+    double Math::ModF(double x, double* d)
+    {
+        return modf(x, d);
     }
 
     static bool IsInteger(double value)
@@ -153,6 +193,36 @@ namespace System
         return int_part;
     }
 
+    double Math::Sin(double a)
+    {
+        return sin(a);
+    }
+
+    double Math::Sinh(double value)
+    {
+        return sinh(value);
+    }
+
+    double Math::Sqrt(double d)
+    {
+        return sqrt(d);
+    }
+
+    double Math::Tan(double a)
+    {
+        return tan(a);
+    }
+
+    double Math::Tanh(double value)
+    {
+        return tanh(value);
+    }
+
+    float Math::Abs(float value)
+    {
+        return fabsf(value);
+    }
+
     double Math::RoundDigits(double value, int32_t digits)
     {
         return RoundMidpoint(value, digits, false);
@@ -176,51 +246,14 @@ namespace System
             return std::rint(value * p) / p;
     }
 
-    double Math::Sin(double val)
-    {
-        return sin(val);
-    }
-
-    double Math::Sinh(double val)
-    {
-        return sinh(val);
-    }
-
-    double Math::Sqrt(double val)
-    {
-        return sqrt(val);
-    }
-
-    double Math::Tan(double val)
-    {
-        return tan(val);
-    }
-
-    double Math::Tanh(double val)
-    {
-        return tanh(val);
-    }
-
-    double Math::Abs(double value)
-    {
-        return fabs(value);
-    }
-
-    double Math::Ceiling(double a)
-    {
-        return ceil(a);
-    }
-
+#if IL2CPP_TINY
     double Math::SplitFractionDouble(double* value)
     {
         return modf(*value, value);
     }
 
-    float Math::Abs(float value)
-    {
-        return fabsf(value);
-    }
-} /* namespace System */
+#endif
+} /*namespace System */
 } /* namespace mscorlib */
 } /* namespace icalls */
-} /* namespace tiny */
+} /* namespace il2cpp */

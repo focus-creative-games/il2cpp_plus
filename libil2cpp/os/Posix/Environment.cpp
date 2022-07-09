@@ -1,5 +1,4 @@
 #include "il2cpp-config.h"
-#include "il2cpp-vm-support.h"
 
 #if !IL2CPP_USE_GENERIC_ENVIRONMENT && IL2CPP_TARGET_POSIX && !IL2CPP_TARGET_PS4
 #include "il2cpp-class-internals.h"
@@ -49,12 +48,26 @@ namespace os
 #if !IL2CPP_TARGET_LUMIN
     std::string Environment::GetMachineName()
     {
-        char buf[256];
+        const int n = 512;
+        char buf[n];
 
-        if (gethostname(buf, sizeof(buf)) != 0)
-            return NULL;
+        if (gethostname(buf, sizeof(buf)) == 0)
+        {
+            buf[n - 1] = 0;
+            int i;
+            // try truncating the string at the first dot
+            for (i = 0; i < n; i++)
+            {
+                if (buf[i] == '.')
+                {
+                    buf[i] = 0;
+                    break;
+                }
+            }
+            return buf;
+        }
 
-        return buf;
+        return NULL;
     }
 
 #endif //!IL2CPP_TARGET_LUMIN
@@ -135,7 +148,6 @@ namespace os
 
     void Environment::Exit(int result)
     {
-        IL2CPP_VM_SHUTDOWN();
         exit(result);
     }
 
@@ -147,13 +159,13 @@ namespace os
     }
 
 #if !RUNTIME_TINY
-    std::string Environment::GetWindowsFolderPath(int folder)
+    utils::Expected<std::string> Environment::GetWindowsFolderPath(int folder)
     {
         // This should only be called on Windows.
         return std::string();
     }
 
-    bool Environment::Is64BitOs()
+    utils::Expected<bool> Environment::Is64BitOs()
     {
         struct utsname name;
 

@@ -2,9 +2,10 @@
 
 #if IL2CPP_TARGET_WINRT || IL2CPP_TARGET_XBOXONE
 
-#include "il2cpp-vm-support.h"
 #include "os\Environment.h"
 #include "os\Win32\WindowsHelpers.h"
+#include "utils\Expected.h"
+#include "utils\Il2CppError.h"
 #include "utils\StringUtils.h"
 
 #include <windows.storage.h>
@@ -108,7 +109,7 @@ namespace os
 #define CSIDL_COMPUTERSNEARME           0x003d        // Computers Near Me (computered from Workgroup membership)
 
     template<typename T>
-    static inline std::string GetAppFolder(T appDataToStorageFolder)
+    static inline utils::Expected<std::string> GetAppFolder(T appDataToStorageFolder)
     {
         ComPtr<IApplicationDataStatics> appDataStatics;
         ComPtr<IApplicationData> appData;
@@ -117,37 +118,42 @@ namespace os
         HString appDataPath;
 
         auto hr = RoGetActivationFactory(HStringReference(RuntimeClass_Windows_Storage_ApplicationData).Get(), __uuidof(IApplicationDataStatics), &appDataStatics);
-        IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+        if (IL2CPP_HR_FAILED(hr))
+            return utils::Il2CppError(utils::ComError, hr);
 
         hr = appDataStatics->get_Current(&appData);
-        IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+        if (IL2CPP_HR_FAILED(hr))
+            return utils::Il2CppError(utils::ComError, hr);
 
         hr = appDataToStorageFolder(appData.Get(), &appDataFolder);
-        IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+        if (IL2CPP_HR_FAILED(hr))
+            return utils::Il2CppError(utils::ComError, hr);
 
         hr = appDataFolder.As(&appDataFolderItem);
-        IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+        if (IL2CPP_HR_FAILED(hr))
+            return utils::Il2CppError(utils::ComError, hr);
 
         hr = appDataFolderItem->get_Path(appDataPath.GetAddressOf());
-        IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+        if (IL2CPP_HR_FAILED(hr))
+            return utils::Il2CppError(utils::ComError, hr);
 
         unsigned int dummy;
         return utils::StringUtils::Utf16ToUtf8(appDataPath.GetRawBuffer(&dummy));
     }
 
-    static inline std::string GetLocalAppDataFolder()
+    static inline utils::Expected<std::string> GetLocalAppDataFolder()
     {
         return GetAppFolder([](IApplicationData* appData, IStorageFolder** folder) { return appData->get_LocalFolder(folder); });
     }
 
 #if !IL2CPP_TARGET_XBOXONE
-    static inline std::string GetRoamingAppDataFolder()
+    static inline utils::Expected<std::string> GetRoamingAppDataFolder()
     {
         return GetAppFolder([](IApplicationData* appData, IStorageFolder** folder) { return appData->get_RoamingFolder(folder); });
     }
 
     template<typename T>
-    static std::string GetUserFolderPath(T&& userDataPathToFolderPathConverter)
+    static utils::Expected<std::string> GetUserFolderPath(T&& userDataPathToFolderPathConverter)
     {
         ComPtr<winrt_interfaces::IUserDataPathsStatics> userDataPathsStatics;
         auto hr = RoGetActivationFactory(HStringReference(L"Windows.Storage.UserDataPaths").Get(), __uuidof(userDataPathsStatics), &userDataPathsStatics);
@@ -156,16 +162,18 @@ namespace os
             // Before OS version 16299, you weren't allowed to touch these folders.
             // In OS version 16299 they added UserDataPaths class for this purpose
             // If that class does not exist, we throw UnauthorizedAccessException
-            IL2CPP_VM_RAISE_UNAUTHORIZED_ACCESS_EXCEPTION(L"Failed getting the path of a special folder: Access Denied.");
+            return utils::Il2CppError(utils::UnauthorizedAccess, "Failed getting the path of a special folder: Access Denied.");
         }
 
         ComPtr<winrt_interfaces::IUserDataPaths> userDataPaths;
         hr = userDataPathsStatics->GetDefault(&userDataPaths);
-        IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+        if (IL2CPP_HR_FAILED(hr))
+            return utils::Il2CppError(utils::ComError, hr);
 
         HString resultHString;
         hr = userDataPathToFolderPathConverter(userDataPaths.Get(), resultHString.GetAddressOf());
-        IL2CPP_VM_RAISE_IF_FAILED(hr, false);
+        if (IL2CPP_HR_FAILED(hr))
+            return utils::Il2CppError(utils::ComError, hr);
 
         unsigned int dummy;
         return utils::StringUtils::Utf16ToUtf8(resultHString.GetRawBuffer(&dummy));
@@ -173,7 +181,7 @@ namespace os
 
 #endif
 
-    std::string Environment::GetWindowsFolderPath(int32_t folder)
+    utils::Expected<std::string> Environment::GetWindowsFolderPath(int32_t folder)
     {
         switch (folder)
         {
@@ -222,18 +230,22 @@ namespace os
                 return GetLocalAppDataFolder();
 
             default:
-                IL2CPP_VM_RAISE_UNAUTHORIZED_ACCESS_EXCEPTION(L"Failed getting the path of a special folder: Access Denied.");
+                return utils::Il2CppError(utils::UnauthorizedAccess, "Failed getting the path of a special folder: Access Denied.");
         }
 
         return std::string();
     }
 
-    bool Environment::Is64BitOs()
+    utils::Expected<bool> Environment::Is64BitOs()
     {
 #if IL2CPP_TARGET_WINRT
-        IL2CPP_VM_NOT_SUPPORTED("Is64BitOs", L"It is not possible to check if the OS is a 64bit OS on the current platform.");
+#if WINDOWS_SDK_BUILD_VERSION >= 16299
+        BOOL isWow64Process = FALSE;
+        if (IsWow64Process(GetCurrentProcess(), &isWow64Process))
+            return isWow64Process == TRUE;
+#endif // WINDOWS_SDK_BUILD_VERSION >= 16299
         return false;
-#endif
+#endif // IL2CPP_TARGET_WINRT
         return true;
     }
 }

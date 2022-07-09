@@ -1,12 +1,15 @@
 #include "il2cpp-config.h"
-#include "il2cpp-vm-support.h"
+#include "gc/WriteBarrier.h"
 #include "os/MarshalStringAlloc.h"
 #include "os/WindowsRuntime.h"
+#include "metadata/GenericMetadata.h"
 #include "vm/Array.h"
 #include "vm/AssemblyName.h"
 #include "vm/Class.h"
+#include "vm/CCW.h"
 #include "vm/Exception.h"
 #include "vm/Object.h"
+#include "vm/Reflection.h"
 #include "vm/Runtime.h"
 #include "vm/StackTrace.h"
 #include "vm/String.h"
@@ -19,6 +22,7 @@
 #include "il2cpp-object-internals.h"
 #include "vm-utils/Debugger.h"
 #include "vm-utils/VmStringUtils.h"
+#include "vm-utils/DebugSymbolReader.h"
 
 namespace il2cpp
 {
@@ -26,6 +30,8 @@ namespace vm
 {
     void Exception::PrepareExceptionForThrow(Il2CppException* ex, MethodInfo* lastManagedFrame)
     {
+#if !IL2CPP_TINY
+
 #if IL2CPP_MONO_DEBUGGER
         il2cpp::utils::Debugger::HandleException(ex);
 #endif
@@ -45,18 +51,54 @@ namespace vm
             if (numberOfFrames == 0 && lastManagedFrame != NULL)
             {
                 // We didn't get any call stack. If we have one frame from codegen, use it.
-                ips = Array::New(il2cpp_defaults.int_class, 1);
-                il2cpp_array_set(ips, const MethodInfo*, 0, lastManagedFrame);
+                if (utils::DebugSymbolReader::DebugSymbolsAvailable())
+                {
+                    Il2CppStackFrame *stackFrame = (Il2CppStackFrame*)vm::Object::New(il2cpp_defaults.stack_frame_class);
+                    IL2CPP_OBJECT_SETREF(stackFrame, method, vm::Reflection::GetMethodObject(lastManagedFrame, NULL));
+
+                    ips = Array::New(il2cpp_defaults.stack_frame_class, 1);
+                    il2cpp_array_setref(ips, 0, stackFrame);
+                }
+                else
+                {
+                    ips = Array::New(il2cpp_defaults.int_class, 1);
+                    il2cpp_array_set(ips, const MethodInfo*, 0, lastManagedFrame);
+                }
             }
             else
             {
                 size_t i = numberOfFrames - 1;
-                ips = Array::New(il2cpp_defaults.int_class, numberOfFrames);
-                raw_ips = Array::New(il2cpp_defaults.int_class, numberOfFrames);
-                for (StackFrames::const_iterator iter = frames.begin(); iter != frames.end(); ++iter, --i)
+                if (utils::DebugSymbolReader::DebugSymbolsAvailable())
                 {
-                    il2cpp_array_set(ips, const MethodInfo*, i, (*iter).method);
-                    il2cpp_array_set(raw_ips, uintptr_t, i, (*iter).raw_ip);
+                    ips = Array::New(il2cpp_defaults.stack_frame_class, numberOfFrames);
+                }
+                else
+                {
+                    ips = Array::New(il2cpp_defaults.int_class, numberOfFrames);
+                }
+
+                raw_ips = Array::New(il2cpp_defaults.int_class, numberOfFrames);
+                for (size_t frame = 0; frame != frames.size() && i >= 0; ++frame, --i)
+                {
+                    const Il2CppStackFrameInfo& stackFrameInfo = frames[frame];
+
+                    if (utils::DebugSymbolReader::DebugSymbolsAvailable())
+                    {
+                        Il2CppStackFrame *stackFrame = (Il2CppStackFrame*)vm::Object::New(il2cpp_defaults.stack_frame_class);
+
+                        IL2CPP_OBJECT_SETREF(stackFrame, method, vm::Reflection::GetMethodObject(stackFrameInfo.method, NULL));
+                        stackFrame->line = stackFrameInfo.sourceCodeLineNumber;
+                        stackFrame->il_offset = stackFrameInfo.ilOffset;
+                        if (stackFrameInfo.filePath != NULL && strlen(stackFrameInfo.filePath) != 0)
+                            IL2CPP_OBJECT_SETREF(stackFrame, filename, il2cpp::vm::String::New(stackFrameInfo.filePath));
+
+                        il2cpp_array_setref(ips, i, stackFrame);
+                    }
+                    else
+                    {
+                        il2cpp_array_set(ips, const MethodInfo*, i, stackFrameInfo.method);
+                    }
+                    il2cpp_array_set(raw_ips, uintptr_t, i, stackFrameInfo.raw_ip);
                 }
             }
 
@@ -64,11 +106,17 @@ namespace vm
             IL2CPP_OBJECT_SETREF(ex, trace_ips, ips);
             IL2CPP_OBJECT_SETREF(ex, native_trace_ips, raw_ips);
         }
+#endif // !IL2CPP_TINY
     }
 
     NORETURN void Exception::Raise(Il2CppException* ex, MethodInfo* lastManagedFrame)
     {
         PrepareExceptionForThrow(ex, lastManagedFrame);
+        throw Il2CppExceptionWrapper(ex);
+    }
+
+    NORETURN void Exception::Rethrow(Il2CppException* ex)
+    {
         throw Il2CppExceptionWrapper(ex);
     }
 
@@ -97,6 +145,11 @@ namespace vm
         Raise(GetDivideByZeroException());
     }
 
+    NORETURN void Exception::RaiseIndexOutOfRangeException()
+    {
+        Raise(GetIndexOutOfRangeException());
+    }
+
     NORETURN void Exception::RaiseOverflowException()
     {
         Raise(GetOverflowException());
@@ -105,6 +158,25 @@ namespace vm
     NORETURN void Exception::RaiseArgumentOutOfRangeException(const char* msg)
     {
         Raise(GetArgumentOutOfRangeException(msg));
+    }
+
+    static NORETURN void RaiseFromIl2CppError(const utils::Il2CppError& error)
+    {
+        utils::Il2CppErrorCode errorCode = error.GetErrorCode();
+        if (errorCode == utils::NotSupported)
+            Exception::Raise(Exception::GetNotSupportedException(error.GetErrorMessage().c_str()));
+        if (errorCode == utils::ComError)
+            Exception::Raise(error.GetHr(), false);
+        if (errorCode == utils::UnauthorizedAccess)
+            Exception::Raise(Exception::GetUnauthorizedAccessException(error.GetErrorMessage().c_str()));
+
+        Exception::Raise(Exception::GetSystemException());
+    }
+
+    void Exception::RaiseIfError(const utils::Il2CppError& error)
+    {
+        if (error.GetErrorCode() != utils::NoError)
+            RaiseFromIl2CppError(error);
     }
 
     inline static Il2CppException* TryGetExceptionFromRestrictedErrorInfo(Il2CppIRestrictedErrorInfo* errorInfo)
@@ -519,6 +591,11 @@ namespace vm
         return FromNameMsg(vm::Image::GetCorlib(), "System", "EntryPointNotFoundException", msg);
     }
 
+    Il2CppException* Exception::GetAmbiguousImplementationException(const char* msg)
+    {
+        return FromNameMsg(vm::Image::GetCorlib(), "System.Runtime", "AmbiguousImplementationException", msg);
+    }
+
     Il2CppException* Exception::GetDllNotFoundException(const char* msg)
     {
         return FromNameMsg(vm::Image::GetCorlib(), "System", "DllNotFoundException", msg);
@@ -564,14 +641,14 @@ namespace vm
         return FromNameMsg(Image::GetCorlib(), "System.Reflection", "TargetException", msg);
     }
 
-    Il2CppException * Exception::GetExecutionEngineException(const char* msg)
-    {
-        return FromNameMsg(Image::GetCorlib(), "System", "ExecutionEngineException", msg);
-    }
-
     Il2CppException* Exception::GetMethodAccessException(const char* msg)
     {
         return FromNameMsg(Image::GetCorlib(), "System", "MethodAccessException", msg);
+    }
+
+    Il2CppException * Exception::GetExecutionEngineException(const char* msg)
+    {
+        return FromNameMsg(Image::GetCorlib(), "System", "ExecutionEngineException", msg);
     }
 
     Il2CppException* Exception::GetUnauthorizedAccessException(const utils::StringView<Il2CppChar>& msg)
@@ -579,9 +656,15 @@ namespace vm
         return FromNameMsg(Image::GetCorlib(), "System", "UnauthorizedAccessException", msg);
     }
 
-    Il2CppException * Exception::GetMaxmimumNestedGenericsException()
+    Il2CppException* Exception::GetUnauthorizedAccessException(const char* msg)
     {
-        return GetNotSupportedException(MAXIMUM_NESTED_GENERICS_EXCEPTION_MESSAGE);
+        return FromNameMsg(Image::GetCorlib(), "System", "UnauthorizedAccessException", msg);
+    }
+
+    Il2CppException * Exception::GetMaximumNestedGenericsException()
+    {
+        int currentLimit = metadata::GenericMetadata::GetMaximumRuntimeGenericDepth();
+        return GetNotSupportedException(utils::StringUtils::Printf(MAXIMUM_NESTED_GENERICS_EXCEPTION_MESSAGE, currentLimit).c_str());
     }
 
     Il2CppException* Exception::GetDivideByZeroException()
@@ -604,10 +687,15 @@ namespace vm
         return FromNameMsg(Image::GetCorlib(), "System.IO", "FileNotFoundException", msg);
     }
 
+    Il2CppException* Exception::GetCustomAttributeFormatException(const char* msg)
+    {
+        return FromNameMsg(Image::GetCorlib(), "System.Reflection", "CustomAttributeFormatException", msg);
+    }
+
     void Exception::StoreExceptionInfo(Il2CppException* ex, Il2CppString* exceptionString)
     {
         // To do: try retrieving IRestrictedErrorInfo here
-        os::WindowsRuntime::OriginateLanguageException(ex, exceptionString);
+        os::WindowsRuntime::OriginateLanguageException(ex->hresult, ex, exceptionString, CCW::GetOrCreate);
     }
 } /* namespace vm */
 } /* namespace il2cpp */

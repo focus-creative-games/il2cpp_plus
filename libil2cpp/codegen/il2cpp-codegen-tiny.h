@@ -3,6 +3,8 @@
 #include "il2cpp-codegen-common-small.h"
 #include "il2cpp-object-internals.h"
 #include "il2cpp-debug-metadata.h"
+#include "gc/GarbageCollector.h"
+#include "gc/WriteBarrier.h"
 #include "os/Memory.h"
 #include "vm/Array.h"
 #include "vm/Exception.h"
@@ -11,14 +13,16 @@
 #include "vm/ScopedThreadAttacher.h"
 #include "vm/String.h"
 #include "vm/Runtime.h"
+#include "vm/Thread.h"
 #include "vm/Type.h"
 #include "vm/TypeUniverse.h"
+#include "vm-utils/Finally.h"
+#include "vm-utils/icalls/mscorlib/System.Threading/Interlocked.h"
+#include "vm-utils/VmThreadUtils.h"
 #include "utils/ExceptionSupportStack.h"
 #include "utils/MemoryUtils.h"
 #include "utils/StringView.h"
 #include <string>
-#include "gc/gc_wrapper.h"
-#include "vm-utils/icalls/mscorlib/System.Threading/Interlocked.h"
 
 struct Exception_t;
 struct Delegate_t;
@@ -35,16 +39,6 @@ typedef Il2CppArray RuntimeArray;
 #define DEFAULT_CALL
 #endif
 
-inline void il2cpp_codegen_memcpy(void* dest, const void* src, size_t count)
-{
-    memcpy(dest, src, count);
-}
-
-inline void il2cpp_codegen_memset(void* ptr, int value, size_t num)
-{
-    memset(ptr, value, num);
-}
-
 inline RuntimeObject* il2cpp_codegen_object_new(size_t size, TinyType* typeInfo)
 {
     return (RuntimeObject*)tiny::vm::Object::New(size, typeInfo);
@@ -55,7 +49,30 @@ inline Il2CppObject* Box(TinyType* type, void* value, size_t size)
     COMPILE_TIME_CONST size_t alignedObjectSize = IL2CPP_ALIGNED_OBJECT_SIZE;
     Il2CppObject* obj = il2cpp_codegen_object_new(size + alignedObjectSize, type);
     memcpy(reinterpret_cast<uint8_t*>(obj) + alignedObjectSize, value, size);
+    il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)(reinterpret_cast<uint8_t*>(obj) + alignedObjectSize), size);
     return obj;
+}
+
+static intptr_t align(intptr_t x, size_t alignment)
+{
+    return (x + alignment - 1) & ~(alignment - 1);
+}
+
+template<typename ArgumentType>
+static uint8_t* NullableValueField(void* storage)
+{
+    // The hasValue field is the first one in the Nullable struct. It is a one byte Boolean.
+    // We're trying to get the address of the value field in the Nullable struct, so offset
+    // past the hasValue field, then offset to the alignment value of the type stored in the
+    // Nullable struct.
+    uint8_t* byteAfterhasValueField = static_cast<uint8_t*>(storage) + 1;
+
+    size_t alignmentOfArgumentType = alignof(ArgumentType);
+
+    intptr_t offsetToAlign = 0;
+    if ((intptr_t)byteAfterhasValueField % alignmentOfArgumentType != 0)
+        offsetToAlign = alignmentOfArgumentType - 1;
+    return byteAfterhasValueField + offsetToAlign;
 }
 
 template<typename NullableType, typename ArgumentType>
@@ -71,12 +88,12 @@ inline Il2CppObject* BoxNullable(TinyType* type, NullableType* value)
     (false and true, respectively).
     */
 
-    uint32_t valueSize = sizeof(ArgumentType);
-    bool hasValue = *reinterpret_cast<bool*>(reinterpret_cast<uint8_t*>(value) + valueSize);
+    bool hasValue = *reinterpret_cast<bool*>(reinterpret_cast<uint8_t*>(value));
     if (!hasValue)
         return NULL;
 
-    return Box(type, value, valueSize);
+    uint32_t valueSize = sizeof(ArgumentType);
+    return Box(type, NullableValueField<ArgumentType>(value), valueSize);
 }
 
 inline void* UnBox(Il2CppObject* obj)
@@ -97,6 +114,9 @@ inline void* UnBox(Il2CppObject* obj, TinyType* expectedBoxedType)
 template<typename ArgumentType>
 inline void UnBoxNullable(Il2CppObject* obj, TinyType* expectedBoxedClass, void* storage)
 {
+    // We assume storage is on the stack, if not we'll need a write barrier
+    IL2CPP_ASSERT_STACK_PTR(storage);
+
     // We only need to do type checks if obj is not null
     // Unboxing null nullable is perfectly valid and returns an instance that has no value
     if (obj != NULL)
@@ -109,13 +129,13 @@ inline void UnBoxNullable(Il2CppObject* obj, TinyType* expectedBoxedClass, void*
 
     if (obj == NULL)
     {
-        memset(storage, 0, valueSize);
-        *(static_cast<uint8_t*>(storage) + valueSize) = false;
+        memset(NullableValueField<ArgumentType>(storage), 0, valueSize);
+        *(static_cast<uint8_t*>(storage)) = false;
     }
     else
     {
-        memcpy(storage, UnBox(obj), valueSize);
-        *(static_cast<uint8_t*>(storage) + valueSize) = true;
+        memcpy(NullableValueField<ArgumentType>(storage), UnBox(obj), valueSize);
+        *(static_cast<uint8_t*>(storage)) = true;
     }
 }
 
@@ -123,6 +143,19 @@ inline bool il2cpp_codegen_is_fake_boxed_object(RuntimeObject* object)
 {
     return false;
 }
+
+template<typename T>
+struct Il2CppFakeBox : RuntimeObject
+{
+    alignas(IL2CPP_ALIGNED_OBJECT_SIZE) T m_Value;
+
+    Il2CppFakeBox(TinyType* boxedType, T* value)
+    {
+        klass = boxedType;
+        m_Value = *value;
+    }
+};
+
 
 // Exception support macros
 
@@ -162,12 +195,6 @@ inline bool il2cpp_codegen_is_fake_boxed_object(RuntimeObject* object)
     if(!__leave_targets.empty() && __leave_targets.top() == Offset) \
         goto Target;
 
-
-template<typename T>
-inline void Il2CppCodeGenWriteBarrier(T** targetAddress, T* object)
-{
-    // TODO
-}
 
 inline void il2cpp_codegen_memory_barrier()
 {
@@ -366,8 +393,11 @@ inline Type_t* il2cpp_codegen_get_base_type(const Type_t* t)
 inline MulticastDelegate_t* il2cpp_codegen_create_combined_delegate(Type_t* type, Il2CppArray* delegates, int delegateCount)
 {
     Il2CppMulticastDelegate* result = static_cast<Il2CppMulticastDelegate*>(il2cpp_codegen_object_new(sizeof(Il2CppMulticastDelegate), const_cast<TinyType*>(reinterpret_cast<Il2CppReflectionType*>(type)->typeHandle)));
-    result->delegates = delegates;
+    IL2CPP_OBJECT_SETREF(result, delegates, delegates);
+    IL2CPP_OBJECT_SETREF(result, m_target, result);
     result->delegateCount = delegateCount;
+    result->invoke_impl = il2cpp_array_get(delegates, Il2CppDelegate*, 0)->multicast_invoke_impl;
+    result->multicast_invoke_impl = result->invoke_impl;
     return reinterpret_cast<MulticastDelegate_t*>(result);
 }
 
@@ -415,7 +445,7 @@ NORETURN inline void il2cpp_codegen_raise_exception(Exception_t* ex, RuntimeMeth
     IL2CPP_UNREACHABLE;
 }
 
-NORETURN inline void il2cpp_codegen_raise_execution_engine_exception(const char* message)
+NORETURN inline void il2cpp_codegen_raise_exception(const char* message)
 {
     tiny::vm::Exception::Raise(message);
     IL2CPP_UNREACHABLE;
@@ -428,7 +458,19 @@ inline Exception_t* il2cpp_codegen_get_marshal_directive_exception(const char* m
     return NULL;
 }
 
+#define IL2CPP_RAISE_NULL_REFERENCE_EXCEPTION() \
+    do {\
+        il2cpp_codegen_raise_null_reference_exception();\
+        IL2CPP_UNREACHABLE;\
+    } while (0)
+
 #define IL2CPP_RAISE_MANAGED_EXCEPTION(ex, lastManagedFrame) \
+    do {\
+        il2cpp_codegen_raise_exception(ex);\
+        IL2CPP_UNREACHABLE;\
+    } while (0)
+
+#define IL2CPP_RETHROW_MANAGED_EXCEPTION(ex) \
     do {\
         il2cpp_codegen_raise_exception(ex);\
         IL2CPP_UNREACHABLE;\
@@ -667,15 +709,17 @@ inline bool il2cpp_codegen_type_is_pointer(Type_t* t)
 }
 
 template<typename T>
-void ArrayGetGenericValueImpl(RuntimeArray* thisPtr, int32_t pos, T* value)
+void GetGenericValueImpl(RuntimeArray* thisPtr, int32_t pos, T* value)
 {
-    memcpy(value, ((uint8_t*)thisPtr) + sizeof(RuntimeArray) + pos * sizeof(T), sizeof(T));
+    // GetGenericValueImpl is only called from the class libs internally and T is never a field
+    IL2CPP_ASSERT_STACK_PTR(value);
+    memcpy(value, il2cpp_array_addr_with_size(thisPtr, sizeof(T), pos), sizeof(T));
 }
 
 template<typename T>
-void ArraySetGenericValueImpl(RuntimeArray * thisPtr, int32_t pos, T* value)
+void SetGenericValueImpl(RuntimeArray* thisPtr, int32_t pos, T* value)
 {
-    memcpy(((uint8_t*)thisPtr) + sizeof(RuntimeArray) + pos * sizeof(T), value, sizeof(T));
+    il2cpp_array_setrefwithsize(thisPtr, sizeof(T), pos, value);
 }
 
 void il2cpp_codegen_marshal_store_last_error();

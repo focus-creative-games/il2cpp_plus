@@ -2,6 +2,7 @@
 #include "NativeMethods.h"
 #include "os/NativeMethods.h"
 #include "os/Process.h"
+#include "vm/Exception.h"
 
 namespace il2cpp
 {
@@ -20,7 +21,9 @@ namespace Win32
 
     bool NativeMethods::GetExitCodeProcess(intptr_t processHandle, int32_t* exitCode)
     {
-        return os::NativeMethods::GetExitCodeProcess((il2cpp::os::ProcessHandle*)processHandle, exitCode);
+        auto result = os::NativeMethods::GetExitCodeProcess((il2cpp::os::ProcessHandle*)processHandle, exitCode);
+        vm::Exception::RaiseIfError(result.GetError());
+        return result.Get();
     }
 
     bool NativeMethods::GetProcessTimes(intptr_t handle, int64_t* creation, int64_t* exit, int64_t* kernel, int64_t* user)
@@ -79,7 +82,9 @@ namespace Win32
 
     intptr_t NativeMethods::GetCurrentProcess()
     {
-        return reinterpret_cast<intptr_t>(os::NativeMethods::GetCurrentProcess());
+        auto currentProcess = os::NativeMethods::GetCurrentProcess();
+        vm::Exception::RaiseIfError(currentProcess.GetError());
+        return reinterpret_cast<intptr_t>(currentProcess.Get());
     }
 } // namespace Win32
 } // namespace Microsoft

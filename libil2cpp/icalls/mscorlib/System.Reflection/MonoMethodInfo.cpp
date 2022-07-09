@@ -1,7 +1,8 @@
-#include "il2cpp-config.h"
 #include <stddef.h>
-#include "icalls/mscorlib/System.Reflection/MonoMethodInfo.h"
+#include "il2cpp-config.h"
 #include "il2cpp-class-internals.h"
+#include "icalls/mscorlib/System.Reflection/MonoMethodInfo.h"
+#include "gc/WriteBarrier.h"
 #include "vm/Class.h"
 #include "vm/Reflection.h"
 #include "vm/Exception.h"

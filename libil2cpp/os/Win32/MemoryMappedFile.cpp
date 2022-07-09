@@ -342,6 +342,11 @@ namespace os
         IL2CPP_ASSERT(success);
 #endif
     }
+
+    bool MemoryMappedFile::OwnsDuplicatedFileHandle(FileHandle* file)
+    {
+        return true;
+    }
 }
 }
 #endif

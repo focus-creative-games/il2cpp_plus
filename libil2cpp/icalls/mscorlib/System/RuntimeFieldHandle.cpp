@@ -1,6 +1,7 @@
 #include "il2cpp-config.h"
 #include "RuntimeFieldHandle.h"
-#include "icalls/mscorlib/System.Reflection/MonoField.h"
+
+#include "icalls/mscorlib/System.Reflection/RuntimeFieldInfo.h"
 #include "vm/Exception.h"
 #include "vm/Field.h"
 #include "vm/Object.h"
@@ -14,6 +15,12 @@ namespace mscorlib
 {
 namespace System
 {
+    Il2CppObject* RuntimeFieldHandle::GetValueDirect(Il2CppObject* field, Il2CppReflectionRuntimeType* fieldType, void* pTypedRef, Il2CppReflectionRuntimeType* contextType)
+    {
+        NOT_SUPPORTED_IL2CPP(RuntimeFieldHandle::GetValueDirect, "This icall is not supported by il2cpp.");
+        return NULL;
+    }
+
     void RuntimeFieldHandle::SetValueDirect(Il2CppReflectionField* field, Il2CppObject* fieldType, Il2CppTypedRef* typedRef, Il2CppObject* value, Il2CppObject* contextType)
     {
         IL2CPP_ASSERT(field);
@@ -40,7 +47,7 @@ namespace System
     {
         // In mono's icall-def.h file, this maps to the same icall as MonoField.SetValueInternal
         // so our implementation will do the same
-        Reflection::MonoField::SetValueInternal(fi, obj, value);
+        Reflection::RuntimeFieldInfo::SetValueInternal(fi, obj, value);
     }
 } // namespace System
 } // namespace mscorlib

@@ -44,6 +44,8 @@ namespace vm
         static bool IsThreadStatic(FieldInfo* field);
 
         static void SetValueRaw(const Il2CppType *type, void *dest, void *value, bool deref_pointer);
+
+        static void* GetInstanceFieldDataPointer(void* instance, FieldInfo* field);
     };
 } /* namespace vm */
 } /* namespace il2cpp */

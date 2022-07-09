@@ -25,11 +25,6 @@ namespace Remoting
         NOT_SUPPORTED_REMOTING(RemotingServices::InternalExecute);
         return NULL;
     }
-
-    bool RemotingServices::IsTransparentProxy(Il2CppObject*)
-    {
-        return false;
-    }
 } /* namespace Remoting */
 } /* namespace Runtime */
 } /* namespace System */
