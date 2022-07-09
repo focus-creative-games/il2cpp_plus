@@ -15,6 +15,8 @@
 #include "utils/MemoryRead.h"
 #include "il2cpp-object-internals.h"
 
+#include "huatuo/metadata/MetadataUtil.h"
+
 const uint8_t kArrayTypeWithSameElements = 0;
 const uint8_t kArrayTypeWithDifferentElements = 1;
 
@@ -22,12 +24,12 @@ namespace il2cpp
 {
 namespace utils
 {
-    bool BlobReader::GetConstantValueFromBlob(const Il2CppImage* image, Il2CppTypeEnum type, const char* blob, void* value)
+    bool BlobReader::GetConstantValueFromBlob(const Il2CppImage* image, Il2CppTypeEnum type, const char* blob, void* value, void*, bool useInterpFormat)
     {
-        return GetConstantValueFromBlob(image, type, &blob, value, true);
+        return GetConstantValueFromBlob(image, type, &blob, value, true, useInterpFormat);
     }
 
-    bool BlobReader::GetConstantValueFromBlob(const Il2CppImage* image, Il2CppTypeEnum type, const char **blob, void *value, bool deserializeManagedObjects)
+    bool BlobReader::GetConstantValueFromBlob(const Il2CppImage* image, Il2CppTypeEnum type, const char **blob, void *value, bool deserializeManagedObjects, bool useInterpFormat)
     {
         switch (type)
         {
@@ -117,7 +119,7 @@ namespace utils
                     // Assumption: The array code is only called for custom attribute data
                     il2cpp::metadata::CustomAttributeDataStorage dataBuffer;
                     IL2CPP_ASSERT(arrayElementClass->element_size <= sizeof(il2cpp::metadata::CustomAttributeDataStorage));
-                    if (!GetConstantValueFromBlob(image, elementType, blob, &dataBuffer, deserializeManagedObjects))
+                    if (!GetConstantValueFromBlob(image, elementType, blob, &dataBuffer, deserializeManagedObjects, huatuo::metadata::IsInterpreterImage(image)))
                         return false;
 
                     if (deserializeManagedObjects)

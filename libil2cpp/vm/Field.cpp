@@ -18,6 +18,8 @@
 #include "vm-utils/BlobReader.h"
 #include "Thread.h"
 
+#include "huatuo/metadata/MetadataUtil.h"
+
 namespace il2cpp
 {
 namespace vm
@@ -140,7 +142,7 @@ namespace vm
         const char* data;
 
         data = Class::GetFieldDefaultValue(field, &type);
-        utils::BlobReader::GetConstantValueFromBlob(field->parent->image, type->type, data, value);
+        utils::BlobReader::GetConstantValueFromBlob(field->parent->image, type->type, data, value, nullptr, huatuo::metadata::IsInterpreterType(field->parent));
     }
 
     void Field::StaticGetValue(FieldInfo *field, void *value)
