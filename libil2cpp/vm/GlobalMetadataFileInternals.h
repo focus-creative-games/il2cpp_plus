@@ -339,3 +339,5 @@ typedef struct Il2CppGlobalMetadataHeader
     int32_t exportedTypeDefinitionsSize;
 } Il2CppGlobalMetadataHeader;
 #pragma pack(pop, p1)
+
+typedef Il2CppCustomAttributeDataRange Il2CppCustomAttributeTypeRange;

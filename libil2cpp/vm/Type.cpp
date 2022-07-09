@@ -25,6 +25,8 @@
 #include "il2cpp-tabledefs.h"
 #include "vm/Array.h"
 
+#include "huatuo/metadata/MetadataUtil.h"
+
 static char* copy_name(const char* name)
 {
     const size_t len = strlen(name);
@@ -1259,6 +1261,14 @@ namespace vm
     {
         typedef void (*DelegateCtor)(Il2CppDelegate* delegate, Il2CppObject* target, intptr_t method, MethodInfo* hiddenMethodInfo);
         const MethodInfo* ctor = Class::GetMethodFromName(delegate->object.klass, ".ctor", 2);
+        if (ctor->methodPointer == nullptr || huatuo::metadata::IsInterpreterMethod(method))
+        {
+            delegate->target = target;
+            delegate->method = method;
+            delegate->invoke_impl = method->methodPointer;
+            delegate->invoke_impl_this = target;
+            return;
+        }
         ((DelegateCtor)ctor->methodPointer)(delegate, target, (intptr_t)method, NULL);
     }
 

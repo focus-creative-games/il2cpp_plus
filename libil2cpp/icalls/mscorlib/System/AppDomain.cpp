@@ -31,6 +31,10 @@
 #include <string>
 #include <vector>
 
+// ==={{ huatuo
+#include "huatuo/metadata/Assembly.h"
+// ===}} huatuo
+
 namespace il2cpp
 {
 namespace icalls
@@ -155,8 +159,9 @@ namespace System
         //il2cpp does not pack multiple assemblies with the same name, and even if that one is not the exact one that is asked for,
         //it's more useful to return it than not to. (like cases where you want to Deserialize a BinaryFormatter blob that was serialized
         //on 4.0)
-        const Il2CppAssembly* assembly = vm::Assembly::GetLoadedAssembly(info.assembly_name().name.c_str());
-
+        // ==={{ huatuo
+        const Il2CppAssembly* assembly = vm::Assembly::Load(info.assembly_name().name.c_str());
+        // ===}} huatuo 
         if (assembly != NULL)
             return vm::Reflection::GetAssemblyObject(assembly);
 
@@ -165,9 +170,13 @@ namespace System
 
     Il2CppObject* AppDomain::LoadAssemblyRaw(Il2CppObject* thisPtr, Il2CppArray* rawAssembly, Il2CppArray* rawSymbolStore, Il2CppObject* securityEvidence, bool refonly)
     {
-        NOT_SUPPORTED_IL2CPP(AppDomain::LoadAssemblyRaw, "This icall is not supported by il2cpp.");
-
-        return 0;
+        if (!rawAssembly)
+        {
+            il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetArgumentNullException("rawAssembly is null"));
+        }
+        const Il2CppAssembly* assembly = il2cpp::vm::MetadataCache::LoadAssemblyFromBytes(il2cpp::vm::Array::GetFirstElementAddress(rawAssembly),
+            il2cpp::vm::Array::GetByteLength(rawAssembly));
+        return (Il2CppObject*)vm::Reflection::GetAssemblyObject(assembly);
     }
 
     Il2CppArray* AppDomain::GetAssemblies(Il2CppObject* thisPtr, bool refOnly)

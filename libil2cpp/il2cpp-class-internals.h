@@ -359,6 +359,10 @@ typedef struct MethodInfo
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t has_full_generic_sharing_signature : 1;
     uint8_t indirect_call_via_invokers : 1;
+
+    // ==={{ huatuo
+    void* huatuoData;
+    // ===}} huatuo
 } MethodInfo;
 
 typedef struct Il2CppRuntimeInterfaceOffsetPair
