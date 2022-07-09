@@ -8,6 +8,8 @@
 #include "vm/Object.h"
 #include "vm/Method.h"
 
+#include "huatuo/metadata/MetadataUtil.h"
+
 namespace il2cpp
 {
 namespace vm
@@ -31,12 +33,13 @@ namespace vm
             Class::SetupFields(parameterType);
             IL2CPP_ASSERT(parameterType->size_inited);
             void* value = alloca(parameterType->instance_size - sizeof(Il2CppObject));
-            utils::BlobReader::GetConstantValueFromBlob(typeOfDefaultValue->type, data, value);
+            utils::BlobReader::GetConstantValueFromBlob(typeOfDefaultValue->type, data, value, false);
             return Object::Box(parameterType, value);
         }
 
         Il2CppObject* value = NULL;
-        utils::BlobReader::GetConstantValueFromBlob(typeOfDefaultValue->type, data, &value);
+        bool useCompressBlobSize = huatuo::metadata::IsInterpreterType(method->klass);
+        utils::BlobReader::GetConstantValueFromBlob(typeOfDefaultValue->type, data, &value, useCompressBlobSize);
         return value;
     }
 }

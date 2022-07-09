@@ -14,6 +14,8 @@
 #include "il2cpp-tabledefs.h"
 #include "vm-utils/BlobReader.h"
 
+#include "huatuo/metadata/MetadataUtil.h"
+
 using il2cpp::utils::StringUtils;
 
 namespace il2cpp
@@ -136,7 +138,7 @@ namespace Reflection
             case IL2CPP_TYPE_R8:
             {
                 Il2CppObject* obj = vm::Object::New(vm::Class::FromIl2CppType(type));
-                utils::BlobReader::GetConstantValueFromBlob(type->type, data, vm::Object::Unbox(obj));
+                utils::BlobReader::GetConstantValueFromBlob(type->type, data, vm::Object::Unbox(obj), false);
                 return obj;
             }
             case IL2CPP_TYPE_STRING:
@@ -145,7 +147,8 @@ namespace Reflection
             case IL2CPP_TYPE_GENERICINST:
             {
                 Il2CppObject* obj = NULL;
-                utils::BlobReader::GetConstantValueFromBlob(type->type, data, &obj);
+                bool useCompressBlobSize = huatuo::metadata::IsInterpreterType(fieldInfo->parent);
+                utils::BlobReader::GetConstantValueFromBlob(type->type, data, &obj, useCompressBlobSize);
                 return obj;
             }
             default:

@@ -10,7 +10,7 @@ namespace utils
     {
     public:
         // internal
-        static int GetConstantValueFromBlob(Il2CppTypeEnum type, const char *blob, void *value);
+        static int GetConstantValueFromBlob(Il2CppTypeEnum type, const char *blob, void *value, bool compressBlogSize);
     };
 } /* utils */
 } /* il2cpp */
