@@ -2273,7 +2273,8 @@ namespace vm
             }
             // ===}} huatuo
 
-            // First, try mscorlib            if (klass == NULL && image != Image::GetCorlib())
+            // First, try mscorlib
+            if (klass == NULL && image != Image::GetCorlib())
                 klass = Image::FromTypeNameParseInfo(Image::GetCorlib(), info, searchFlags & kTypeSearchFlagIgnoreCase);
 
             // If we did not find it, now look in all loaded assemblies, except the ones we have tried already.
