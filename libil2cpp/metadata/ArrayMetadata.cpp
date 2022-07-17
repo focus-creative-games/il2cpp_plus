@@ -286,7 +286,7 @@ namespace metadata
             inflatedMethod->genericMethod = genericMethod;
             inflatedMethod->rgctx_data = methodToCopyDataFrom->rgctx_data;
         }
-
+        inflatedMethod->token = methodToCopyDataFrom->token;
         inflatedMethod->slot = methodToCopyDataFrom->slot;
         inflatedMethod->parameters_count = methodToCopyDataFrom->parameters_count;
         inflatedMethod->parameters = methodToCopyDataFrom->parameters;
