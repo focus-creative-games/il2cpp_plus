@@ -1267,7 +1267,7 @@ namespace vm
             delegate->method = method;
             delegate->invoke_impl = method->methodPointer;
             delegate->invoke_impl_this = target;
-            // return;
+            if (ctor->methodPointer == nullptr) return;
         }
         ((DelegateCtor)ctor->methodPointer)(delegate, target, (intptr_t)method, NULL);
     }
