@@ -364,7 +364,9 @@ namespace vm
     void Object::UnboxNullable(Il2CppObject* obj, Il2CppClass* nullableClass, void* storage)
     {
         // We assume storage is on the stack, if not we'll need a write barrier
-        IL2CPP_ASSERT_STACK_PTR(storage);
+        // ==={{ wolong.  may storage in heap
+        // IL2CPP_ASSERT_STACK_PTR(storage);
+        // ===}} wolong
 
         // After the assert above, we can safely call this method, because the GC will find storage as a root,
         // since it is on the stack.
