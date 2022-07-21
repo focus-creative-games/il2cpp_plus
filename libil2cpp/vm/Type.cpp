@@ -1257,7 +1257,7 @@ namespace vm
         return type;
     }
 
-    static void InvokeDelegateConstructor(Il2CppDelegate* delegate, Il2CppObject* target, const MethodInfo* method)
+    void Type::InvokeDelegateConstructor(Il2CppDelegate* delegate, Il2CppObject* target, const MethodInfo* method)
     {
         typedef void (*DelegateCtor)(Il2CppDelegate* delegate, Il2CppObject* target, intptr_t method, MethodInfo* hiddenMethodInfo);
         const MethodInfo* ctor = Class::GetMethodFromName(delegate->object.klass, ".ctor", 2);

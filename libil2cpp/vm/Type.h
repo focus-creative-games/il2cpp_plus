@@ -218,7 +218,7 @@ namespace vm
         static Il2CppArray* GetGenericArgumentsInternal(Il2CppReflectionType* type, bool runtimeArray);
         static bool IsEqualToType(const Il2CppType *type, const Il2CppType *otherType);
         static Il2CppReflectionType* GetTypeFromHandle(intptr_t handle);
-
+        static void InvokeDelegateConstructor(Il2CppDelegate* delegate, Il2CppObject* target, const MethodInfo* method);
     public:
         // internal
         static void GetNameChunkedRecurseInternal(const Il2CppType * type, Il2CppTypeNameFormat format, bool is_nested, void(*reportFunc)(void *data, void *userData), void * userData);
