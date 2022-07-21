@@ -15,7 +15,7 @@
 #include "utils/MemoryRead.h"
 #include "il2cpp-object-internals.h"
 
-#include "huatuo/metadata/MetadataUtil.h"
+#include "huatuo/metadata/RawImage.h"
 
 const uint8_t kArrayTypeWithSameElements = 0;
 const uint8_t kArrayTypeWithDifferentElements = 1;
@@ -66,18 +66,28 @@ namespace utils
                 *(void**)value = NULL;
                 if (*blob != NULL)
                 {
-                    // int32_t length followed by non-null terminated utf-8 byte stream
-                    int32_t length = ReadCompressedInt32(blob);
-
-                    // A length of -1 is a null string
-                    if (length != -1)
+                    if (useInterpFormat)
                     {
-                        if (deserializeManagedObjects)
+                        // origin IL metadata use compress encode length
+                        huatuo::metadata::BlobReader br = huatuo::metadata::RawImage::DecodeBlob((const huatuo::byte*)*blob);
+                        *(Il2CppString**)value = il2cpp::vm::String::NewUtf16((const Il2CppChar*)br.GetData(), br.GetLength() / 2);
+                        *blob = (const char*)(br.GetData() + br.GetLength());
+                    }
+                    else
+                    {
+                        // int32_t length followed by non-null terminated utf-8 byte stream
+                        int32_t length = ReadCompressedInt32(blob);
+
+                        // A length of -1 is a null string
+                        if (length != -1)
                         {
-                            *(Il2CppString**)value = il2cpp::vm::String::NewLen(*blob, length);
-                            il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)value);
+                            if (deserializeManagedObjects)
+                            {
+                                *(Il2CppString**)value = il2cpp::vm::String::NewLen(*blob, length);
+                                il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)value);
+                            }
+                            *blob += length;
                         }
-                        *blob += length;
                     }
                 }
                 break;
