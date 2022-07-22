@@ -1261,13 +1261,13 @@ namespace vm
     {
         typedef void (*DelegateCtor)(Il2CppDelegate* delegate, Il2CppObject* target, intptr_t method, MethodInfo* hiddenMethodInfo);
         const MethodInfo* ctor = Class::GetMethodFromName(delegate->object.klass, ".ctor", 2);
-        if (ctor->methodPointer == nullptr)
+        if (ctor->methodPointer == nullptr || huatuo::metadata::IsInterpreterType(delegate->object.klass))
         {
             delegate->target = target;
             delegate->method = method;
             delegate->invoke_impl = method->methodPointer;
             delegate->invoke_impl_this = target;
-            il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetNotSupportedException("interperter delegate can't be constructed by InvokeDelegateConstructor"));
+            //il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetNotSupportedException("interperter delegate can't be constructed by InvokeDelegateConstructor"));
             return;
         }
         ((DelegateCtor)ctor->methodPointer)(delegate, target, (intptr_t)method, NULL);
