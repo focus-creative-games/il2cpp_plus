@@ -232,16 +232,6 @@ namespace metadata
             newMethod->rgctx_data = InflateRGCTXLocked(gmethod, lock);
         }
 
-        // ==={{ huatuo
-        if (huatuo::metadata::IsInterpreterMethod(newMethod))
-        {
-            newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            newMethod->methodPointer = IS_CLASS_VALUE_TYPE(newMethod->klass) && huatuo::metadata::IsInstanceMethod(newMethod) ? huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-            newMethod->virtualMethodPointer = Method::IsInstance(newMethod) ? huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod) : nullptr;
-            ++il2cpp_runtime_stats.inflated_method_count;
-            return newMethod;
-        }
-        // ===}} huatuo
         il2cpp::vm::Il2CppGenericMethodPointers methodPointers = MetadataCache::GetGenericMethodPointers(methodDefinition, &gmethod->context);
         newMethod->virtualMethodPointer = methodPointers.virtualMethodPointer;
         newMethod->methodPointer = methodPointers.methodPointer;
@@ -249,7 +239,7 @@ namespace metadata
         {
             newMethod->invoker_method = methodPointers.invoker_method;
         }
-        else if (huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
+        else if (huatuo::metadata::IsInterpreterMethod(newMethod) || huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
         {
             newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
             newMethod->methodPointer = IS_CLASS_VALUE_TYPE(newMethod->klass) && huatuo::metadata::IsInstanceMethod(newMethod) ? huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
