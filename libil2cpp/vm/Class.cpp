@@ -2249,35 +2249,45 @@ namespace vm
             }
 
             klass = Image::FromTypeNameParseInfo(image, info, searchFlags & kTypeSearchFlagIgnoreCase);
-            // ==={{ huatuo
-            if (klass == nullptr)
+            if (klass)
             {
-                huatuo::interpreter::MachineState& state = huatuo::interpreter::InterpreterModule::GetCurrentThreadMachineState();
-                const huatuo::interpreter::InterpFrame* frame = state.GetTopFrame();
-                if (frame)
+                return klass;
+            }
+            // ==={{ huatuo
+            huatuo::interpreter::MachineState& state = huatuo::interpreter::InterpreterModule::GetCurrentThreadMachineState();
+            const huatuo::interpreter::InterpFrame* frame = state.GetTopFrame();
+            if (frame)
+            {
+                const Il2CppImage* interpImage = frame->method->method->klass->image;
+                if (interpImage != image)
                 {
-                    const Il2CppImage* interpImage = frame->method->method->klass->image;
-                    if (interpImage != image)
+                    klass = Image::FromTypeNameParseInfo(interpImage, info, searchFlags & kTypeSearchFlagIgnoreCase);
+                    if (klass)
                     {
-                        klass = Image::FromTypeNameParseInfo(interpImage, info, searchFlags & kTypeSearchFlagIgnoreCase);
+                        return klass;
                     }
                 }
-                if (!klass)
+            }
+            const  Il2CppImage* interpImage = state.GetTopExecutingImage();
+            if (interpImage)
+            {
+                klass = Image::FromTypeNameParseInfo(interpImage, info, searchFlags & kTypeSearchFlagIgnoreCase);
+                if (klass)
                 {
-                    const  Il2CppImage* interpImage = state.GetTopExecutingImage();
-                    if (interpImage)
-                    {
-                        klass = Image::FromTypeNameParseInfo(interpImage, info, searchFlags & kTypeSearchFlagIgnoreCase);
-                    }
+                    return klass;
                 }
             }
             // ===}} huatuo
 
             // First, try mscorlib            if (klass == NULL && image != Image::GetCorlib())
-                klass = Image::FromTypeNameParseInfo(Image::GetCorlib(), info, searchFlags & kTypeSearchFlagIgnoreCase);
+            klass = Image::FromTypeNameParseInfo(Image::GetCorlib(), info, searchFlags & kTypeSearchFlagIgnoreCase);
+            if (klass)
+            {
+                return klass;
+            }
 
             // If we did not find it, now look in all loaded assemblies, except the ones we have tried already.
-            if (klass == NULL && !dontUseExecutingImage)
+            if (!dontUseExecutingImage)
             {
                 for (auto assembly : *Assembly::GetAllAssemblies())
                 {
@@ -2285,8 +2295,8 @@ namespace vm
                     if (currentImage != Image::GetCorlib() && currentImage != image)
                     {
                         klass = Image::FromTypeNameParseInfo(currentImage, info, searchFlags & kTypeSearchFlagIgnoreCase);
-                        if (klass != NULL)
-                            break;
+                        if (klass)
+                            return klass;
                     }
                 }
             }
