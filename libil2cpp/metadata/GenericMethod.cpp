@@ -242,8 +242,10 @@ namespace metadata
         else if (huatuo::metadata::IsInterpreterMethod(newMethod) || huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
         {
             newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            newMethod->methodPointer = IS_CLASS_VALUE_TYPE(newMethod->klass) && huatuo::metadata::IsInstanceMethod(newMethod) ? huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-            newMethod->virtualMethodPointer = Method::IsInstance(newMethod) ? huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod) : nullptr;
+            newMethod->methodPointer = huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+            newMethod->virtualMethodPointer = Method::IsInstance(newMethod) ?
+                (IS_CLASS_VALUE_TYPE(newMethod->klass) ? huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod))
+                : nullptr;
         }
         else
         {
