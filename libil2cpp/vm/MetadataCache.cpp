@@ -840,6 +840,10 @@ static bool GenericInstancesMatch(const MethodInfo* method, const MethodInfo* ma
 
 Il2CppMethodPointer il2cpp::vm::MetadataCache::GetReversePInvokeWrapper(const Il2CppImage* image, const MethodInfo* method)
 {
+    if (huatuo::metadata::IsInterpreterImage(image))
+    {
+        return huatuo::metadata::MetadataModule::GetReversePInvokeWrapper(image, method);
+    }
     if (image->codeGenModule->reversePInvokeWrapperCount == 0)
         return NULL;
 
