@@ -261,6 +261,16 @@ namespace metadata
         // And invalid static methods can't use the unresolved virtual call stubs
         newMethod->indirect_call_via_invokers = newMethod->has_full_generic_sharing_signature || (!Method::IsInstance(newMethod) && newMethod->methodPointer == NULL);
 
+        // now we don't support full generic sharing method, so we use interpreter mode
+        if (newMethod->indirect_call_via_invokers)
+        {
+            newMethod->interpCallMethodPointer = huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod) ?
+                huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod) : nullptr;
+        }
+        else
+        {
+            newMethod->interpCallMethodPointer = newMethod->methodPointer;
+        }
         ++il2cpp_runtime_stats.inflated_method_count;
 
         if (il2cpp::vm::Runtime::IsFullGenericSharingEnabled())

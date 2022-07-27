@@ -362,6 +362,7 @@ typedef struct MethodInfo
 
     // ==={{ huatuo
     void* huatuoData;
+    Il2CppMethodPointer interpCallMethodPointer;
     // ===}} huatuo
 } MethodInfo;
 

@@ -1265,7 +1265,7 @@ namespace vm
         {
             delegate->target = target;
             delegate->method = method;
-            delegate->invoke_impl = method->methodPointer;
+            delegate->invoke_impl = huatuo::GetInterpreterDirectlyCallMethodPointer(method);
             delegate->invoke_impl_this = target;
             //il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetNotSupportedException("interperter delegate can't be constructed by InvokeDelegateConstructor"));
             return;
