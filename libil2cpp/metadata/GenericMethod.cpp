@@ -246,6 +246,7 @@ namespace metadata
             newMethod->virtualMethodPointer = Method::IsInstance(newMethod) ?
                 (IS_CLASS_VALUE_TYPE(newMethod->klass) ? huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod))
                 : nullptr;
+            newMethod->isInterpterImpl = true;
         }
         else
         {
@@ -264,8 +265,11 @@ namespace metadata
         // now we don't support full generic sharing method, so we use interpreter mode
         if (newMethod->indirect_call_via_invokers)
         {
-            newMethod->interpCallMethodPointer = huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod) ?
-                huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod) : nullptr;
+            if (huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
+            {
+                newMethod->interpCallMethodPointer = huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+                newMethod->isInterpterImpl = true;
+            }
         }
         else
         {

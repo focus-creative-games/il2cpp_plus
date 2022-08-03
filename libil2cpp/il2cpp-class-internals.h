@@ -364,6 +364,7 @@ typedef struct MethodInfo
     void* huatuoData;
     Il2CppMethodPointer interpCallMethodPointer;
     bool initInterpCallMethodPointer;
+    bool isInterpterImpl;
     // ===}} huatuo
 } MethodInfo;
 
