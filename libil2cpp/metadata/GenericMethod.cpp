@@ -134,20 +134,19 @@ namespace metadata
             newMethod->methodPointer = newMethod->klass->valuetype && huatuo::metadata::IsInstanceMethod(newMethod) ?
                 huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
                 : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+            newMethod->isInterpterImpl = true;
         }
         else
         {
             newMethod->invoker_method = MetadataCache::GetInvokerMethodPointer(methodDefinition, &gmethod->context);
             newMethod->methodPointer = MetadataCache::GetMethodPointer(methodDefinition, &gmethod->context);
-            if (!newMethod->invoker_method && huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
-            {
-                newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            }
             if (!newMethod->methodPointer && huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
             {
                 newMethod->methodPointer = newMethod->klass->valuetype && huatuo::metadata::IsInstanceMethod(newMethod) ?
                     huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
                     : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+                newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+                newMethod->isInterpterImpl = true;
             }
         }
         // ===}} huatuo

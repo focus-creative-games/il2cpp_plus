@@ -374,6 +374,7 @@ typedef struct MethodInfo
     // ==={{ huatuo
     void* huatuoData;
     bool initInterpCallMethodPointer;
+    bool isInterpterImpl;
     // ===}} huatuo
 } MethodInfo;
 
