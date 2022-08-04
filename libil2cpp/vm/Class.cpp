@@ -1260,6 +1260,7 @@ namespace vm
                 if (newMethod->virtualMethodPointer == NULL)
                     newMethod->virtualMethodPointer = newMethod->methodPointer;
 
+                newMethod->isInterpterImpl = huatuo::metadata::IsInterpreterType(klass);
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
 
