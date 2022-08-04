@@ -1238,6 +1238,7 @@ namespace vm
                     newMethod->methodPointer = MetadataCache::GetMethodPointer(klass->image, methodInfo.token);
 
                 newMethod->invoker_method = MetadataCache::GetMethodInvoker(klass->image, methodInfo.token);
+                newMethod->isInterpterImpl = huatuo::metadata::IsInterpreterType(klass);
 
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
