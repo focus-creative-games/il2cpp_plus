@@ -21,11 +21,11 @@
 #include "il2cpp-runtime-stats.h"
 #include <string>
 
-// ==={{ huatuo
-#include "huatuo/metadata/MetadataUtil.h"
-#include "huatuo/metadata/MetadataModule.h"
-#include "huatuo/interpreter/InterpreterModule.h"
-// ===}} huatuo
+// ==={{ hybridclr
+#include "hybridclr/metadata/MetadataUtil.h"
+#include "hybridclr/metadata/MetadataModule.h"
+#include "hybridclr/interpreter/InterpreterModule.h"
+// ===}} hybridclr
 
 using il2cpp::metadata::GenericMetadata;
 using il2cpp::metadata::GenericSharing;
@@ -239,12 +239,12 @@ namespace metadata
         {
             newMethod->invoker_method = methodPointers.invoker_method;
         }
-        else if (huatuo::metadata::IsInterpreterMethod(newMethod) || huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
+        else if (hybridclr::metadata::IsInterpreterMethod(newMethod) || hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
         {
-            newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            newMethod->methodPointer = huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+            newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+            newMethod->methodPointer = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
             newMethod->virtualMethodPointer = Method::IsInstance(newMethod) ?
-                (IS_CLASS_VALUE_TYPE(newMethod->klass) ? huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod))
+                (IS_CLASS_VALUE_TYPE(newMethod->klass) ? hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod))
                 : nullptr;
             newMethod->isInterpterImpl = true;
         }
@@ -254,7 +254,7 @@ namespace metadata
             if (Method::IsInstance(newMethod))
                 newMethod->virtualMethodPointer = MetadataCache::GetUnresolvedVirtualCallStub(newMethod);
         }
-        // ===}} huatuo
+        // ===}} hybridclr
 
         newMethod->has_full_generic_sharing_signature = methodPointers.isFullGenericShared && HasFullGenericSharedParametersOrReturn(gmethod->methodDefinition);
 
@@ -265,9 +265,9 @@ namespace metadata
         // now we don't support full generic sharing method, so we use interpreter mode
         if (newMethod->indirect_call_via_invokers)
         {
-            if (huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
+            if (hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
             {
-                newMethod->interpCallMethodPointer = huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+                newMethod->interpCallMethodPointer = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
                 newMethod->isInterpterImpl = true;
             }
         }

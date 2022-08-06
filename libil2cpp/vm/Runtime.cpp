@@ -67,9 +67,9 @@ extern "C" {
 }
 #endif
 
-// ==={{ huatuo
-#include "huatuo/ModuleManager.h"
-// ===}} huatuo
+// ==={{ hybridclr
+#include "hybridclr/ModuleManager.h"
+// ===}} hybridclr
 
 Il2CppDefaults il2cpp_defaults;
 bool g_il2cpp_is_fully_initialized = false;
@@ -399,9 +399,9 @@ namespace vm
         vm::MetadataCache::ExecuteEagerStaticClassConstructors();
         vm::MetadataCache::ExecuteModuleInitializers();
 
-        // ==={{ huatuo
-        huatuo::ModuleManager::Initialize();
-        // ===}} huatuo
+        // ==={{ hybridclr
+        hybridclr::ModuleManager::Initialize();
+        // ===}} hybridclr
         return true;
     }
 

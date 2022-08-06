@@ -44,13 +44,13 @@
 #include <limits>
 #include <stdarg.h>
 
-// ==={{ huatuo
+// ==={{ hybridclr
 #include <set>
-#include "huatuo/metadata/MetadataUtil.h"
-#include "huatuo/interpreter/Engine.h"
-#include "huatuo/interpreter/Interpreter.h"
-#include "huatuo/interpreter/InterpreterModule.h"
-// ===}} huatuo
+#include "hybridclr/metadata/MetadataUtil.h"
+#include "hybridclr/interpreter/Engine.h"
+#include "hybridclr/interpreter/Interpreter.h"
+#include "hybridclr/interpreter/InterpreterModule.h"
+// ===}} hybridclr
 
 namespace il2cpp
 {
@@ -959,13 +959,13 @@ namespace vm
             klass->minimumAlignment = sizeof(Il2CppObject*);
         }
 
-        // ==={{ huatuo
-        bool isInterpreterType = huatuo::metadata::IsInterpreterType(klass);
+        // ==={{ hybridclr
+        bool isInterpreterType = hybridclr::metadata::IsInterpreterType(klass);
         bool computSize = klass->instance_size == 0 && isInterpreterType;
         bool isExplictLayout = klass->flags & TYPE_ATTRIBUTE_EXPLICIT_LAYOUT;
         bool computLayout = isInterpreterType;
         bool computInstanceFieldLayout = !isExplictLayout && isInterpreterType;
-        // ===}} huatuo
+        // ===}} hybridclr
 
         if (klass->field_count)
         {
@@ -997,7 +997,7 @@ namespace vm
                 klass->actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
             }
 
-// ==={{ huatuo
+// ==={{ hybridclr
             // comput size when explicit layout
             if (computSize && isExplictLayout && !layoutData.FieldOffsets.empty())
             {
@@ -1087,7 +1087,7 @@ namespace vm
             klass->static_fields_size = (uint32_t)staticSize;
             klass->thread_static_fields_size = (uint32_t)threadStaticSize;
 
-// ===}} huatuo
+// ===}} hybridclr
 
             if (klass->generic_class)
             {
@@ -1106,7 +1106,7 @@ namespace vm
         }
         else
         {
-// ==={{ huatuo
+// ==={{ hybridclr
             if (computSize)
             {
                 if (IS_CLASS_VALUE_TYPE(klass))
@@ -1114,7 +1114,7 @@ namespace vm
                     instanceSize = actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
                 }
             }
-// ===}} huatuo
+// ===}} hybridclr
             // need to set this in case there are no fields in a generic instance type
             instanceSize = UpdateInstanceSizeForGenericClass(klass, instanceSize);
 
@@ -1124,13 +1124,13 @@ namespace vm
             // uses that extra space (as clang does).
             klass->actualSize = static_cast<uint32_t>(actualSize);
 
-// ==={{ huatuo
+// ==={{ hybridclr
             if (computSize)
             {
                 klass->instance_size = (uint32_t)instanceSize;
                 klass->native_size = (uint32_t)instanceSize;
             }
-// ===}} huatuo
+// ===}} hybridclr
         }
 
         if (klass->static_fields_size)
@@ -1260,7 +1260,7 @@ namespace vm
                 if (newMethod->virtualMethodPointer == NULL)
                     newMethod->virtualMethodPointer = newMethod->methodPointer;
 
-                newMethod->isInterpterImpl = huatuo::metadata::IsInterpreterType(klass);
+                newMethod->isInterpterImpl = hybridclr::metadata::IsInterpreterType(klass);
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
 
@@ -2254,9 +2254,9 @@ namespace vm
             {
                 return klass;
             }
-            // ==={{ huatuo
-            huatuo::interpreter::MachineState& state = huatuo::interpreter::InterpreterModule::GetCurrentThreadMachineState();
-            const huatuo::interpreter::InterpFrame* frame = state.GetTopFrame();
+            // ==={{ hybridclr
+            hybridclr::interpreter::MachineState& state = hybridclr::interpreter::InterpreterModule::GetCurrentThreadMachineState();
+            const hybridclr::interpreter::InterpFrame* frame = state.GetTopFrame();
             if (frame)
             {
                 const Il2CppImage* interpImage = frame->method->method->klass->image;
@@ -2278,7 +2278,7 @@ namespace vm
                     return klass;
                 }
             }
-            // ===}} huatuo
+            // ===}} hybridclr
 
             // First, try mscorlib            if (klass == NULL && image != Image::GetCorlib())
             klass = Image::FromTypeNameParseInfo(Image::GetCorlib(), info, searchFlags & kTypeSearchFlagIgnoreCase);

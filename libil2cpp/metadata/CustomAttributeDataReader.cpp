@@ -8,7 +8,7 @@
 #include "vm/GlobalMetadata.h"
 #include "vm/MetadataCache.h"
 
-#include "huatuo/metadata/MetadataUtil.h"
+#include "hybridclr/metadata/MetadataUtil.h"
 
 // Custom attribute metadata format
 //
@@ -74,7 +74,7 @@ static bool ReadAttributeDataValue(const Il2CppImage* image, const char** buffer
 {
     const Il2CppTypeEnum type = il2cpp::utils::BlobReader::ReadEncodedTypeEnum(image, buffer, &arg->klass);
 
-    if (!il2cpp::utils::BlobReader::GetConstantValueFromBlob(image, type, buffer, &arg->data, deserializedManagedObjects, huatuo::metadata::IsInterpreterImage(image)))
+    if (!il2cpp::utils::BlobReader::GetConstantValueFromBlob(image, type, buffer, &arg->data, deserializedManagedObjects, hybridclr::metadata::IsInterpreterImage(image)))
     {
         SetInvalidDataException(exc);
         return false;

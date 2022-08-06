@@ -15,7 +15,7 @@
 #include "utils/MemoryRead.h"
 #include "il2cpp-object-internals.h"
 
-#include "huatuo/metadata/RawImage.h"
+#include "hybridclr/metadata/RawImage.h"
 
 const uint8_t kArrayTypeWithSameElements = 0;
 const uint8_t kArrayTypeWithDifferentElements = 1;
@@ -69,7 +69,7 @@ namespace utils
                     if (useInterpFormat)
                     {
                         // origin IL metadata use compress encode length
-                        huatuo::metadata::BlobReader br = huatuo::metadata::RawImage::DecodeBlob((const huatuo::byte*)*blob);
+                        hybridclr::metadata::BlobReader br = hybridclr::metadata::RawImage::DecodeBlob((const hybridclr::byte*)*blob);
                         *(Il2CppString**)value = il2cpp::vm::String::NewUtf16((const Il2CppChar*)br.GetData(), br.GetLength() / 2);
                         *blob = (const char*)(br.GetData() + br.GetLength());
                     }
@@ -129,7 +129,7 @@ namespace utils
                     // Assumption: The array code is only called for custom attribute data
                     il2cpp::metadata::CustomAttributeDataStorage dataBuffer;
                     IL2CPP_ASSERT(arrayElementClass->element_size <= sizeof(il2cpp::metadata::CustomAttributeDataStorage));
-                    if (!GetConstantValueFromBlob(image, elementType, blob, &dataBuffer, deserializeManagedObjects, huatuo::metadata::IsInterpreterImage(image)))
+                    if (!GetConstantValueFromBlob(image, elementType, blob, &dataBuffer, deserializeManagedObjects, hybridclr::metadata::IsInterpreterImage(image)))
                         return false;
 
                     if (deserializeManagedObjects)

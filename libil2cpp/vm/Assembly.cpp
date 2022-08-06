@@ -7,11 +7,11 @@
 #include "il2cpp-tabledefs.h"
 #include "il2cpp-class-internals.h"
 
-// ==={{ huatuo
+// ==={{ hybridclr
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 #include "os/Atomic.h"
-// ===}} huatuo
+// ===}} hybridclr
 
 #include <vector>
 #include <string>
@@ -20,13 +20,13 @@ namespace il2cpp
 {
 namespace vm
 {
-    // ==={{ huatuo
+    // ==={{ hybridclr
     static baselib::ReentrantLock s_assemblyLock;
     // copy on write
     static AssemblyVector s_emptyAssemblies;
     static AssemblyVector* s_Assemblies = &s_emptyAssemblies;
     static AssemblyVector* s_lastValidAssemblies = &s_emptyAssemblies;
-    // ===}} huatuo
+    // ===}} hybridclr
 
     AssemblyVector* Assembly::GetAllAssemblies()
     {
@@ -105,7 +105,7 @@ namespace vm
 
     const Il2CppAssembly* Assembly::Load(const char* name)
     {
-// ==={{ huatuo
+// ==={{ hybridclr
         const Il2CppAssembly* loadedAssembly = MetadataCache::GetAssemblyByName(name);
         if (loadedAssembly)
         {
@@ -141,12 +141,12 @@ namespace vm
         {
             return MetadataCache::LoadAssemblyByName(name);
         }
-// ===}} huatuo
+// ===}} hybridclr
     }
 
     void Assembly::Register(const Il2CppAssembly* assembly)
     {
-// ==={{ huatuo
+// ==={{ hybridclr
         os::FastAutoLock lock(&s_assemblyLock);
 
         AssemblyVector* oldAssemblies = s_Assemblies;
@@ -161,12 +161,12 @@ namespace vm
             // can't delete
             // delete oldAssemblies;
         }
-// ===}} huatuo
+// ===}} hybridclr
     }
 
     void Assembly::ClearAllAssemblies()
     {
-// ==={{ huatuo
+// ==={{ hybridclr
         os::FastAutoLock lock(&s_assemblyLock);
         AssemblyVector* oldAssemblies = s_Assemblies;
         s_Assemblies = nullptr;
@@ -174,7 +174,7 @@ namespace vm
         {
             // TODO ???
         }
-// ===}} huatuo
+// ===}} hybridclr
     }
 
     void Assembly::Initialize()

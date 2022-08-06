@@ -94,7 +94,7 @@ namespace Reflection
     {
         IL2CPP_ASSERT(!refOnly && "This icall is not supported by il2cpp when refOnly=true");
 
-        // ==={{ huatuo 
+        // ==={{ hybridclr 
         // Our implementation is going to behave a bit different.  We can't actually load any assembly.  If we didn't know about the assembly at conversion time,
         // then we won't be able to do anything.
         // On the other hand, if the name of the assembly matches the name of an assembly that we converted, then lets return the assembly that we know about.
@@ -111,7 +111,7 @@ namespace Reflection
             IL2CPP_UNREACHABLE;*/
             return nullptr;
         }
-        // ===}} huatuo
+        // ===}} hybridclr
 
         return vm::Reflection::GetAssemblyObject(foundAssembly);
     }
