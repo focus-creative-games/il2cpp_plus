@@ -371,11 +371,11 @@ typedef struct MethodInfo
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t is_marshaled_from_native : 1; /* a fake MethodInfo wrapping a native function pointer */
 
-    // ==={{ huatuo
-    void* huatuoData;
+    // ==={{ hybridclr
+    void* interpData;
     bool initInterpCallMethodPointer;
     bool isInterpterImpl;
-    // ===}} huatuo
+    // ===}} hybridclr
 } MethodInfo;
 
 typedef struct Il2CppRuntimeInterfaceOffsetPair

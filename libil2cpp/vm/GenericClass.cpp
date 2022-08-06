@@ -12,14 +12,14 @@
 #include "il2cpp-runtime-metadata.h"
 #include "il2cpp-runtime-stats.h"
 
-// ==={{ huatuo
+// ==={{ hybridclr
 #include "metadata/Il2CppGenericClassHash.h"
 #include "metadata/Il2CppGenericClassCompare.h"
 #include "utils/Il2CppHashSet.h"
 #include "utils/Il2CppHashMap.h"
 
-#include "huatuo/CommonDef.h"
-// ===}} huatuo
+#include "hybridclr/CommonDef.h"
+// ===}} hybridclr
 
 namespace il2cpp
 {
@@ -161,7 +161,7 @@ namespace vm
         genericInstanceType->fields = fields;
     }
 
-// ==={{ huatuo
+// ==={{ hybridclr
     void InitCacheClass(Il2CppClass* definition, Il2CppGenericClass* gclass, bool throwOnError)
     {
         Il2CppClass* klass = gclass->cached_class = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
@@ -242,7 +242,7 @@ namespace vm
                 return gclass->cached_class = cacheGclass->cached_class;
             }
             //// === huauto
-            //if (huatuo::metadata::IsInterpreterType((Il2CppTypeDefinition*)gclass->type->data.typeHandle))
+            //if (hybridclr::metadata::IsInterpreterType((Il2CppTypeDefinition*)gclass->type->data.typeHandle))
             //{
             //     Il2CppGenericClass* cacheGclass = il2cpp::metadata::GenericMetadata::GetGenericClass(gclass->type, gclass->context.class_inst);
             //     if (cacheGclass->cached_class)
@@ -252,16 +252,16 @@ namespace vm
             //     InitCacheClass(definition, cacheGclass, throwOnError);
             //     return gclass->cached_class = cacheGclass->cached_class;
             //}
-            //// === huatuo
+            //// === hybridclr
 
-            // TODO thread safe error! huatuo
+            // TODO thread safe error! hybridclr
             InitCacheClass(definition, gclass, throwOnError);
             s_GenericClassSet.insert(gclass);
         }
 
         return gclass->cached_class;
     }
-// ===}} huatuo
+// ===}} hybridclr
 
     Il2CppGenericContext* GenericClass::GetContext(Il2CppGenericClass *gclass)
     {

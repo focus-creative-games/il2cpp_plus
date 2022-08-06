@@ -21,11 +21,11 @@
 #include "il2cpp-runtime-stats.h"
 #include <string>
 
-// ==={{ huatuo
-#include "huatuo/metadata/MetadataUtil.h"
-#include "huatuo/metadata/MetadataModule.h"
-#include "huatuo/interpreter/InterpreterModule.h"
-// ===}} huatuo
+// ==={{ hybridclr
+#include "hybridclr/metadata/MetadataUtil.h"
+#include "hybridclr/metadata/MetadataModule.h"
+#include "hybridclr/interpreter/InterpreterModule.h"
+// ===}} hybridclr
 
 using il2cpp::metadata::GenericMetadata;
 using il2cpp::metadata::GenericSharing;
@@ -127,29 +127,29 @@ namespace metadata
             newMethod->rgctx_data = GenericMetadata::InflateRGCTX(gmethod->methodDefinition->klass->image, gmethod->methodDefinition->token, &gmethod->context);
         }
 
-        // ==={{ huatuo
-        if (huatuo::metadata::IsInterpreterMethod(newMethod))
+        // ==={{ hybridclr
+        if (hybridclr::metadata::IsInterpreterMethod(newMethod))
         {
-            newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            newMethod->methodPointer = newMethod->klass->valuetype && huatuo::metadata::IsInstanceMethod(newMethod) ?
-                huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
-                : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+            newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+            newMethod->methodPointer = newMethod->klass->valuetype && hybridclr::metadata::IsInstanceMethod(newMethod) ?
+                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
+                : hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
             newMethod->isInterpterImpl = true;
         }
         else
         {
             newMethod->invoker_method = MetadataCache::GetInvokerMethodPointer(methodDefinition, &gmethod->context);
             newMethod->methodPointer = MetadataCache::GetMethodPointer(methodDefinition, &gmethod->context);
-            if (!newMethod->methodPointer && huatuo::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
+            if (!newMethod->methodPointer && hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
             {
-                newMethod->methodPointer = newMethod->klass->valuetype && huatuo::metadata::IsInstanceMethod(newMethod) ?
-                    huatuo::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
-                    : huatuo::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-                newMethod->invoker_method = huatuo::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+                newMethod->methodPointer = newMethod->klass->valuetype && hybridclr::metadata::IsInstanceMethod(newMethod) ?
+                    hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
+                    : hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+                newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
                 newMethod->isInterpterImpl = true;
             }
         }
-        // ===}} huatuo
+        // ===}} hybridclr
 
         ++il2cpp_runtime_stats.inflated_method_count;
 

@@ -14,7 +14,7 @@
 #include "il2cpp-tabledefs.h"
 #include "vm-utils/BlobReader.h"
 
-#include "huatuo/metadata/MetadataUtil.h"
+#include "hybridclr/metadata/MetadataUtil.h"
 
 using il2cpp::utils::StringUtils;
 
@@ -122,7 +122,7 @@ namespace Reflection
         const Il2CppType* type = NULL;
         const char* data = vm::Class::GetFieldDefaultValue(fieldInfo, &type);
 
-        bool useCompressBlobSize = huatuo::metadata::IsInterpreterType(fieldInfo->parent);
+        bool useCompressBlobSize = hybridclr::metadata::IsInterpreterType(fieldInfo->parent);
         switch (type->type)
         {
             case IL2CPP_TYPE_U1:

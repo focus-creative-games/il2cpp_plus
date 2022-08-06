@@ -32,9 +32,9 @@
 #include <string>
 #include <vector>
 
-// ==={{ huatuo
-#include "huatuo/metadata/Assembly.h"
-// ===}} huatuo
+// ==={{ hybridclr
+#include "hybridclr/metadata/Assembly.h"
+// ===}} hybridclr
 
 namespace il2cpp
 {
@@ -165,9 +165,9 @@ namespace System
         //il2cpp does not pack multiple assemblies with the same name, and even if that one is not the exact one that is asked for,
         //it's more useful to return it than not to. (like cases where you want to Deserialize a BinaryFormatter blob that was serialized
         //on 4.0)
-        // ==={{ huatuo
+        // ==={{ hybridclr
         const Il2CppAssembly* assembly = vm::Assembly::Load(info.assembly_name().name.c_str());
-        // ===}} huatuo 
+        // ===}} hybridclr 
         if (assembly != NULL)
             return vm::Reflection::GetAssemblyObject(assembly);
 
@@ -181,7 +181,7 @@ namespace System
         return 0;
     }
 
-    // ==={{ huatuo
+    // ==={{ hybridclr
     Il2CppReflectionAssembly* AppDomain::LoadAssemblyRaw(Il2CppAppDomain* self, Il2CppArray* rawAssembly, Il2CppArray* rawSymbolStore, void* /* System.Security.Policy.Evidence */ securityEvidence, bool refonly)
     {
         //NOT_SUPPORTED_IL2CPP(AppDomain::LoadAssemblyRaw, "This icall is not supported by il2cpp.");
@@ -194,7 +194,7 @@ namespace System
             il2cpp::vm::Array::GetByteLength(rawAssembly));
         return vm::Reflection::GetAssemblyObject(assembly);
     }
-    // ===}} huatuo
+    // ===}} hybridclr
 
     bool AppDomain::InternalIsFinalizingForUnload(int32_t domain_id)
     {

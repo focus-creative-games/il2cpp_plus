@@ -34,10 +34,10 @@
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 
-// ==={{ huatuo
-#include "huatuo/metadata/Assembly.h"
-#include "huatuo/metadata/MetadataModule.h"
-// ===}} huatuo
+// ==={{ hybridclr
+#include "hybridclr/metadata/Assembly.h"
+#include "hybridclr/metadata/MetadataModule.h"
+// ===}} hybridclr
 
 typedef std::map<Il2CppClass*, Il2CppClass*> PointerTypeMap;
 
@@ -112,9 +112,9 @@ struct PairToKeyConverter
 typedef il2cpp::utils::collections::ArrayValueMap<const Il2CppGuid*, std::pair<const Il2CppGuid*, Il2CppClass*>, PairToKeyConverter<const Il2CppGuid*, Il2CppClass*> > GuidToClassMap;
 static GuidToClassMap s_GuidToNonImportClassMap;
 
-// ==={{ huatuo 
+// ==={{ hybridclr 
 static il2cpp::utils::dynamic_array<Il2CppAssembly*> s_cliAssemblies;
-// ===}} huatuo
+// ===}} hybridclr
 
 void il2cpp::vm::MetadataCache::Register(const Il2CppCodeRegistration* const codeRegistration, const Il2CppMetadataRegistration* const metadataRegistration, const Il2CppCodeGenOptions* const codeGenOptions)
 {
@@ -688,12 +688,12 @@ static int CompareIl2CppTokenAdjustorThunkPair(const void* pkey, const void* pel
 
 Il2CppMethodPointer il2cpp::vm::MetadataCache::GetAdjustorThunk(const Il2CppImage* image, uint32_t token)
 {
-    // ==={{ huatuo
-    if (huatuo::metadata::IsInterpreterIndex(image->token))
+    // ==={{ hybridclr
+    if (hybridclr::metadata::IsInterpreterIndex(image->token))
     {
-        return huatuo::metadata::MetadataModule::GetAdjustorThunk(image, token);
+        return hybridclr::metadata::MetadataModule::GetAdjustorThunk(image, token);
     }
-    // ===}} huatuo
+    // ===}} hybridclr
     if (image->codeGenModule->adjustorThunkCount == 0)
         return NULL;
 
@@ -717,12 +717,12 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetMethodPointer(const Il2CppImag
     if (rid == 0)
         return NULL;
 
-    // ==={{ huatuo
-    if (huatuo::metadata::IsInterpreterImage(image))
+    // ==={{ hybridclr
+    if (hybridclr::metadata::IsInterpreterImage(image))
     {
-        return huatuo::metadata::MetadataModule::GetMethodPointer(image, token);
+        return hybridclr::metadata::MetadataModule::GetMethodPointer(image, token);
     }
-    // ===}} huatuo
+    // ===}} hybridclr
 
     IL2CPP_ASSERT(rid <= image->codeGenModule->methodPointerCount);
 
@@ -735,12 +735,12 @@ InvokerMethod il2cpp::vm::MetadataCache::GetMethodInvoker(const Il2CppImage* ima
     uint32_t table = GetTokenType(token);
     if (rid == 0)
         return NULL;
-    // ==={{ huatuo
-    if (huatuo::metadata::IsInterpreterImage(image))
+    // ==={{ hybridclr
+    if (hybridclr::metadata::IsInterpreterImage(image))
     {
-        return huatuo::metadata::MetadataModule::GetMethodInvoker(image, token);
+        return hybridclr::metadata::MetadataModule::GetMethodInvoker(image, token);
     }
-    // ===}} huatuo
+    // ===}} hybridclr
     int32_t index = image->codeGenModule->invokerIndices[rid - 1];
 
     if (index == kMethodIndexInvalid)
@@ -767,9 +767,9 @@ static bool MatchTokens(Il2CppTokenIndexMethodTuple key, Il2CppTokenIndexMethodT
 
 Il2CppMethodPointer il2cpp::vm::MetadataCache::GetReversePInvokeWrapper(const Il2CppImage* image, const MethodInfo* method)
 {
-    if (huatuo::metadata::IsInterpreterImage(image))
+    if (hybridclr::metadata::IsInterpreterImage(image))
     {
-        return huatuo::metadata::MetadataModule::GetReversePInvokeWrapper(image, method);
+        return hybridclr::metadata::MetadataModule::GetReversePInvokeWrapper(image, method);
     }
     if (image->codeGenModule->reversePInvokeWrapperCount == 0)
         return NULL;
@@ -880,7 +880,7 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyFromIndex(AssemblyIn
     return s_AssembliesTable + index;
 }
 
-// ==={{ huatuo
+// ==={{ hybridclr
 const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyByName(const char* nameToFind)
 {
     return GetOrLoadAssemblyByName(nameToFind, false);
@@ -888,7 +888,7 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyByName(const char* n
 
 const Il2CppAssembly* il2cpp::vm::MetadataCache::GetOrLoadAssemblyByName(const char* assemblyNameOrPath, bool tryLoad)
 {
-    const char* assemblyName = huatuo::GetAssemblyNameFromPath(assemblyNameOrPath);
+    const char* assemblyName = hybridclr::GetAssemblyNameFromPath(assemblyNameOrPath);
 
     il2cpp::utils::VmStringUtils::CaseInsensitiveComparer comparer;
 
@@ -910,7 +910,7 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetOrLoadAssemblyByName(const c
 
     if (tryLoad)
     {
-        Il2CppAssembly* newAssembly = huatuo::metadata::Assembly::LoadFromFile(assemblyNameOrPath);
+        Il2CppAssembly* newAssembly = hybridclr::metadata::Assembly::LoadFromFile(assemblyNameOrPath);
         if (newAssembly)
         {
             il2cpp::vm::Assembly::Register(newAssembly);
@@ -926,7 +926,7 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyFromBytes(const cha
 {
     il2cpp::os::FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
 
-    Il2CppAssembly* newAssembly = huatuo::metadata::Assembly::LoadFromBytes(assemblyBytes, length, true);
+    Il2CppAssembly* newAssembly = hybridclr::metadata::Assembly::LoadFromBytes(assemblyBytes, length, true);
     if (newAssembly)
     {
         // avoid register placeholder assembly twicely.
@@ -967,7 +967,7 @@ void il2cpp::vm::MetadataCache::FixThreadLocalStaticOffsetForFieldLocked(FieldIn
     s_ThreadLocalStaticOffsetMap[field] = offset;
 }
 
-// ===}} huatuo
+// ===}} hybridclr
 
 Il2CppImage* il2cpp::vm::MetadataCache::GetImageFromIndex(ImageIndex index)
 {

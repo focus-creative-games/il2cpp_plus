@@ -8,7 +8,7 @@
 #include "vm/Object.h"
 #include "vm/Method.h"
 
-#include "huatuo/metadata/MetadataUtil.h"
+#include "hybridclr/metadata/MetadataUtil.h"
 
 namespace il2cpp
 {
@@ -38,7 +38,7 @@ namespace vm
         }
 
         Il2CppObject* value = NULL;
-        bool useCompressBlobSize = huatuo::metadata::IsInterpreterType(method->klass);
+        bool useCompressBlobSize = hybridclr::metadata::IsInterpreterType(method->klass);
         utils::BlobReader::GetConstantValueFromBlob(typeOfDefaultValue->type, data, &value, useCompressBlobSize);
         return value;
     }
