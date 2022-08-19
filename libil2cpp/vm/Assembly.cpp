@@ -41,7 +41,8 @@ namespace vm
     {
         for (int32_t sourceIndex = 0; sourceIndex < assembly->referencedAssemblyCount; sourceIndex++)
         {
-            const Il2CppAssembly* refAssembly = MetadataCache::GetReferencedAssembly(assembly, sourceIndex);
+            int32_t indexIntoMainAssemblyTable = MetadataCache::GetReferenceAssemblyIndexIntoAssemblyTable(assembly->referencedAssemblyStart + sourceIndex);
+            const Il2CppAssembly* refAssembly = MetadataCache::GetAssemblyFromIndex(indexIntoMainAssemblyTable);
 
             target->push_back(&refAssembly->aname);
         }
@@ -107,11 +108,6 @@ namespace vm
     void Assembly::Register(const Il2CppAssembly* assembly)
     {
         s_Assemblies.push_back(assembly);
-    }
-
-    void Assembly::ClearAllAssemblies()
-    {
-        s_Assemblies.clear();
     }
 
     void Assembly::Initialize()

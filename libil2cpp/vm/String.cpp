@@ -14,9 +14,6 @@
 #include "il2cpp-class-internals.h"
 #include "il2cpp-object-internals.h"
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 namespace il2cpp
 {
 namespace vm
@@ -93,7 +90,7 @@ namespace vm
 
     Il2CppString* String::NewUtf16(const utils::StringView<Il2CppChar>& text)
     {
-        IL2CPP_ASSERT(text.Length() < static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+        assert(text.Length() < static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
         return NewUtf16(text.Str(), static_cast<int32_t>(text.Length()));
     }
 
@@ -152,7 +149,7 @@ namespace vm
 
     typedef il2cpp::gc::AppendOnlyGCHashMap<InternedString, Il2CppString*, InternedStringHash, InternedStringCompare> InternedStringMap;
 
-    static baselib::ReentrantLock s_InternedStringMapMutex;
+    static os::FastMutex s_InternedStringMapMutex;
     static InternedStringMap* s_InternedStringMap;
 
     Il2CppString* String::Intern(Il2CppString* str)

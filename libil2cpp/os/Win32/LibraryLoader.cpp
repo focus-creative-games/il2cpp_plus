@@ -11,9 +11,6 @@
 #include "WindowsHelpers.h"
 #include "Evntprov.h"
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 #define WINNT // All functions in Evntrace.h are under this define.. Why? I have no idea!
 #include "Evntrace.h"
 
@@ -23,7 +20,7 @@ namespace os
 {
     static std::vector<std::pair<std::wstring, HMODULE> > s_NativeDllCache;
     typedef std::vector<std::pair<std::wstring, HMODULE> >::const_iterator DllCacheIterator;
-    baselib::ReentrantLock s_NativeDllCacheMutex;
+    os::FastMutex s_NativeDllCacheMutex;
 
 #define HARDCODED_DEPENDENCY_LIBRARY(libraryName, libraryFunctions) { libraryName, ARRAYSIZE(libraryFunctions), libraryFunctions }
 #define HARDCODED_DEPENDENCY_FUNCTION(function) { #function, reinterpret_cast<Il2CppMethodPointer>(function), IL2CPP_ARRAY_SIZE(#function)-1  }
@@ -72,7 +69,7 @@ namespace os
         HARDCODED_DEPENDENCY_FUNCTION(GetTimeZoneInformation),
         HARDCODED_DEPENDENCY_FUNCTION(GetFullPathNameW),
     };
-
+#if !IL2CPP_TARGET_WINDOWS_GAMES
     const HardcodedPInvokeDependencyFunction kiphlpapiFunctions[] =
     {
         HARDCODED_DEPENDENCY_FUNCTION(GetNetworkParams),
@@ -81,7 +78,7 @@ namespace os
         HARDCODED_DEPENDENCY_FUNCTION(GetIfEntry),
 #endif
     };
-
+#endif
 #if !IL2CPP_TARGET_WINDOWS_DESKTOP && !IL2CPP_TARGET_WINDOWS_GAMES
     const HardcodedPInvokeDependencyFunction kTimezoneFunctions[] =
     {
@@ -111,7 +108,9 @@ namespace os
         HARDCODED_DEPENDENCY_LIBRARY(L"api-ms-win-core-timezone-l1-1-0", kTimezoneFunctions),
 #endif
         HARDCODED_DEPENDENCY_LIBRARY(L"kernel32", kKernel32Functions),
+#if !IL2CPP_TARGET_WINDOWS_GAMES
         HARDCODED_DEPENDENCY_LIBRARY(L"iphlpapi", kiphlpapiFunctions),
+#endif // !IL2CPP_TARGET_WINDOWS_GAMES
 #if IL2CPP_TARGET_WINRT // Win8+, plus needs to be looked up dynamically on Xbox One
         HARDCODED_DEPENDENCY_LIBRARY(L"wintypes", kWinTypesFunctions),
 #endif
@@ -167,12 +166,8 @@ namespace os
         return false;
     }
 
-    Il2CppMethodPointer LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(const il2cpp::utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, const il2cpp::utils::StringView<char>& entryPoint, Il2CppCharSet charSet)
+    Il2CppMethodPointer LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(const il2cpp::utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, const il2cpp::utils::StringView<char>& entryPoint)
     {
-        // We don't support, nor do we need to Ansi functions.  That would break forwarding method names to Unicode MoveFileEx -> MoveFileExW
-        if (charSet == CHARSET_ANSI)
-            return NULL;
-
         for (int i = 0; i < ARRAYSIZE(kHardcodedPInvokeDependencies); i++)
         {
             const HardcodedPInvokeDependencyLibrary& library = kHardcodedPInvokeDependencies[i];
@@ -195,12 +190,12 @@ namespace os
         return NULL;
     }
 
-    void* LibraryLoader::LoadDynamicLibraryImpl(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary)
+    void* LibraryLoader::LoadDynamicLibrary(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary)
     {
-        return LoadDynamicLibraryImpl(nativeDynamicLibrary, 0);
+        return LoadDynamicLibrary(nativeDynamicLibrary, 0);
     }
 
-    void* LibraryLoader::LoadDynamicLibraryImpl(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, int flags)
+    void* LibraryLoader::LoadDynamicLibrary(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, int flags)
     {
         if (nativeDynamicLibrary.IsEmpty())
             return (HMODULE)Image::GetImageBase();

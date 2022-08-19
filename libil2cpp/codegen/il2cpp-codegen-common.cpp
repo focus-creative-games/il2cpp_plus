@@ -1,7 +1,5 @@
 #include "il2cpp-config.h"
 
-#if !RUNTIME_TINY
-
 #include "utils/Runtime.h"
 #include "gc/GarbageCollector.h"
 
@@ -28,21 +26,6 @@ REAL_NORETURN void il2cpp_codegen_abort()
 void Il2CppCodeGenWriteBarrier(void** targetAddress, void* object)
 {
     il2cpp::gc::GarbageCollector::SetWriteBarrier(targetAddress);
-}
-
-#endif
-
-#endif // !RUNTIME_TINY
-
-#if IL2CPP_TINY
-
-#include <cstdio>
-
-int il2cpp_codegen_double_to_string(double value, uint8_t* format, uint8_t* buffer, int bufferLength)
-{
-    // return number of characters written to the buffer. if the return value greater than bufferLength
-    // means the number of characters would be written to the buffer if there is enough space
-    return snprintf(reinterpret_cast<char*>(buffer), bufferLength, reinterpret_cast<char*>(format), value);
 }
 
 #endif

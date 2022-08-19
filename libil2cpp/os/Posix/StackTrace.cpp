@@ -4,8 +4,10 @@
 
 #include "os/StackTrace.h"
 #include <execinfo.h>
+#include <stdio.h>
 #include <cxxabi.h>
-#include <cstdlib>
+#include <dlfcn.h>
+
 
 namespace il2cpp
 {
@@ -28,7 +30,7 @@ namespace os
         }
         else
         {
-            for (int i = 0; i < frames; i++)
+            for (size_t i = 0; i < frames; i++)
             {
                 if (!callback(reinterpret_cast<Il2CppMethodPointer>(callstack[i]), context))
                     break;

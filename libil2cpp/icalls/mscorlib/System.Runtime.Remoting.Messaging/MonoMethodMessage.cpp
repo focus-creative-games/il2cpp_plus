@@ -4,8 +4,8 @@
 #include "il2cpp-object-internals.h"
 #include "il2cpp-tabledefs.h"
 #include "icalls/mscorlib/System.Runtime.Remoting.Messaging/MonoMethodMessage.h"
-#include "os/Atomic.h"
 #include "vm/Exception.h"
+#include "vm/Atomic.h"
 #include "vm/Array.h"
 #include "vm/String.h"
 #include "utils/dynamic_array.h"
@@ -49,7 +49,7 @@ namespace Messaging
             klass = il2cpp_array_class_get(il2cpp_defaults.object_class, 1);
             IL2CPP_ASSERT(klass);
 
-            il2cpp::os::Atomic::ExchangePointer(&object_array_klass, klass);
+            il2cpp::vm::Atomic::ExchangePointer(&object_array_klass, klass);
         }
 
         IL2CPP_OBJECT_SETREF(this_obj, method, method);

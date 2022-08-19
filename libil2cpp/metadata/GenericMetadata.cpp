@@ -23,12 +23,10 @@
 #include "il2cpp-tabledefs.h"
 #include <vector>
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 using namespace il2cpp::vm;
 using il2cpp::metadata::GenericMethod;
 using il2cpp::os::FastAutoLock;
+using il2cpp::os::FastMutex;
 using il2cpp::utils::StringUtils;
 
 using std::vector;
@@ -60,10 +58,10 @@ namespace metadata
     {
         IL2CPP_ASSERT(inst);
 
-        Il2CppGenericParameterInfo gp = Type::GetGenericParameterInfo(type);
-        IL2CPP_ASSERT(gp.num < inst->type_argc);
+        const Il2CppGenericParameter* gp = Type::GetGenericParameter(type);
+        IL2CPP_ASSERT(gp->num < inst->type_argc);
 
-        const Il2CppType* genericArgument = inst->type_argv[gp.num];
+        const Il2CppType* genericArgument = inst->type_argv[gp->num];
         if (genericArgument->attrs == type->attrs && genericArgument->byref == type->byref)
             return genericArgument;
 
@@ -152,21 +150,21 @@ namespace metadata
         }
     }
 
-    static baselib::ReentrantLock s_GenericClassMutex;
+    static os::FastMutex s_GenericClassMutex;
     typedef Il2CppHashSet<Il2CppGenericClass*, Il2CppGenericClassHash, Il2CppGenericClassCompare> Il2CppGenericClassSet;
     static Il2CppGenericClassSet s_GenericClassSet;
 
 
     Il2CppGenericClass* GenericMetadata::GetGenericClass(const Il2CppClass* containerClass, const Il2CppGenericInst* inst)
     {
-        return GetGenericClass(&containerClass->byval_arg, inst);
+        return GetGenericClass(MetadataCache::GetIndexForTypeDefinition(containerClass), inst);
     }
 
-    Il2CppGenericClass* GenericMetadata::GetGenericClass(const Il2CppType* elementType, const Il2CppGenericInst* inst)
+    Il2CppGenericClass* GenericMetadata::GetGenericClass(TypeDefinitionIndex elementClassIndex, const Il2CppGenericInst* inst)
     {
         // temporary inst to lookup a permanent one that may already exist
         Il2CppGenericClass genericClass = { 0 };
-        genericClass.type = elementType;
+        genericClass.typeDefinitionIndex = elementClassIndex;
         genericClass.context.class_inst = inst;
 
         FastAutoLock lock(&s_GenericClassMutex);
@@ -175,7 +173,7 @@ namespace metadata
             return *iter;
 
         Il2CppGenericClass* newClass = MetadataAllocGenericClass();
-        newClass->type = elementType;
+        newClass->typeDefinitionIndex = elementClassIndex;
         newClass->context.class_inst = inst;
 
         s_GenericClassSet.insert(newClass);
@@ -260,13 +258,13 @@ namespace metadata
             switch (definitionData->type)
             {
                 case IL2CPP_RGCTX_DATA_TYPE:
-                    dataValues[rgctxIndex].type = GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true);
+                    dataValues[rgctxIndex].type = GenericMetadata::InflateIfNeeded(MetadataCache::GetIl2CppTypeFromIndex(definitionData->data.typeIndex), context, true);
                     break;
                 case IL2CPP_RGCTX_DATA_CLASS:
-                    dataValues[rgctxIndex].klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true));
+                    dataValues[rgctxIndex].klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetIl2CppTypeFromIndex(definitionData->data.typeIndex), context, true));
                     break;
                 case IL2CPP_RGCTX_DATA_METHOD:
-                    dataValues[rgctxIndex].method = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromRgctxDefinition(definitionData), context));
+                    dataValues[rgctxIndex].method = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromIndex(definitionData->data.methodIndex), context));
                     break;
                 default:
                     IL2CPP_ASSERT(0);
@@ -277,16 +275,10 @@ namespace metadata
     }
 
 // temporary while we generate generics
-    void GenericMetadata::RegisterGenericClasses(Il2CppGenericClass* const * genericClasses, int32_t genericClassesCount)
+    void GenericMetadata::RegisterGenericClass(Il2CppGenericClass *gclass)
     {
-        s_GenericClassSet.resize(genericClassesCount / 2 + 1);
-
         // don't lock, this should only be called from startup and temporarily
-        for (int32_t i = 0; i < genericClassesCount; i++)
-        {
-            if (genericClasses[i]->type != NULL)
-                s_GenericClassSet.insert(genericClasses[i]);
-        }
+        s_GenericClassSet.insert(gclass);
     }
 
     void GenericMetadata::WalkAllGenericClasses(GenericClassWalkCallback callback, void* context)
@@ -298,13 +290,6 @@ namespace metadata
             if ((*it).key->cached_class != NULL)
                 callback((*it).key->cached_class, context);
         }
-    }
-
-    void GenericMetadata::Clear()
-    {
-        for (Il2CppGenericClassSet::iterator genericClass = s_GenericClassSet.begin(); genericClass != s_GenericClassSet.end(); genericClass++)
-            (*genericClass).key->cached_class = NULL;
-        s_GenericClassSet.clear();
     }
 
     static int s_MaximumRuntimeGenericDepth;

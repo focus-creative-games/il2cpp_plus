@@ -2,6 +2,8 @@
 
 #include "il2cpp-config.h"
 
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
+
 #include <stdint.h>
 #include "il2cpp-runtime-metadata.h"
 #include "il2cpp-metadata.h"
@@ -11,10 +13,6 @@
 
 #define IL2CPP_CLASS_IS_ARRAY(c) ((c)->rank)
 
-struct Il2CppCodeGenModule;
-struct Il2CppMetadataRegistration;
-struct Il2CppCodeRegistration;
-
 typedef struct Il2CppClass Il2CppClass;
 typedef struct Il2CppGuid Il2CppGuid;
 typedef struct Il2CppImage Il2CppImage;
@@ -22,20 +20,29 @@ typedef struct Il2CppAppDomain Il2CppAppDomain;
 typedef struct Il2CppAppDomainSetup Il2CppAppDomainSetup;
 typedef struct Il2CppDelegate Il2CppDelegate;
 typedef struct Il2CppAppContext Il2CppAppContext;
-typedef struct Il2CppNameToTypeHandleHashTable Il2CppNameToTypeHandleHashTable;
+typedef struct Il2CppNameToTypeDefinitionIndexHashTable Il2CppNameToTypeDefinitionIndexHashTable;
 typedef struct Il2CppCodeGenModule Il2CppCodeGenModule;
-typedef struct Il2CppMetadataRegistration Il2CppMetadataRegistration;
-typedef struct Il2CppCodeRegistration Il2CppCodeRegistration;
 
-#if RUNTIME_TINY
-typedef Il2CppMethodPointer VirtualInvokeData;
-#else
+#if RUNTIME_MONO
+#if defined(__cplusplus)
+extern "C"
+{
+#endif // __cplusplus
+#include <mono/metadata/metadata.h>
+#if defined(__cplusplus)
+}
+#endif // __cplusplus
+#endif
+
 typedef struct VirtualInvokeData
 {
     Il2CppMethodPointer methodPtr;
+#if RUNTIME_MONO
+    const MonoMethod* method;
+#else
     const MethodInfo* method;
-} VirtualInvokeData;
 #endif
+} VirtualInvokeData;
 
 typedef enum Il2CppTypeNameFormat
 {
@@ -240,7 +247,11 @@ typedef struct ParameterInfo
     const Il2CppType* parameter_type;
 } ParameterInfo;
 
+#if RUNTIME_MONO
+typedef void* (*InvokerMethod)(Il2CppMethodPointer, const MonoMethod*, void*, void**);
+#else
 typedef void* (*InvokerMethod)(Il2CppMethodPointer, const MethodInfo*, void*, void**);
+#endif
 
 typedef enum MethodVariableKind
 {
@@ -289,13 +300,13 @@ typedef struct Il2CppSequencePointSourceFile
 
 typedef struct Il2CppTypeSourceFilePair
 {
-    TypeDefinitionIndex __klassIndex;
+    TypeDefinitionIndex klassIndex;
     int32_t sourceFileIndex;
 } Il2CppTypeSourceFilePair;
 
 typedef struct Il2CppSequencePoint
 {
-    MethodIndex __methodDefinitionIndex;
+    MethodIndex methodDefinitionIndex;
     int32_t sourceFileIndex;
     int32_t lineStart, lineEnd;
     int32_t columnStart, columnEnd;
@@ -307,7 +318,7 @@ typedef struct Il2CppSequencePoint
 
 typedef struct Il2CppCatchPoint
 {
-    MethodIndex __methodDefinitionIndex;
+    MethodIndex methodDefinitionIndex;
     TypeIndex catchTypeIndex;
     int32_t ilOffset;
     int32_t tryId;
@@ -350,14 +361,14 @@ typedef struct MethodInfo
     union
     {
         const Il2CppRGCTXData* rgctx_data; /* is_inflated is true and is_generic is false, i.e. a generic instance method */
-        Il2CppMetadataMethodDefinitionHandle methodMetadataHandle;
+        const Il2CppMethodDefinition* methodDefinition;
     };
 
     /* note, when is_generic == true and is_inflated == true the method represents an uninflated generic method on an inflated type. */
     union
     {
         const Il2CppGenericMethod* genericMethod; /* is_inflated is true */
-        Il2CppMetadataGenericContainerHandle genericContainerHandle; /* is_inflated is false and is_generic is true */
+        const Il2CppGenericContainer* genericContainer; /* is_inflated is false and is_generic is true */
         Il2CppMethodPointer nativeFunction; /* if is_marshaled_from_native is true */
     };
 
@@ -400,7 +411,7 @@ typedef struct Il2CppClass
     Il2CppClass* declaringType;
     Il2CppClass* parent;
     Il2CppGenericClass *generic_class;
-    Il2CppMetadataTypeHandle typeMetadataHandle; // non-NULL for Il2CppClass's constructed from type defintions
+    const Il2CppTypeDefinition* typeDefinition; // non-NULL for Il2CppClass's constructed from type defintions
     const Il2CppInteropData* interopData;
     Il2CppClass* klass; // hack to pretend we are a MonoVTable. Points to ourself
     // End always valid fields
@@ -428,8 +439,8 @@ typedef struct Il2CppClass
     ALIGN_TYPE(8) size_t cctor_thread;
 
     // Remaining fields are always valid except where noted
-    Il2CppMetadataGenericContainerHandle genericContainerHandle;
-    uint32_t instance_size; // valid when size_inited is true
+    GenericContainerIndex genericContainerIndex;
+    uint32_t instance_size;
     uint32_t actualSize;
     uint32_t element_size;
     int32_t native_size;
@@ -463,9 +474,8 @@ typedef struct Il2CppClass
     uint8_t initialized : 1;
     uint8_t enumtype : 1;
     uint8_t is_generic : 1;
-    uint8_t has_references : 1; // valid when size_inited is true
+    uint8_t has_references : 1;
     uint8_t init_pending : 1;
-    uint8_t size_init_pending : 1;
     uint8_t size_inited : 1;
     uint8_t has_finalize : 1;
     uint8_t has_cctor : 1;
@@ -524,16 +534,21 @@ typedef struct Il2CppImage
     const char *nameNoExt;
     Il2CppAssembly* assembly;
 
+    TypeDefinitionIndex typeStart;
     uint32_t typeCount;
+
+    TypeDefinitionIndex exportedTypeStart;
     uint32_t exportedTypeCount;
+
+    CustomAttributeIndex customAttributeStart;
     uint32_t customAttributeCount;
 
-    Il2CppMetadataImageHandle metadataHandle;
+    MethodIndex entryPointIndex;
 
 #ifdef __cplusplus
     mutable
 #endif
-    Il2CppNameToTypeHandleHashTable * nameToClassHashTable;
+    Il2CppNameToTypeDefinitionIndexHashTable * nameToClassHashTable;
 
     const Il2CppCodeGenModule* codeGenModule;
 
@@ -556,11 +571,12 @@ typedef struct Il2CppCodeGenOptions
     int maximumRuntimeGenericDepth;
 } Il2CppCodeGenOptions;
 
-typedef struct Il2CppRange
+typedef struct Il2CppTokenIndexPair
 {
-    int32_t start;
-    int32_t length;
-} Il2CppRange;
+    uint32_t token;
+    int32_t index;
+} Il2CppTokenIndexPair;
+
 
 typedef struct Il2CppTokenRangePair
 {
@@ -573,7 +589,7 @@ typedef struct Il2CppTokenIndexMethodTuple
     uint32_t token;
     int32_t index;
     void** method;
-    uint32_t __genericMethodIndex;
+    uint32_t genericMethodIndex;
 } Il2CppTokenIndexMethodTuple;
 
 typedef struct Il2CppTokenAdjustorThunkPair
@@ -601,13 +617,12 @@ typedef struct Il2CppCodeGenModule
     const uint32_t rgctxRangesCount;
     const Il2CppTokenRangePair* rgctxRanges;
     const uint32_t rgctxsCount;
+#if RUNTIME_MONO
+    const MonoRGCTXDefinition* rgctxs;
+#else
     const Il2CppRGCTXDefinition* rgctxs;
+#endif
     const Il2CppDebuggerMetadataRegistration *debuggerMetadata;
-    const CustomAttributesCacheGenerator* customAttributeCacheGenerator;
-    const Il2CppMethodPointer moduleInitializer;
-    TypeDefinitionIndex* staticConstructorTypeIndices;
-    const Il2CppMetadataRegistration* metadataRegistration; // Per-assembly mode only
-    const Il2CppCodeRegistration* codeRegistaration; // Per-assembly mode only
 } Il2CppCodeGenModule;
 
 typedef struct Il2CppCodeRegistration
@@ -619,6 +634,8 @@ typedef struct Il2CppCodeRegistration
     const Il2CppMethodPointer* genericAdjustorThunks;
     uint32_t invokerPointersCount;
     const InvokerMethod* invokerPointers;
+    CustomAttributeIndex customAttributeCount;
+    const CustomAttributesCacheGenerator* customAttributeGenerators;
     uint32_t unresolvedVirtualCallCount;
     const Il2CppMethodPointer* unresolvedVirtualCallPointers;
     uint32_t interopDataCount;
@@ -733,3 +750,5 @@ typedef struct Il2CppPerfCounters
     unsigned int threadpool_threads;
     unsigned int threadpool_iothreads;
 } Il2CppPerfCounters;
+
+#endif // !IL2CPP_TINY

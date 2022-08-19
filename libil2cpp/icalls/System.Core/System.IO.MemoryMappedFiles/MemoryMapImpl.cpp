@@ -8,9 +8,6 @@
 #include "utils/StringUtils.h"
 #include "utils/Memory.h"
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 namespace il2cpp
 {
 namespace icalls
@@ -25,7 +22,7 @@ namespace IO
 {
 namespace MemoryMappedFiles
 {
-    static baselib::ReentrantLock s_Mutex;
+    static os::FastMutex s_Mutex;
     static std::vector<os::FileHandle*> s_OwnedFileHandles;
 
     typedef struct
@@ -118,13 +115,13 @@ namespace MemoryMappedFiles
     intptr_t MemoryMapImpl::OpenFileInternal(Il2CppString* path, int32_t mode, Il2CppString* mapName, int64_t* capacity, int32_t access, int32_t options, int32_t* error)
     {
         IL2CPP_ASSERT(path || mapName);
-        os::FastAutoLock lock(&s_Mutex);
 
         *error = 0;
 
         os::FileHandle* file = NULL;
         if (path != NULL)
         {
+            os::FastAutoLock lock(&s_Mutex);
             std::string filePath = utils::StringUtils::Utf16ToUtf8(path->chars);
             file = os::File::Open(filePath, mode, ConvertMemoryMappedFileAccessToIL2CPPFileAccess((os::MemoryMappedFileAccess)access), 0, options, error);
 
@@ -152,7 +149,6 @@ namespace MemoryMappedFiles
     void MemoryMapImpl::CloseMapping(intptr_t handle)
     {
         IL2CPP_ASSERT(handle);
-        os::FastAutoLock lock(&s_Mutex);
 
         os::FileHandle* file = (os::FileHandle*)handle;
 

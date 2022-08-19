@@ -166,8 +166,8 @@ extern "C" {
     {
         static const int kBitIsValueType = 1;
         Il2CppType *type = (Il2CppType*)monoType;
-        Il2CppMetadataTypeHandle handle = il2cpp::vm::MetadataCache::GetTypeHandleFromType(type->data.generic_class->type);
-        return il2cpp::vm::MetadataCache::TypeIsValueType(handle);
+        const Il2CppTypeDefinition *typeDef = il2cpp::vm::MetadataCache::GetTypeDefinitionFromIndex(type->data.generic_class->typeDefinitionIndex);
+        return (typeDef->bitfield >> (kBitIsValueType - 1)) & 0x1;
     }
 
     MonoGenericContext* il2cpp_mono_method_get_context(MonoMethod* monoMethod);
@@ -584,7 +584,7 @@ extern "C" {
         if (method->is_inflated || !method->is_generic)
             return NULL;
 
-        return (MonoGenericContainer*)method->genericContainerHandle;
+        return (MonoGenericContainer*)method->genericContainer;
     }
 
     MonoMethod* il2cpp_mono_class_inflate_generic_method_full_checked(MonoMethod* method, MonoClass* klass_hint, MonoGenericContext* context, MonoError* error)
@@ -787,7 +787,7 @@ extern "C" {
 
     MonoClass* il2cpp_mono_class_from_generic_parameter_internal(MonoGenericParam* param)
     {
-        return (MonoClass*)il2cpp::vm::Class::FromGenericParameter((Il2CppMetadataGenericParameterHandle)param);
+        return (MonoClass*)il2cpp::vm::Class::FromGenericParameter((Il2CppGenericParameter*)param);
     }
 
     MonoClass* il2cpp_mono_class_load_from_name(MonoImage* image, const char* name_space, const char* name)
@@ -1255,7 +1255,7 @@ extern "C" {
 
     MonoGenericParam* il2cpp_mono_generic_container_get_param(MonoGenericContainer *gc, int i)
     {
-        return (MonoGenericParam*)il2cpp::vm::GenericContainer::GetGenericParameter((Il2CppMetadataGenericContainerHandle)gc, i);
+        return (MonoGenericParam*)il2cpp::vm::GenericContainer::GetGenericParameter((Il2CppGenericContainer*)gc, i);
     }
 
     gboolean il2cpp_mono_find_seq_point(MonoDomain *domain, MonoMethod *method, gint32 il_offset, MonoSeqPointInfo **info, SeqPoint *seq_point)
@@ -1415,7 +1415,7 @@ extern "C" {
     Il2CppSequencePoint* il2cpp_get_seq_point_from_catch_point(Il2CppCatchPoint *cp)
     {
 #if IL2CPP_MONO_DEBUGGER
-        return (Il2CppSequencePoint*)il2cpp::utils::Debugger::GetSequencePoint(NULL, cp);
+        return (Il2CppSequencePoint*)il2cpp::utils::Debugger::GetSequencePoint(cp);
 #else
         return NULL;
 #endif
@@ -1430,7 +1430,7 @@ extern "C" {
             return TRUE;
         if (rightMethod == NULL || leftMethod == NULL)
             return FALSE;
-        if (leftMethod->methodMetadataHandle == rightMethod->methodMetadataHandle)
+        if (leftMethod->methodDefinition == rightMethod->methodDefinition)
             return TRUE;
 
         return FALSE;
@@ -1612,7 +1612,7 @@ extern "C" {
     const MonoMethod* il2cpp_get_seq_point_method(Il2CppSequencePoint *seqPoint)
     {
 #if IL2CPP_MONO_DEBUGGER
-        return il2cpp::utils::Debugger::GetSequencePointMethod(NULL, seqPoint);
+        return il2cpp::utils::Debugger::GetSequencePointMethod(seqPoint);
 #else
         return NULL;
 #endif
@@ -1623,12 +1623,12 @@ extern "C" {
         if (index < 0)
             return NULL;
 
-        return il2cpp::vm::MetadataCache::GetTypeInfoFromTypeIndex(NULL, index);
+        return il2cpp::vm::MetadataCache::GetTypeInfoFromTypeIndex(index);
     }
 
     const MonoType* il2cpp_get_type_from_index(int index)
     {
-        return il2cpp::vm::MetadataCache::GetIl2CppTypeFromIndex(NULL, index);
+        return il2cpp::vm::MetadataCache::GetIl2CppTypeFromIndex(index);
     }
 
     const MonoType* il2cpp_type_inflate(MonoType* type, const MonoGenericContext* context)

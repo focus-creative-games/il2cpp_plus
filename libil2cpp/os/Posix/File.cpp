@@ -9,18 +9,13 @@
 #endif
 
 #include "il2cpp-vm-support.h"
-#include "os/ConsoleExtension.h"
 #include "os/ErrorCodes.h"
 #include "os/File.h"
 #include "os/Mutex.h"
 #include "os/Posix/Error.h"
 #include "utils/PathUtils.h"
 
-#if IL2CPP_SUPPORT_THREADS
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-#endif
-
+#include <assert.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -42,7 +37,7 @@ namespace os
     static FileHandle* s_fileHandleHead = NULL;
     static FileHandle* s_fileHandleTail = NULL;
 #if IL2CPP_SUPPORT_THREADS
-    static baselib::ReentrantLock s_fileHandleMutex;
+    static FastMutex s_fileHandleMutex;
 #endif
 
     static void AddFileHandle(FileHandle *fileHandle)
@@ -1064,11 +1059,6 @@ namespace os
 
 #if IL2CPP_ENABLE_PROFILER
         IL2CPP_VM_PROFILE_FILEIO(IL2CPP_PROFILE_FILEIO_WRITE, count);
-#endif
-
-#if IL2CPP_SUPPORTS_CONSOLE_EXTENSION
-        if (handle == GetStdOutput() || handle == GetStdError())
-            os::ConsoleExtension::Write(buffer);
 #endif
         return ret;
     }

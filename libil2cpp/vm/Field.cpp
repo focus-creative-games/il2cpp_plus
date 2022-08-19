@@ -227,8 +227,8 @@ namespace vm
 
     void Field::SetInstanceFieldValueObject(Il2CppObject* objectInstance, FieldInfo* field, Il2CppObject* value)
     {
-        IL2CPP_ASSERT(!(field->type->attrs & FIELD_ATTRIBUTE_LITERAL));
-        IL2CPP_ASSERT(!Class::FromIl2CppType(field->type)->valuetype);
+        assert(!(field->type->attrs & FIELD_ATTRIBUTE_LITERAL));
+        assert(!Class::FromIl2CppType(field->type)->valuetype);
         gc::WriteBarrier::GenericStore(reinterpret_cast<uint8_t*>(objectInstance) + field->offset, value);
     }
 

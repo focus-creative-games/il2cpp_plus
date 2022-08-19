@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_TARGET_POSIX
+#if IL2CPP_TARGET_POSIX || IL2CPP_SUPPORT_SOCKETS_POSIX_API
 
 #include "Error.h"
 #include "utils/PathUtils.h"
@@ -134,7 +134,7 @@ namespace os
 
         switch (code)
         {
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
             case EACCES: case EPERM: case EROFS:
                 ret = kErrorCodeAccessDenied;
                 break;
@@ -223,7 +223,7 @@ namespace os
         if (code == ENOENT)
         {
             const std::string dirname(il2cpp::utils::PathUtils::DirectoryName(path));
-#if !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PSP2  && !IL2CPP_HAS_NOACCESS
+#if !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PS5 && !IL2CPP_TARGET_PSP2
             if (access(dirname.c_str(), F_OK) == 0)
                 return kErrorCodeFileNotFound;
             else

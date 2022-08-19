@@ -61,8 +61,8 @@ namespace gc
     static void* g_MaxHeap = 0;
     static WriteBarrierValidation::ExternalAllocationTrackerFunction g_ExternalAllocationTrackerFunction = NULL;
     static WriteBarrierValidation::ExternalWriteBarrierTrackerFunction g_ExternalWriteBarrierTrackerFunction = NULL;
-    static baselib::ReentrantLock s_AllocationMutex;
-    static baselib::ReentrantLock s_WriteBarrierMutex;
+    static FastMutex s_AllocationMutex;
+    static FastMutex s_WriteBarrierMutex;
 
     extern "C" void* GC_malloc_kind(size_t size, int k);
 
@@ -139,13 +139,6 @@ namespace gc
     }
 
     extern "C" void* GC_gcj_malloc(size_t size, void * ptr_to_struct_containing_descr)
-    {
-        void ** ptr = (void**)GC_malloc_wrapper(size, kObject);
-        *ptr = ptr_to_struct_containing_descr;
-        return ptr;
-    }
-
-    extern "C" void* GC_CALL GC_gcj_vector_malloc(size_t size, void * ptr_to_struct_containing_descr)
     {
         void ** ptr = (void**)GC_malloc_wrapper(size, kObject);
         *ptr = ptr_to_struct_containing_descr;

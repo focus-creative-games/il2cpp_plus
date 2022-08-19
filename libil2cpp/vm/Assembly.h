@@ -26,7 +26,6 @@ namespace vm
         static const Il2CppAssembly* GetLoadedAssembly(const char* name);
         static const Il2CppAssembly* Load(const char* name);
         static void Register(const Il2CppAssembly* assembly);
-        static void ClearAllAssemblies();
         static void Initialize();
 
     private:

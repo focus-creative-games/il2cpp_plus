@@ -50,7 +50,7 @@ namespace gc
             {
                 m_Size = 8;
                 m_Data = (T*)il2cpp::gc::GarbageCollector::AllocateFixed(m_Size * sizeof(T), NULL);
-                IL2CPP_ASSERT(m_Data);
+                assert(m_Data);
             }
             else if (m_Map.size() == m_Size)
             {
@@ -67,7 +67,7 @@ namespace gc
 
                 m_Size = newSize;
                 m_Data = newData;
-                IL2CPP_ASSERT(m_Data);
+                assert(m_Data);
             }
 
             size_t index = m_Map.size();
@@ -76,7 +76,7 @@ namespace gc
 
             GarbageCollector::SetWriteBarrier((void**)(m_Data + index));
 
-            IL2CPP_ASSERT(m_Map.size() <= m_Size);
+            assert(m_Map.size() <= m_Size);
             return true;
         }
 
@@ -87,7 +87,7 @@ namespace gc
                 return false;
 
             size_t index = iter->second;
-            IL2CPP_ASSERT(index <= m_Map.size());
+            assert(index <= m_Map.size());
             *value = m_Data[index];
             return true;
         }

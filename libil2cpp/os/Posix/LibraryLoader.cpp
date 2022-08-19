@@ -23,19 +23,14 @@
 #include "utils/StringUtils.h"
 #include "utils/Environment.h"
 
-#if !RUNTIME_TINY
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-#endif
-
 namespace il2cpp
 {
 namespace os
 {
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
     static std::set<void*> s_NativeHandlesOpen;
     typedef std::set<void*>::const_iterator OpenHandleIterator;
-    baselib::ReentrantLock s_NativeHandlesOpenMutex;
+    os::FastMutex s_NativeHandlesOpenMutex;
 #endif
 
     struct LibraryNamePrefixAndSuffix
@@ -147,17 +142,17 @@ namespace os
         return NULL;
     }
 
-    Il2CppMethodPointer LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(const il2cpp::utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, const il2cpp::utils::StringView<char>& entryPoint, Il2CppCharSet charSet)
+    Il2CppMethodPointer LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(const il2cpp::utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, const il2cpp::utils::StringView<char>& entryPoint)
     {
         return NULL;
     }
 
-    void* LibraryLoader::LoadDynamicLibraryImpl(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary)
+    void* LibraryLoader::LoadDynamicLibrary(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary)
     {
-        return LoadDynamicLibraryImpl(nativeDynamicLibrary, RTLD_LAZY);
+        return LoadDynamicLibrary(nativeDynamicLibrary, RTLD_LAZY);
     }
 
-    void* LibraryLoader::LoadDynamicLibraryImpl(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, int flags)
+    void* LibraryLoader::LoadDynamicLibrary(const utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, int flags)
     {
 #ifdef VERBOSE_OUTPUT
         printf("Attempting to load dynamic library: %s\n", nativeDynamicLibrary.Str());
@@ -192,7 +187,7 @@ namespace os
             }
         }
 
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
         os::FastAutoLock lock(&s_NativeHandlesOpenMutex);
         if (handle != NULL)
             s_NativeHandlesOpen.insert(handle);
@@ -204,7 +199,7 @@ namespace os
     Il2CppMethodPointer LibraryLoader::GetFunctionPointer(void* dynamicLibrary, const PInvokeArguments& pinvokeArgs)
     {
         StringViewAsNullTerminatedStringOf(char, pinvokeArgs.entryPoint, entryPoint);
-#if RUNTIME_TINY
+#if IL2CPP_TINY_WITHOUT_DEBUGGER
         return reinterpret_cast<Il2CppMethodPointer>(dlsym(dynamicLibrary, entryPoint));
 #else
 
@@ -264,7 +259,7 @@ namespace os
 
     void LibraryLoader::CleanupLoadedLibraries()
     {
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
         os::FastAutoLock lock(&s_NativeHandlesOpenMutex);
         for (OpenHandleIterator it = s_NativeHandlesOpen.begin(); it != s_NativeHandlesOpen.end(); it++)
         {
@@ -278,7 +273,7 @@ namespace os
         if (dynamicLibrary == NULL)
             return false;
 
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
         os::FastAutoLock lock(&s_NativeHandlesOpenMutex);
         OpenHandleIterator it = s_NativeHandlesOpen.find(dynamicLibrary);
         if (it != s_NativeHandlesOpen.end())

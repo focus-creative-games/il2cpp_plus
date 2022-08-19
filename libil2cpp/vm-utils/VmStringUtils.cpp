@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include "VmStringUtils.h"
 #include "il2cpp-object-internals.h"

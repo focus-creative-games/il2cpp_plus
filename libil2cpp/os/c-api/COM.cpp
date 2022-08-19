@@ -1,6 +1,6 @@
 #include "os/c-api/il2cpp-config-platforms.h"
 
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include "os/COM.h"
 #include "os/c-api/COM-c-api.h"

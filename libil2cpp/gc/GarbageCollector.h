@@ -33,7 +33,7 @@ namespace gc
         static void AddMemoryPressure(int64_t value);
         static int32_t GetMaxGeneration();
         static int32_t GetGeneration(void* addr);
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
         static void InitializeFinalizer();
         static bool IsFinalizerThread(Il2CppThread* thread);
         static void UninitializeFinalizers();
@@ -48,18 +48,11 @@ namespace gc
 
         // functions implemented in a GC specific manner
         static void Initialize();
-
-        // Deprecated. Remove when Unity has switched to mono_unity_gc_set_mode
         static void Enable();
-        // Deprecated. Remove when Unity has switched to mono_unity_gc_set_mode
         static void Disable();
-        // Deprecated. Remove when Unity has switched to mono_unity_gc_set_mode
         static bool IsDisabled();
 
-        static void SetMode(Il2CppGCMode mode);
-
         static bool IsIncremental();
-        static void StartIncrementalCollection();
 
         static int64_t GetMaxTimeSliceNs();
         static void SetMaxTimeSliceNs(int64_t maxTimeSlice);
@@ -72,7 +65,7 @@ namespace gc
         static void* MakeDescriptorForString();
         static void* MakeDescriptorForArray();
 
-#if RUNTIME_TINY
+#if IL2CPP_TINY_WITHOUT_DEBUGGER
         static void* Allocate(size_t size);
 #endif
 
@@ -82,7 +75,7 @@ namespace gc
         static bool RegisterThread(void *baseptr);
         static bool UnregisterThread();
 
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
         static bool HasPendingFinalizers();
         static int32_t InvokeFinalizers();
 #endif

@@ -43,6 +43,7 @@
 #include "vm/InternalCalls.h"
 #include "utils/Collections.h"
 #include "utils/Memory.h"
+#include "utils/RegisterRuntimeInitializeAndCleanup.h"
 #include "utils/StringUtils.h"
 #include "utils/PathUtils.h"
 #include "utils/Runtime.h"
@@ -50,9 +51,6 @@
 #include "mono/ThreadPool/threadpool-ms.h"
 #include "mono/ThreadPool/threadpool-ms-io.h"
 //#include "icalls/mscorlib/System.Reflection/Assembly.h"
-
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
 
 #if IL2CPP_MONO_DEBUGGER
 extern "C" {
@@ -64,19 +62,14 @@ Il2CppDefaults il2cpp_defaults;
 bool g_il2cpp_is_fully_initialized = false;
 static bool shutting_down = false;
 
-MetadataInitializerCleanupFunc g_ClearMethodMetadataInitializedFlags = NULL;
-
-static baselib::ReentrantLock s_InitLock;
+static il2cpp::os::FastMutex s_InitLock;
 static int32_t s_RuntimeInitCount;
-
-typedef void (*CodegenRegistrationFunction) ();
-extern CodegenRegistrationFunction g_CodegenRegistration;
 
 namespace il2cpp
 {
 namespace vm
 {
-    baselib::ReentrantLock g_MetadataLock;
+    il2cpp::os::FastMutex g_MetadataLock;
 
     static int32_t exitcode = 0;
     static std::string s_ConfigDir;
@@ -152,9 +145,7 @@ namespace vm
         os::Image::Initialize();
         os::Thread::Init();
 
-        // This should be filled in by generated code.
-        IL2CPP_ASSERT(g_CodegenRegistration != NULL);
-        g_CodegenRegistration();
+        il2cpp::utils::RegisterRuntimeInitializeAndCleanup::ExecuteInitializations();
 
         if (!MetadataCache::Initialize())
         {
@@ -233,12 +224,12 @@ namespace vm
         DEFAULTS_INIT_TYPE(stack_frame_class, "System.Diagnostics", "StackFrame", Il2CppStackFrame);
         DEFAULTS_INIT(stack_trace_class, "System.Diagnostics", "StackTrace");
         DEFAULTS_INIT_TYPE(typed_reference_class, "System", "TypedReference", Il2CppTypedRef);
-#endif
         DEFAULTS_INIT(generic_ilist_class, "System.Collections.Generic", "IList`1");
         DEFAULTS_INIT(generic_icollection_class, "System.Collections.Generic", "ICollection`1");
         DEFAULTS_INIT(generic_ienumerable_class, "System.Collections.Generic", "IEnumerable`1");
         DEFAULTS_INIT(generic_ireadonlylist_class, "System.Collections.Generic", "IReadOnlyList`1");
         DEFAULTS_INIT(generic_ireadonlycollection_class, "System.Collections.Generic", "IReadOnlyCollection`1");
+#endif
         DEFAULTS_INIT(generic_nullable_class, "System", "Nullable`1");
 #if !IL2CPP_TINY
         DEFAULTS_INIT(version, "System", "Version");
@@ -374,9 +365,6 @@ namespace vm
             utils::Environment::SetMainArgs(mainArgs, 1);
         }
 
-        vm::MetadataCache::ExecuteEagerStaticClassConstructors();
-        vm::MetadataCache::ExecuteModuleInitializers();
-
         return true;
     }
 
@@ -410,13 +398,9 @@ namespace vm
         il2cpp::gc::GarbageCollector::UninitializeFinalizers();
 
         // after the gc cleanup so the finalizer thread can unregister itself
-        Thread::Uninitialize();
+        Thread::UnInitialize();
 
         os::Thread::Shutdown();
-
-#if IL2CPP_ENABLE_RELOAD
-        MetadataCache::Clear();
-#endif
 
         // We need to do this after thread shut down because it is freeing GC fixed memory
         il2cpp::gc::GarbageCollector::UninitializeGC();
@@ -431,13 +415,6 @@ namespace vm
 
         os::Locale::UnInitialize();
         os::Uninitialize();
-
-        Reflection::ClearStatics();
-
-#if IL2CPP_ENABLE_RELOAD
-        if (g_ClearMethodMetadataInitializedFlags != NULL)
-            g_ClearMethodMetadataInitializedFlags();
-#endif
     }
 
     bool Runtime::IsShuttingDown()
@@ -812,7 +789,7 @@ namespace vm
             utils::Runtime::Abort();
     }
 
-    static baselib::ReentrantLock s_TypeInitializationLock;
+    static il2cpp::os::FastMutex s_TypeInitializationLock;
 
 // We currently call Runtime::ClassInit in 4 places:
 // 1. Just after we allocate storage for a new object (Object::NewAllocSpecific)
@@ -829,23 +806,23 @@ namespace vm
         if (os::Atomic::CompareExchange(&klass->cctor_finished, 1, 1) == 1)
             return;
 
-        s_TypeInitializationLock.Acquire();
+        s_TypeInitializationLock.Lock();
 
         // See if some thread ran it while we acquired the lock.
         if (os::Atomic::CompareExchange(&klass->cctor_finished, 1, 1) == 1)
         {
-            s_TypeInitializationLock.Release();
+            s_TypeInitializationLock.Unlock();
             return;
         }
 
         // See if some other thread got there first and already started running the constructor.
         if (os::Atomic::CompareExchange(&klass->cctor_started, 1, 1) == 1)
         {
-            s_TypeInitializationLock.Release();
+            s_TypeInitializationLock.Unlock();
 
             // May have been us and we got here through recursion.
             os::Thread::ThreadId currentThread = os::Thread::CurrentThreadId();
-            if (os::Atomic::CompareExchangePointer((size_t**)&klass->cctor_thread, (size_t*)currentThread, (size_t*)currentThread) == (size_t*)currentThread)
+            if (os::Atomic::CompareExchangePointer((size_t*volatile*)&klass->cctor_thread, (size_t*)currentThread, (size_t*)currentThread) == (size_t*)currentThread)
                 return;
 
             // Wait for other thread to finish executing the constructor.
@@ -857,10 +834,10 @@ namespace vm
         else
         {
             // Let others know we have started executing the constructor.
-            os::Atomic::ExchangePointer((size_t**)&klass->cctor_thread, (size_t*)os::Thread::CurrentThreadId());
+            os::Atomic::ExchangePointer((size_t*volatile*)&klass->cctor_thread, (size_t*)os::Thread::CurrentThreadId());
             os::Atomic::Exchange(&klass->cctor_started, 1);
 
-            s_TypeInitializationLock.Release();
+            s_TypeInitializationLock.Unlock();
 
             // Run it.
             Il2CppException* exception = NULL;
@@ -872,7 +849,7 @@ namespace vm
 
             // Let other threads know we finished.
             os::Atomic::Exchange(&klass->cctor_finished, 1);
-            os::Atomic::ExchangePointer((size_t**)&klass->cctor_thread, (size_t*)0);
+            os::Atomic::ExchangePointer((size_t*volatile*)&klass->cctor_thread, (size_t*)0);
 
             // Deal with exceptions.
             if (exception != NULL)

@@ -33,11 +33,6 @@ namespace Console
         IL2CPP_NOT_IMPLEMENTED_ICALL(Console::TtySetup);
         return false;
     }
-
-    const char* NewLine()
-    {
-        return "\r\n";
-    }
 }
 }
 }

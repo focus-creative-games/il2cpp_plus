@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include <stdint.h>
 #include "BlobReader.h"

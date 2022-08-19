@@ -43,14 +43,9 @@ namespace Image
         {
             const char* imageName = _dyld_get_image_name(i);
             if (strstr(imageName, "GameAssembly.dylib") != NULL || strstr(imageName, "UnityFramework.framework/UnityFramework") != NULL)
-            {
                 gameAssemblyImageIndex = i;
-                break;
-            }
             else if (strcmp(imageName, &path[0]) == 0)
-            {
                 executableImageIndex = i;
-            }
         }
 
         if (gameAssemblyImageIndex != -1)
@@ -130,33 +125,6 @@ namespace Image
     {
         return s_ImageBase;
     }
-
-#if IL2CPP_ENABLE_NATIVE_INSTRUCTION_POINTER_EMISSION
-    void GetImageUUID(char* uuid)
-    {
-        const struct mach_header_64* header = (mach_header_64*)_dyld_get_image_header(GetImageIndex());
-        const uint8_t *command = (const uint8_t *)(header + 1);
-
-        for (uint32_t idx = 0; idx < header->ncmds; ++idx)
-        {
-            if (((const struct load_command *)command)->cmd == LC_UUID)
-            {
-                command += sizeof(struct load_command);
-                snprintf(uuid, 33, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-                    command[0], command[1], command[2], command[3],
-                    command[4], command[5], command[6], command[7],
-                    command[8], command[9], command[10], command[11],
-                    command[12], command[13], command[14], command[15]);
-                return;
-            }
-            else
-            {
-                command += ((const struct load_command *)command)->cmdsize;
-            }
-        }
-    }
-
-#endif
 }
 }
 }

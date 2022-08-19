@@ -47,6 +47,7 @@
 #include "os/Mutex.h"
 #include "os/Time.h"
 #include "utils/CallOnce.h"
+#include "vm/Atomic.h"
 #include "vm/Array.h"
 #include "vm/Class.h"
 #include "vm/Domain.h"
@@ -167,7 +168,7 @@ static void initialize(void* arg)
 	int threads_count;
 
 	IL2CPP_ASSERT(!g_ThreadPool);
-    g_ThreadPool = new ThreadPool();
+	g_ThreadPool = new ThreadPool();
 	IL2CPP_ASSERT(g_ThreadPool);
 
 	il2cpp::vm::Random::Open();
@@ -307,7 +308,7 @@ static ThreadPoolDomain* domain_get(Il2CppDomain *domain, bool create)
 
 bool worker_try_unpark()
 {
-	il2cpp::os::FastAutoLockOld lock(&g_ThreadPool->active_threads_lock);
+	il2cpp::os::FastAutoLock lock(&g_ThreadPool->active_threads_lock);
 
 	if (g_ThreadPool->parked_threads_count == 0)
 		return false;
@@ -326,7 +327,7 @@ static bool worker_request (Il2CppDomain *domain)
 	if (il2cpp::vm::Runtime::IsShuttingDown ())
 		return false;
 
-	g_ThreadPool->domains_lock.Acquire();
+	g_ThreadPool->domains_lock.Lock();
 
 	/* synchronize check with worker_thread */
 	//if (mono_domain_is_unloading (domain)) {
@@ -341,7 +342,7 @@ static bool worker_request (Il2CppDomain *domain)
 	/*mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_THREADPOOL, "[%p] request worker, domain = %p, outstanding_request = %d",
 		mono_native_thread_id_get (), tpdomain->domain, tpdomain->outstanding_request);*/
 
-	g_ThreadPool->domains_lock.Release();
+	g_ThreadPool->domains_lock.Unlock();
 
 	if (g_ThreadPool->suspended)
 		return false;
@@ -633,7 +634,7 @@ static void heuristic_notify_work_completed (void)
 {
 	IL2CPP_ASSERT(g_ThreadPool);
 
-	g_ThreadPool->heuristic_completions++;
+	il2cpp::vm::Atomic::Increment(&g_ThreadPool->heuristic_completions);
 	g_ThreadPool->heuristic_last_dequeue = il2cpp::os::Time::GetTicksMillisecondsMonotonic();
 }
 
@@ -655,8 +656,8 @@ static void heuristic_adjust (void)
 {
 	IL2CPP_ASSERT(g_ThreadPool);
 
-	if (g_ThreadPool->heuristic_lock.TryAcquire()) {
-		int32_t completions = g_ThreadPool->heuristic_completions.exchange(0);
+	if (g_ThreadPool->heuristic_lock.TryLock()) {
+		int32_t completions = il2cpp::vm::Atomic::Exchange (&g_ThreadPool->heuristic_completions, 0);
 		int64_t sample_end = il2cpp::os::Time::GetTicksMillisecondsMonotonic();
 		int64_t sample_duration = sample_end - g_ThreadPool->heuristic_sample_start;
 
@@ -676,7 +677,7 @@ static void heuristic_adjust (void)
 			g_ThreadPool->heuristic_last_adjustment = il2cpp::os::Time::GetTicksMillisecondsMonotonic();
 		}
 
-		g_ThreadPool->heuristic_lock.Release();
+		g_ThreadPool->heuristic_lock.Unlock();
 	}
 }
 

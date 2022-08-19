@@ -5,6 +5,7 @@
 #include "il2cpp-vm-support.h"
 #include "PlatformInvoke.h"
 #include "Exception.h"
+#include "LibraryLoader.h"
 #include "MetadataCache.h"
 #include "Object.h"
 #include "Method.h"
@@ -26,7 +27,7 @@ namespace vm
 {
     void PlatformInvoke::SetFindPluginCallback(Il2CppSetFindPlugInCallback method)
     {
-        os::LibraryLoader::SetFindPluginCallback(method);
+        LibraryLoader::SetFindPluginCallback(method);
     }
 
     Il2CppMethodPointer PlatformInvoke::Resolve(const PInvokeArguments& pinvokeArgs)
@@ -36,15 +37,29 @@ namespace vm
         // Some platforms, like UWP, just don't allow you to load to load system libraries at runtime dynamically.
         // On other platforms (THEY SHALL NOT BE NAMED :O), while the functions that mscorlib.dll wants to P/Invoke into exist,
         // They exist in different system libraries than it is said in the DllImport attribute.
-        Il2CppMethodPointer function = os::LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(pinvokeArgs.moduleName, pinvokeArgs.entryPoint, pinvokeArgs.charSet);
+
+        Il2CppMethodPointer function = NULL;
+
+#if IL2CPP_TARGET_WINDOWS
+        // On Windows we don't support, nor do we need support hard-coded ANSI functions.  That would break forwarding method names to Unicode MoveFileEx -> MoveFileExW
+        // Doing this here so we don't need to update external implementations of GetHardcodedPInvokeDependencyFunctionPointer on 2019.4
+        // On later versions of IL2CPP this check is only in the Win32 implementation.
+        if (pinvokeArgs.charSet != CHARSET_ANSI)
+        {
+#endif
+        function = os::LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(pinvokeArgs.moduleName, pinvokeArgs.entryPoint);
+#if IL2CPP_TARGET_WINDOWS
+    }
+
+#endif
         if (function != NULL)
             return function;
 
         void* dynamicLibrary = NULL;
         if (utils::VmStringUtils::CaseSensitiveEquals(il2cpp::utils::StringUtils::NativeStringToUtf8(pinvokeArgs.moduleName.Str()).c_str(), "__InternalDynamic"))
-            dynamicLibrary = os::LibraryLoader::LoadDynamicLibrary(il2cpp::utils::StringView<Il2CppNativeChar>::Empty());
+            dynamicLibrary = LibraryLoader::LoadDynamicLibrary(il2cpp::utils::StringView<Il2CppNativeChar>::Empty());
         else
-            dynamicLibrary = os::LibraryLoader::LoadDynamicLibrary(pinvokeArgs.moduleName);
+            dynamicLibrary = LibraryLoader::LoadDynamicLibrary(pinvokeArgs.moduleName);
 
         if (dynamicLibrary == NULL)
         {
@@ -394,7 +409,7 @@ namespace vm
         if (IsFakeDelegateMethodMarshaledFromNativeCode(d->method))
             return reinterpret_cast<intptr_t>(d->method->nativeFunction);
 
-        IL2CPP_ASSERT(d->method->methodMetadataHandle);
+        IL2CPP_ASSERT(d->method->methodDefinition);
 
         Il2CppMethodPointer reversePInvokeWrapper = MetadataCache::GetReversePInvokeWrapper(d->method->klass->image, d->method);
         if (reversePInvokeWrapper == NULL)
@@ -451,7 +466,6 @@ namespace vm
             const MethodInfo* invoke = il2cpp::vm::Runtime::GetDelegateInvoke(delegateType);
             MethodInfo* newMethod = (MethodInfo*)IL2CPP_CALLOC(1, sizeof(MethodInfo));
             memcpy(newMethod, invoke, sizeof(MethodInfo));
-            newMethod->methodPointer = managedToNativeWrapperMethodPointer;
             newMethod->nativeFunction = nativeFunctionPointer;
             newMethod->slot = kInvalidIl2CppMethodSlot;
             newMethod->is_marshaled_from_native = true;

@@ -2,10 +2,8 @@
 
 #include "il2cpp-api-types.h"
 #include "il2cpp-vm-support.h"
+#include "os/Mutex.h"
 #include <map>
-
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
 
 namespace il2cpp
 {
@@ -19,7 +17,7 @@ namespace utils
         static const VmMethod* GetNativeDelegate(Il2CppMethodPointer nativeFunctionPointer);
         static void AddNativeDelegate(Il2CppMethodPointer nativeFunctionPointer, const VmMethod* managedMethodInfo);
     private:
-        static baselib::ReentrantLock m_CacheMutex;
+        static il2cpp::os::FastMutex m_CacheMutex;
         static NativeDelegateMap m_NativeDelegateMethods;
     };
 } // namespace utils

@@ -110,10 +110,11 @@ namespace metadata
 
             if (!declaringClass->generic_class)
             {
-                newMethod->genericContainerHandle = methodDefinition->genericContainerHandle;
+                const Il2CppGenericContainer* container = methodDefinition->genericContainer;
+                newMethod->genericContainer = container;
             }
 
-            newMethod->methodMetadataHandle = methodDefinition->methodMetadataHandle;
+            newMethod->methodDefinition = methodDefinition->methodDefinition;
         }
         else
         {
@@ -163,11 +164,6 @@ namespace metadata
         output.append(FormatGenericArguments(gmethod->context.method_inst));
 
         return output;
-    }
-
-    void GenericMethod::ClearStatics()
-    {
-        s_GenericMethodMap.clear();
     }
 } /* namespace vm */
 } /* namespace il2cpp */

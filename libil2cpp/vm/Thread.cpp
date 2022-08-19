@@ -1,4 +1,5 @@
 #include "il2cpp-config.h"
+#include "os/Atomic.h"
 #include "os/Mutex.h"
 #include "os/Thread.h"
 #include "os/ThreadLocalValue.h"
@@ -25,9 +26,6 @@
 #include <algorithm>
 #include <map>
 
-#include "Baselib.h"
-#include "Cpp/Atomic.h"
-#include "Cpp/ReentrantLock.h"
 
 #if IL2CPP_MONO_DEBUGGER
 
@@ -51,13 +49,13 @@ namespace vm
 
 #define AUTO_LOCK_THREADS() \
     il2cpp::os::FastAutoLock lock(&s_ThreadMutex)
-    static baselib::ReentrantLock s_ThreadMutex;
+    static il2cpp::os::FastMutex s_ThreadMutex;
 
     static std::vector<int32_t> s_ThreadStaticSizes;
 
     static il2cpp::os::ThreadLocalValue s_CurrentThread;
 
-    static baselib::atomic<int32_t> s_NextManagedThreadId = {0};
+    static volatile int32_t s_NextManagedThreadId = 0;
 
     static void
     set_wbarrier_for_attached_threads()
@@ -81,26 +79,16 @@ namespace vm
 #if IL2CPP_HAS_NATIVE_THREAD_CLEANUP
         os::Thread::SetNativeThreadCleanup(&thread_cleanup_on_cancel);
 #endif
-#if IL2CPP_ENABLE_RELOAD
-        s_BlockNewThreads = false;
-#endif
         s_AttachedThreads = new GCTrackedThreadVector();
     }
 
-    void Thread::Uninitialize()
+    void Thread::UnInitialize()
     {
-        IL2CPP_ASSERT(Current() == Main());
-
 #if IL2CPP_HAS_NATIVE_THREAD_CLEANUP
         os::Thread::SetNativeThreadCleanup(NULL);
 #endif
-
         delete s_AttachedThreads;
         s_AttachedThreads = NULL;
-
-        s_MainThread = NULL;
-
-        s_CurrentThread.SetValue(NULL);
     }
 
     Il2CppThread* Thread::Attach(Il2CppDomain *domain)
@@ -138,7 +126,7 @@ namespace vm
 
     void Thread::Setup(Il2CppThread* thread)
     {
-        thread->GetInternalThread()->synch_cs = new baselib::ReentrantLock;
+        thread->GetInternalThread()->synch_cs = new il2cpp::os::FastMutex();
         thread->GetInternalThread()->apartment_state = il2cpp::os::kApartmentStateUnknown;
     }
 
@@ -267,7 +255,7 @@ namespace vm
         Il2CppThread* currentThread = Current();
         IL2CPP_ASSERT(currentThread != NULL && "No current thread!");
 
-        s_ThreadMutex.Acquire();
+        s_ThreadMutex.Lock();
         s_BlockNewThreads = true;
         GCTrackedThreadVector attachedThreadsCopy = *s_AttachedThreads;
 
@@ -275,7 +263,7 @@ namespace vm
         // reference to the object on the stack during it's lifetime. But for validation
         // tests, we turn off GC, and thus we need it to pass.
         gc::GarbageCollector::SetWriteBarrier((void**)attachedThreadsCopy.data(), sizeof(Il2CppThread*) * attachedThreadsCopy.size());
-        s_ThreadMutex.Release();
+        s_ThreadMutex.Unlock();
 
         std::vector<os::Thread*> backgroundThreads;
         std::vector<os::Thread*> foregroundThreads;
@@ -364,7 +352,6 @@ namespace vm
 
     void Thread::SetMain(Il2CppThread* thread)
     {
-        IL2CPP_ASSERT(s_MainThread == NULL);
         s_MainThread = thread;
     }
 
@@ -747,7 +734,7 @@ namespace vm
 
         internal->state = kThreadStateUnstarted;
         internal->handle = osThread;
-        internal->synch_cs = new baselib::ReentrantLock;
+        internal->synch_cs = new il2cpp::os::FastMutex();
         internal->apartment_state = il2cpp::os::kApartmentStateUnknown;
         internal->threadpool_thread = threadpool_thread;
 
@@ -815,9 +802,7 @@ namespace vm
 
     void Thread::SetDefaultAffinityMask(int64_t affinityMask)
     {
-#if defined(IL2CPP_ENABLE_PLATFORM_THREAD_AFFINTY)
         os::Thread::SetDefaultAffinityMask(affinityMask);
-#endif
     }
 
     void Thread::CheckCurrentThreadForAbortAndThrowIfNecessary()
@@ -859,7 +844,7 @@ namespace vm
 
     int32_t Thread::GetNewManagedId()
     {
-        return ++s_NextManagedThreadId;
+        return os::Atomic::Increment(&s_NextManagedThreadId);
     }
 
     uint64_t Thread::GetId(Il2CppThread* thread)

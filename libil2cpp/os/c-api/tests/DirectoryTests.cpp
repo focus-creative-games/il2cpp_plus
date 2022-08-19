@@ -54,7 +54,7 @@ SUITE(Directory)
 
 // PS4 returns an empty directory, so the other UnityPalDirectoryGetCurrent tests are enough to confirm
 // the proper behavior.
-#if !IL2CPP_TARGET_PS4
+#if !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PS5
     TEST_FIXTURE(DirectoryFixture, GetCurrentDirectoryReturnsAStringOfSomeLength)
     {
         apiRetValue = UnityPalDirectoryGetCurrent(&error);
@@ -109,7 +109,7 @@ SUITE(Directory)
     }
 
 // On PS4, any string can be set as the current directory.
-#if !IL2CPP_TARGET_PS4
+#if !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PS5
     TEST_FIXTURE(DirectoryFixture, SetCurrentDirectoryWithGarbageReturnsFalse)
     {
         CHECK(!UnityPalDirectorySetCurrent(GARBAGE_PATH, &error));
@@ -406,7 +406,7 @@ SUITE(Directory)
 
     TEST_FIXTURE(FileSytemEntriesFixture, GetFileSystemEntriesReturnsThreeEntires)
     {
-#if IL2CPP_TARGET_PS4
+#if IL2CPP_TARGET_PS4 || IL2CPP_TARGET_PS5
         const int expectedNumEntries = 9; // PS4 has the test exectuable, src, test.map, and test.prx files in the current directory as well.
 #else
         const int expectedNumEntries = 3;
@@ -501,7 +501,7 @@ SUITE(Directory)
         // UnityPalDirectoryFindNextFile will find "."" and ".." , we need to hit it
         // a few times to grab a test dir name
 
-#if IL2CPP_TARGET_PS4
+#if IL2CPP_TARGET_PS4 || IL2CPP_TARGET_PS5
         const char* expectedFile = "test.map"; // PS4 has the test exectuable, src, and test.map files in the current directory as well.
 #else
         const char* expectedFile = TEST_DIR_1;

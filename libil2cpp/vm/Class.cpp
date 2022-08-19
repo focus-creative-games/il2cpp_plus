@@ -120,9 +120,9 @@ namespace vm
             case IL2CPP_TYPE_GENERICINST:
                 return GenericClass::GetClass(type->data.generic_class, throwOnError);
             case IL2CPP_TYPE_VAR:
-                return Class::FromGenericParameter(Type::GetGenericParameterHandle(type));
+                return Class::FromGenericParameter(Type::GetGenericParameter(type));
             case IL2CPP_TYPE_MVAR:
-                return Class::FromGenericParameter(Type::GetGenericParameterHandle(type));
+                return Class::FromGenericParameter(Type::GetGenericParameter(type));
             default:
                 IL2CPP_NOT_IMPLEMENTED(Class::FromIl2CppType);
         }
@@ -192,13 +192,15 @@ namespace vm
                 IL2CPP_ASSERT(genericTypeDefinition->interfaces_count == klass->interfaces_count);
                 klass->implementedInterfaces = (Il2CppClass**)MetadataCalloc(genericTypeDefinition->interfaces_count, sizeof(Il2CppClass*));
                 for (uint16_t i = 0; i < genericTypeDefinition->interfaces_count; i++)
-                    klass->implementedInterfaces[i] = Class::FromIl2CppType(il2cpp::metadata::GenericMetadata::InflateIfNeeded(MetadataCache::GetInterfaceFromOffset(genericTypeDefinition, i), context, false));
+                    klass->implementedInterfaces[i] = Class::FromIl2CppType(il2cpp::metadata::GenericMetadata::InflateIfNeeded(MetadataCache::GetInterfaceFromIndex(genericTypeDefinition->typeDefinition->interfacesStart + i), context, false));
             }
         }
         else if (klass->rank > 0)
         {
+#if !IL2CPP_TINY
             if (klass->implementedInterfaces == NULL)
                 il2cpp::metadata::ArrayMetadata::SetupArrayInterfaces(klass, lock);
+#endif
         }
         else
         {
@@ -206,16 +208,18 @@ namespace vm
             {
                 klass->implementedInterfaces = (Il2CppClass**)MetadataCalloc(klass->interfaces_count, sizeof(Il2CppClass*));
                 for (uint16_t i = 0; i < klass->interfaces_count; i++)
-                    klass->implementedInterfaces[i] = Class::FromIl2CppType(MetadataCache::GetInterfaceFromOffset(klass, i));
+                    klass->implementedInterfaces[i] = Class::FromIl2CppType(MetadataCache::GetInterfaceFromIndex(klass->typeDefinition->interfacesStart + i));
             }
         }
     }
 
-    typedef Il2CppHashMap<Il2CppMetadataGenericParameterHandle, Il2CppClass*, utils::PassThroughHash<Il2CppMetadataGenericParameterHandle> > GenericParameterMap;
+    typedef Il2CppHashMap<const Il2CppGenericParameter*, Il2CppClass*, il2cpp::utils::PointerHash<const Il2CppGenericParameter> > GenericParameterMap;
     static GenericParameterMap s_GenericParameterMap;
 
-    Il2CppClass* Class::FromGenericParameter(Il2CppMetadataGenericParameterHandle param)
+    Il2CppClass* Class::FromGenericParameter(const Il2CppGenericParameter *param)
     {
+        IL2CPP_ASSERT(param->ownerIndex != kGenericContainerIndexInvalid);
+
         il2cpp::os::FastAutoLock lock(&g_MetadataLock);
 
         GenericParameterMap::const_iterator iter = s_GenericParameterMap.find(param);
@@ -225,14 +229,11 @@ namespace vm
         Il2CppClass* klass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass));
         klass->klass = klass;
 
-        Il2CppGenericParameterInfo paramInfo = MetadataCache::GetGenericParameterInfo(param);
-
-        IL2CPP_ASSERT(paramInfo.containerHandle != NULL);
-
-        klass->name = paramInfo.name;
+        klass->name = MetadataCache::GetStringFromIndex(param->nameIndex);
         klass->namespaze = "";
 
-        klass->image = GenericContainer::GetDeclaringType(paramInfo.containerHandle)->image;
+        const Il2CppGenericContainer* container = MetadataCache::GetGenericContainerFromIndex(param->ownerIndex);
+        klass->image = GenericContainer::GetDeclaringType(container)->image;
 
         klass->initialized = true;
         UpdateInitializedAndNoError(klass);
@@ -242,10 +243,8 @@ namespace vm
 
         klass->flags = TYPE_ATTRIBUTE_PUBLIC;
 
-        bool containerIsMethod = MetadataCache::GetGenericContainerIsMethod(paramInfo.containerHandle);
-
-        MetadataCache::MakeGenericArgType(paramInfo.containerHandle, param, &klass->byval_arg);
-        MetadataCache::MakeGenericArgType(paramInfo.containerHandle, param, &klass->this_arg);
+        klass->this_arg.type = klass->byval_arg.type = container->is_method ? IL2CPP_TYPE_MVAR : IL2CPP_TYPE_VAR;
+        klass->this_arg.data.genericParameterIndex = klass->byval_arg.data.genericParameterIndex = MetadataCache::GetIndexForGenericParameter(param);
         klass->this_arg.byref = true;
 
         klass->instance_size = sizeof(void*);
@@ -556,8 +555,8 @@ namespace vm
     {
         int32_t size;
 
-        if (!klass->size_init_pending)
-            SetupFields(klass);
+        if (!klass->init_pending)
+            Init(klass);
 
         IL2CPP_ASSERT(klass->valuetype);
 
@@ -644,8 +643,10 @@ namespace vm
 
             if (klass->parent == il2cpp_defaults.multicastdelegate_class && klass->generic_class != NULL)
             {
-                Il2CppMetadataGenericContainerHandle containerHandle = MetadataCache::GetGenericContainerFromGenericClass(klass->image, klass->generic_class);
-                if (IsGenericClassAssignableFrom(klass, oklass, klass->image, containerHandle))
+                const Il2CppTypeDefinition* genericClass = MetadataCache::GetTypeDefinitionFromIndex(klass->generic_class->typeDefinitionIndex);
+                const Il2CppGenericContainer* genericContainer = MetadataCache::GetGenericContainerFromIndex(genericClass->genericContainerIndex);
+
+                if (IsGenericClassAssignableFrom(klass, oklass, genericContainer))
                     return true;
             }
 
@@ -656,22 +657,23 @@ namespace vm
         {
             // checking for simple reference equality is not enough in this case because generic interface might have covariant and/or contravariant parameters
 
-            Il2CppMetadataGenericContainerHandle containerHandle = MetadataCache::GetGenericContainerFromGenericClass(klass->image, klass->generic_class);
+            const Il2CppTypeDefinition* genericInterface = MetadataCache::GetTypeDefinitionFromIndex(klass->generic_class->typeDefinitionIndex);
+            const Il2CppGenericContainer* genericContainer = MetadataCache::GetGenericContainerFromIndex(genericInterface->genericContainerIndex);
 
             for (Il2CppClass* iter = oklass; iter != NULL; iter = iter->parent)
             {
-                if (IsGenericClassAssignableFrom(klass, iter, klass->image, containerHandle))
+                if (IsGenericClassAssignableFrom(klass, iter, genericContainer))
                     return true;
 
                 for (uint16_t i = 0; i < iter->interfaces_count; ++i)
                 {
-                    if (IsGenericClassAssignableFrom(klass, iter->implementedInterfaces[i], klass->image, containerHandle))
+                    if (IsGenericClassAssignableFrom(klass, iter->implementedInterfaces[i], genericContainer))
                         return true;
                 }
 
                 for (uint16_t i = 0; i < iter->interface_offsets_count; ++i)
                 {
-                    if (IsGenericClassAssignableFrom(klass, iter->interfaceOffsets[i].interfaceType, klass->image, containerHandle))
+                    if (IsGenericClassAssignableFrom(klass, iter->interfaceOffsets[i].interfaceType, genericContainer))
                         return true;
                 }
             }
@@ -866,7 +868,7 @@ namespace vm
         // need to set this in case there are no fields in a generic instance type
         if (klass->generic_class)
         {
-            const Il2CppClass* genericTypeDef = il2cpp::vm::MetadataCache::GetTypeInfoFromType(klass->generic_class->type);
+            const Il2CppClass* genericTypeDef = GenericClass::GetTypeDefinition(klass->generic_class);
             // If the generic class has an instance size, it was explictly set
             if (genericTypeDef->instance_size > 0 && genericTypeDef->instance_size > instanceSize)
                 instanceSize = genericTypeDef->instance_size;
@@ -1026,16 +1028,19 @@ namespace vm
         FieldInfo* fields = (FieldInfo*)MetadataCalloc(klass->field_count, sizeof(FieldInfo));
         FieldInfo* newField = fields;
 
-        FieldIndex end = klass->field_count;
-        for (FieldIndex fieldIndex = 0; fieldIndex < end; ++fieldIndex)
-        {
-            Il2CppMetadataFieldInfo fieldInfo = MetadataCache::GetFieldInfo(klass, fieldIndex);
+        FieldIndex start = klass->typeDefinition->fieldStart;
+        IL2CPP_ASSERT(klass->typeDefinition->fieldStart != kFieldIndexInvalid);
+        FieldIndex end = start + klass->field_count;
 
-            newField->type = fieldInfo.type;
-            newField->name = fieldInfo.name;
+        for (FieldIndex fieldIndex = start; fieldIndex < end; ++fieldIndex)
+        {
+            const Il2CppFieldDefinition* fieldDefinition = MetadataCache::GetFieldDefinitionFromIndex(fieldIndex);
+
+            newField->type = MetadataCache::GetIl2CppTypeFromIndex(fieldDefinition->typeIndex);
+            newField->name = MetadataCache::GetStringFromIndex(fieldDefinition->nameIndex);
             newField->parent = klass;
-            newField->offset = MetadataCache::GetFieldOffsetFromIndexLocked(klass, fieldIndex, newField, lock);
-            newField->token = fieldInfo.token;
+            newField->offset = MetadataCache::GetFieldOffsetFromIndexLocked(MetadataCache::GetIndexForTypeDefinition(klass), fieldIndex - start, newField, lock);
+            newField->token = fieldDefinition->token;
 
             newField++;
         }
@@ -1048,8 +1053,6 @@ namespace vm
     {
         if (klass->size_inited)
             return;
-
-        klass->size_init_pending = true;
 
         if (klass->parent && !klass->parent->size_inited)
             SetupFieldsLocked(klass->parent, lock);
@@ -1068,8 +1071,6 @@ namespace vm
 
         if (!Class::IsGeneric(klass))
             LayoutFieldsLocked(klass, lock);
-
-        klass->size_init_pending = false;
 
         klass->size_inited = true;
     }
@@ -1107,61 +1108,60 @@ namespace vm
                 return;
             }
 
-            klass->methods = (const MethodInfo**)MetadataCalloc(klass->method_count, sizeof(MethodInfo*));
-            MethodInfo* methods = (MethodInfo*)MetadataCalloc(klass->method_count, sizeof(MethodInfo));
+            klass->methods = (const MethodInfo**)IL2CPP_CALLOC(klass->method_count, sizeof(MethodInfo*));
+            MethodInfo* methods = (MethodInfo*)IL2CPP_CALLOC(klass->method_count, sizeof(MethodInfo));
             MethodInfo* newMethod = methods;
 
-            MethodIndex end = klass->method_count;
+            MethodIndex start = klass->typeDefinition->methodStart;
+            IL2CPP_ASSERT(start != kFieldIndexInvalid);
+            MethodIndex end = start + klass->method_count;
 
-            for (MethodIndex index = 0; index < end; ++index)
+            for (MethodIndex index = start; index < end; ++index)
             {
-                Il2CppMetadataMethodInfo methodInfo = MetadataCache::GetMethodInfo(klass, index);
+                const Il2CppMethodDefinition* methodDefinition = MetadataCache::GetMethodDefinitionFromIndex(index);
 
-                newMethod->name = methodInfo.name;
+                newMethod->name = MetadataCache::GetStringFromIndex(methodDefinition->nameIndex);
 
                 if (klass->valuetype)
                 {
-                    Il2CppMethodPointer adjustorThunk = MetadataCache::GetAdjustorThunk(klass->image, methodInfo.token);
+                    Il2CppMethodPointer adjustorThunk = MetadataCache::GetAdjustorThunk(klass->image, methodDefinition->token);
                     if (adjustorThunk != NULL)
                         newMethod->methodPointer = adjustorThunk;
                 }
 
-                // We did not find an adjustor thunk, or maybe did not need to look for one. Let's get the real method pointer.
                 if (newMethod->methodPointer == NULL)
-                    newMethod->methodPointer = MetadataCache::GetMethodPointer(klass->image, methodInfo.token);
+                    newMethod->methodPointer = MetadataCache::GetMethodPointer(klass->image, methodDefinition->token);
 
-                newMethod->invoker_method = MetadataCache::GetMethodInvoker(klass->image, methodInfo.token);
-
+                newMethod->invoker_method = MetadataCache::GetMethodInvoker(klass->image, methodDefinition->token);
                 newMethod->klass = klass;
-                newMethod->return_type = methodInfo.return_type;
+                newMethod->return_type = MetadataCache::GetIl2CppTypeFromIndex(methodDefinition->returnType);
 
-                newMethod->parameters_count = (uint8_t)methodInfo.parameterCount;
-
-                ParameterInfo* parameters = (ParameterInfo*)MetadataCalloc(methodInfo.parameterCount, sizeof(ParameterInfo));
+                ParameterInfo* parameters = (ParameterInfo*)IL2CPP_CALLOC(methodDefinition->parameterCount, sizeof(ParameterInfo));
                 ParameterInfo* newParameter = parameters;
-                for (uint16_t paramIndex = 0; paramIndex < methodInfo.parameterCount; ++paramIndex)
+                for (uint16_t paramIndex = 0; paramIndex < methodDefinition->parameterCount; ++paramIndex)
                 {
-                    Il2CppMetadataParameterInfo paramInfo = MetadataCache::GetParameterInfo(klass, methodInfo.handle, paramIndex);
-                    newParameter->name = paramInfo.name;
+                    const Il2CppParameterDefinition* parameterDefinition = MetadataCache::GetParameterDefinitionFromIndex(methodDefinition->parameterStart + paramIndex);
+                    newParameter->name = MetadataCache::GetStringFromIndex(parameterDefinition->nameIndex);
                     newParameter->position = paramIndex;
-                    newParameter->token = paramInfo.token;
-                    newParameter->parameter_type = paramInfo.type;
+                    newParameter->token = parameterDefinition->token;
+                    newParameter->parameter_type = MetadataCache::GetIl2CppTypeFromIndex(parameterDefinition->typeIndex);
 
                     newParameter++;
                 }
                 newMethod->parameters = parameters;
 
-                newMethod->flags = methodInfo.flags;
-                newMethod->iflags = methodInfo.iflags;
-                newMethod->slot = methodInfo.slot;
+                newMethod->flags = methodDefinition->flags;
+                newMethod->iflags = methodDefinition->iflags;
+                newMethod->slot = methodDefinition->slot;
+                newMethod->parameters_count = static_cast<const uint8_t>(methodDefinition->parameterCount);
                 newMethod->is_inflated = false;
-                newMethod->token = methodInfo.token;
-                newMethod->methodMetadataHandle = methodInfo.handle;
-                newMethod->genericContainerHandle = MetadataCache::GetGenericContainerFromMethod(methodInfo.handle);
-                if (newMethod->genericContainerHandle)
+                newMethod->token = methodDefinition->token;
+                newMethod->methodDefinition = methodDefinition;
+                newMethod->genericContainer = MetadataCache::GetGenericContainerFromIndex(methodDefinition->genericContainerIndex);
+                if (newMethod->genericContainer)
                     newMethod->is_generic = true;
 
-                klass->methods[index] = newMethod;
+                klass->methods[index - start] = newMethod;
 
                 newMethod++;
             }
@@ -1186,7 +1186,7 @@ namespace vm
         {
             klass->nestedTypes = (Il2CppClass**)MetadataCalloc(klass->nested_type_count, sizeof(Il2CppClass*));
             for (uint16_t i = 0; i < klass->nested_type_count; i++)
-                klass->nestedTypes[i] = MetadataCache::GetNestedTypeFromOffset(klass, i);
+                klass->nestedTypes[i] = MetadataCache::GetNestedTypeFromIndex(klass->typeDefinition->nestedTypesStart + i);
         }
     }
 
@@ -1217,9 +1217,9 @@ namespace vm
                 klass->interfaceOffsets = (Il2CppRuntimeInterfaceOffsetPair*)MetadataCalloc(genericTypeDefinition->interface_offsets_count, sizeof(Il2CppRuntimeInterfaceOffsetPair));
                 for (uint16_t i = 0; i < genericTypeDefinition->interface_offsets_count; i++)
                 {
-                    Il2CppInterfaceOffsetInfo interfaceOffset = MetadataCache::GetInterfaceOffsetInfo(genericTypeDefinition, i);
+                    Il2CppInterfaceOffsetPair interfaceOffset = MetadataCache::GetInterfaceOffsetIndex(genericTypeDefinition->typeDefinition->interfaceOffsetsStart + i);
                     klass->interfaceOffsets[i].offset = interfaceOffset.offset;
-                    klass->interfaceOffsets[i].interfaceType = Class::FromIl2CppType(il2cpp::metadata::GenericMetadata::InflateIfNeeded(interfaceOffset.interfaceType, context, false));
+                    klass->interfaceOffsets[i].interfaceType = Class::FromIl2CppType(il2cpp::metadata::GenericMetadata::InflateIfNeeded(MetadataCache::GetIl2CppTypeFromIndex(interfaceOffset.interfaceTypeIndex), context, false));
                 }
             }
 
@@ -1228,8 +1228,9 @@ namespace vm
                 klass->vtable_count = genericTypeDefinition->vtable_count;
                 for (uint16_t i = 0; i < genericTypeDefinition->vtable_count; i++)
                 {
-                    const MethodInfo* method = MetadataCache::GetMethodInfoFromVTableSlot(genericTypeDefinition, i);
-                    if (method && method->is_inflated)
+                    EncodedMethodIndex vtableMethodIndex = MetadataCache::GetVTableMethodFromIndex(genericTypeDefinition->typeDefinition->vtableStart + i);
+                    const MethodInfo* method = MetadataCache::GetMethodInfoFromIndex(vtableMethodIndex);
+                    if (GetEncodedIndexType(vtableMethodIndex) == kIl2CppMetadataUsageMethodRef)
                     {
                         const Il2CppGenericMethod* genericMethod = il2cpp::metadata::GenericMetadata::Inflate(method->genericMethod, context);
                         method = il2cpp::metadata::GenericMethod::GetMethod(genericMethod);
@@ -1263,9 +1264,9 @@ namespace vm
                 klass->interfaceOffsets = (Il2CppRuntimeInterfaceOffsetPair*)MetadataCalloc(klass->interface_offsets_count, sizeof(Il2CppRuntimeInterfaceOffsetPair));
                 for (uint16_t i = 0; i < klass->interface_offsets_count; i++)
                 {
-                    Il2CppInterfaceOffsetInfo interfaceOffset = MetadataCache::GetInterfaceOffsetInfo(klass, i);
+                    Il2CppInterfaceOffsetPair interfaceOffset = MetadataCache::GetInterfaceOffsetIndex(klass->typeDefinition->interfaceOffsetsStart + i);
                     klass->interfaceOffsets[i].offset = interfaceOffset.offset;
-                    klass->interfaceOffsets[i].interfaceType = Class::FromIl2CppType(interfaceOffset.interfaceType);
+                    klass->interfaceOffsets[i].interfaceType = Class::FromIl2CppType(MetadataCache::GetIl2CppTypeFromIndex(interfaceOffset.interfaceTypeIndex));
                 }
             }
 
@@ -1273,7 +1274,7 @@ namespace vm
             {
                 for (uint16_t i = 0; i < klass->vtable_count; i++)
                 {
-                    const MethodInfo* method = MetadataCache::GetMethodInfoFromVTableSlot(klass, i);
+                    const MethodInfo* method = MetadataCache::GetMethodInfoFromIndex(MetadataCache::GetVTableMethodFromIndex(klass->typeDefinition->vtableStart + i));
                     klass->vtable[i].method = method;
 
                     if (method != NULL)
@@ -1302,22 +1303,31 @@ namespace vm
             // we need methods initialized since we reference them via index below
             SetupMethodsLocked(klass, lock);
 
-            EventInfo* events = (EventInfo*)MetadataCalloc(klass->event_count, sizeof(EventInfo));
+            EventInfo* events = (EventInfo*)IL2CPP_CALLOC(klass->event_count, sizeof(EventInfo));
             EventInfo* newEvent = events;
 
-            EventIndex end = klass->event_count;
+            EventIndex start = klass->typeDefinition->eventStart;
+            IL2CPP_ASSERT(klass->typeDefinition->eventStart != kEventIndexInvalid);
+            EventIndex end = start + klass->event_count;
 
-            for (EventIndex eventIndex = 0; eventIndex < end; ++eventIndex)
+            for (EventIndex eventIndex = start; eventIndex < end; ++eventIndex)
             {
-                Il2CppMetadataEventInfo eventInfo = MetadataCache::GetEventInfo(klass, eventIndex);
+                const Il2CppEventDefinition* eventDefinition = MetadataCache::GetEventDefinitionFromIndex(eventIndex);
 
-                newEvent->eventType = eventInfo.type;
-                newEvent->name = eventInfo.name;
+                newEvent->eventType = MetadataCache::GetIl2CppTypeFromIndex(eventDefinition->typeIndex);
+                newEvent->name = MetadataCache::GetStringFromIndex(eventDefinition->nameIndex);
                 newEvent->parent = klass;
-                newEvent->add = eventInfo.add;
-                newEvent->remove = eventInfo.remove;
-                newEvent->raise = eventInfo.raise;
-                newEvent->token = eventInfo.token;
+
+                if (eventDefinition->add != kMethodIndexInvalid)
+                    newEvent->add = klass->methods[eventDefinition->add];
+
+                if (eventDefinition->remove != kMethodIndexInvalid)
+                    newEvent->remove = klass->methods[eventDefinition->remove];
+
+                if (eventDefinition->raise != kMethodIndexInvalid)
+                    newEvent->raise = klass->methods[eventDefinition->raise];
+
+                newEvent->token = eventDefinition->token;
 
                 newEvent++;
             }
@@ -1347,21 +1357,28 @@ namespace vm
             // we need methods initialized since we reference them via index below
             SetupMethodsLocked(klass, lock);
 
-            PropertyInfo* properties = (PropertyInfo*)MetadataCalloc(klass->property_count, sizeof(PropertyInfo));
+            PropertyInfo* properties = (PropertyInfo*)IL2CPP_CALLOC(klass->property_count, sizeof(PropertyInfo));
             PropertyInfo* newProperty = properties;
 
-            PropertyIndex end = klass->property_count;
+            PropertyIndex start = klass->typeDefinition->propertyStart;
+            IL2CPP_ASSERT(klass->typeDefinition->propertyStart != kPropertyIndexInvalid);
+            PropertyIndex end = start + klass->property_count;
 
-            for (PropertyIndex propertyIndex = 0; propertyIndex < end; ++propertyIndex)
+            for (PropertyIndex propertyIndex = start; propertyIndex < end; ++propertyIndex)
             {
-                Il2CppMetadataPropertyInfo propertyInfo = MetadataCache::GetPropertyInfo(klass, propertyIndex);
+                const Il2CppPropertyDefinition* propertyDefinition = MetadataCache::GetPropertyDefinitionFromIndex(propertyIndex);
 
-                newProperty->name = propertyInfo.name;
+                newProperty->name = MetadataCache::GetStringFromIndex(propertyDefinition->nameIndex);
                 newProperty->parent = klass;
-                newProperty->get = propertyInfo.get;
-                newProperty->set = propertyInfo.set;
-                newProperty->attrs = propertyInfo.attrs;
-                newProperty->token = propertyInfo.token;
+
+                if (propertyDefinition->get != kMethodIndexInvalid)
+                    newProperty->get = klass->methods[propertyDefinition->get];
+
+                if (propertyDefinition->set != kMethodIndexInvalid)
+                    newProperty->set = klass->methods[propertyDefinition->set];
+
+                newProperty->attrs = propertyDefinition->attrs;
+                newProperty->token = propertyDefinition->token;
 
                 newProperty++;
             }
@@ -1737,9 +1754,9 @@ namespace vm
         return klass->image;
     }
 
-    Il2CppMetadataGenericContainerHandle Class::GetGenericContainer(Il2CppClass *klass)
+    const Il2CppGenericContainer* Class::GetGenericContainer(Il2CppClass *klass)
     {
-        return klass->genericContainerHandle;
+        return MetadataCache::GetGenericContainerFromIndex(klass->genericContainerIndex);
     }
 
     const MethodInfo* Class::GetCCtor(Il2CppClass *klass)
@@ -1752,7 +1769,16 @@ namespace vm
 
     const char* Class::GetFieldDefaultValue(const FieldInfo *field, const Il2CppType** type)
     {
-        return reinterpret_cast<const char*>(MetadataCache::GetFieldDefaultValue(field, type));
+        const Il2CppFieldDefaultValue *entry = MetadataCache::GetFieldDefaultValueForField(field);
+        if (entry != NULL)
+        {
+            *type = MetadataCache::GetIl2CppTypeFromIndex(entry->typeIndex);
+            if (entry->dataIndex == kDefaultValueIndexNull)
+                return NULL;
+
+            return (const char*)MetadataCache::GetFieldDefaultValueDataFromIndex(entry->dataIndex);
+        }
+        return NULL;
     }
 
     int Class::GetFieldMarshaledSize(const FieldInfo *field)
@@ -1826,15 +1852,14 @@ namespace vm
 
     bool Class::HasReferences(Il2CppClass *klass)
     {
-        if (klass->size_init_pending)
+        if (klass->init_pending)
         {
-            abort();
             /* Be conservative */
             return true;
         }
         else
         {
-            SetupFields(klass);
+            Init(klass);
 
             return klass->has_references;
         }
@@ -1992,9 +2017,8 @@ namespace vm
     {
         Il2CppClass *klass = NULL;
 
-        Il2CppMetadataGenericContainerHandle containerHandle = Class::GetGenericContainer(generic_class);
-        uint32_t type_argc = MetadataCache::GetGenericContainerCount(containerHandle);
-        if (type_argc != generic_arguments.size())
+        const Il2CppGenericContainer* container = Class::GetGenericContainer(generic_class);
+        if (container->type_argc != generic_arguments.size())
             il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetArgumentException("name", "The number of generic arguments provided doesn't equal the arity of the generic type definition."));
 
         if (info.assembly_name().name.empty())

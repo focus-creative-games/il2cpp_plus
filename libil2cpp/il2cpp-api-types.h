@@ -78,13 +78,6 @@ typedef enum
 
 typedef enum
 {
-    IL2CPP_GC_MODE_DISABLED = 0,
-    IL2CPP_GC_MODE_ENABLED = 1,
-    IL2CPP_GC_MODE_MANUAL = 2
-} Il2CppGCMode;
-
-typedef enum
-{
     IL2CPP_STAT_NEW_OBJECT_COUNT,
     IL2CPP_STAT_INITIALIZED_CLASS_COUNT,
     //IL2CPP_STAT_GENERIC_VTABLE_COUNT,
@@ -112,7 +105,6 @@ typedef enum
 typedef struct Il2CppStackFrameInfo
 {
     const MethodInfo *method;
-    uintptr_t raw_ip;
 } Il2CppStackFrameInfo;
 
 typedef void(*Il2CppMethodPointer)();

@@ -58,7 +58,7 @@ namespace MemoryInformation
 
             for (uint32_t i = 0; i < image.typeCount; i++)
             {
-                Il2CppClass* type = MetadataCache::GetTypeInfoFromHandle(MetadataCache::GetAssemblyTypeHandle(&image, i));
+                Il2CppClass* type = MetadataCache::GetTypeInfoFromTypeDefinitionIndex(image.typeStart + i);
                 if (type->initialized)
                     gatherMetadataContext.allTypes.insert(std::make_pair(type, gatherMetadataContext.currentIndex++));
             }
@@ -308,7 +308,7 @@ namespace MemoryInformation
 
             for (uint32_t i = 0; i < image.typeCount; i++)
             {
-                Il2CppClass* type = MetadataCache::GetTypeInfoFromHandle(MetadataCache::GetAssemblyTypeHandle(&image, i));
+                Il2CppClass* type = MetadataCache::GetTypeInfoFromTypeDefinitionIndex(image.typeStart + i);
                 if (type->initialized)
                     callback(type, context);
             }

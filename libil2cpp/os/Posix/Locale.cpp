@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_TARGET_POSIX
+#if IL2CPP_TARGET_POSIX && !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include <clocale>
 #include <locale.h>
@@ -15,10 +15,6 @@ namespace il2cpp
 {
 namespace os
 {
-#if IL2CPP_TARGET_ANDROID
-    std::string AndroidGetLocale();
-#endif
-
 #if IL2CPP_TARGET_DARWIN
     static std::string DarwinGetLocale()
     {
@@ -122,9 +118,9 @@ namespace os
         if (posix_locale == NULL)
             return std::string();
 
-#if IL2CPP_TARGET_JAVASCRIPT || IL2CPP_TARGET_ANDROID
+#if IL2CPP_TARGET_JAVASCRIPT
         // This code is here due to a few factors:
-        //   1. Emscripten and Android give us a "C" locale (the POSIX default).
+        //   1. Emscripten gives us a "C" locale (the POSIX default).
         //   2. The Mono class library code uses managed exceptions for flow control.
         //   3. We need to support Emscripten builds with exceptions disabled.
         //   4. Our localization tables don't have any entry for the "C" locale.
@@ -154,8 +150,6 @@ namespace os
         std::string locale;
 #if IL2CPP_TARGET_DARWIN
         locale = DarwinGetLocale();
-#elif IL2CPP_TARGET_ANDROID
-        locale = AndroidGetLocale();
 #endif
         if (locale.empty())
             locale = PosixGetLocale();

@@ -79,7 +79,7 @@ static bool monitor_should_keep_running(void)
 
     IL2CPP_ASSERT(s_MonitorStatus == MONITOR_STATUS_WAITING_FOR_REQUEST || s_MonitorStatus == MONITOR_STATUS_REQUESTED);
 
-    if (il2cpp::os::Atomic::Exchange(&s_MonitorStatus, MONITOR_STATUS_WAITING_FOR_REQUEST) == MONITOR_STATUS_WAITING_FOR_REQUEST)
+    if (il2cpp::vm::Atomic::Exchange(&s_MonitorStatus, MONITOR_STATUS_WAITING_FOR_REQUEST) == MONITOR_STATUS_WAITING_FOR_REQUEST)
     {
         bool should_keep_running = true, force_should_keep_running = false;
 
@@ -89,10 +89,10 @@ static bool monitor_should_keep_running(void)
         }
         else
         {
-            g_ThreadPool->domains_lock.Acquire();
+            g_ThreadPool->domains_lock.Lock();
             if (!domain_any_has_request())
                 should_keep_running = false;
-            g_ThreadPool->domains_lock.Release();
+            g_ThreadPool->domains_lock.Unlock();
 
             if (!should_keep_running)
             {
@@ -111,7 +111,7 @@ static bool monitor_should_keep_running(void)
         else
         {
             last_should_keep_running = -1;
-            if (il2cpp::os::Atomic::CompareExchange(&s_MonitorStatus, MONITOR_STATUS_NOT_RUNNING, MONITOR_STATUS_WAITING_FOR_REQUEST) == MONITOR_STATUS_WAITING_FOR_REQUEST)
+            if (il2cpp::vm::Atomic::CompareExchange(&s_MonitorStatus, MONITOR_STATUS_NOT_RUNNING, MONITOR_STATUS_WAITING_FOR_REQUEST) == MONITOR_STATUS_WAITING_FOR_REQUEST)
                 return false;
         }
     }
@@ -170,13 +170,13 @@ static void monitor_thread(void* data)
         if (il2cpp::vm::Runtime::IsShuttingDown())
             continue;
 
-        g_ThreadPool->domains_lock.Acquire();
+        g_ThreadPool->domains_lock.Lock();
         if (!domain_any_has_request())
         {
-            g_ThreadPool->domains_lock.Release();
+            g_ThreadPool->domains_lock.Unlock();
             continue;
         }
-        g_ThreadPool->domains_lock.Release();
+        g_ThreadPool->domains_lock.Unlock();
 
         g_ThreadPool->cpu_usage = cpu_info_usage(g_ThreadPool->cpu_usage_state);
 
@@ -232,12 +232,12 @@ void monitor_ensure_running()
             case MONITOR_STATUS_REQUESTED:
                 return;
             case MONITOR_STATUS_WAITING_FOR_REQUEST:
-                il2cpp::os::Atomic::CompareExchange(&s_MonitorStatus, MONITOR_STATUS_REQUESTED, MONITOR_STATUS_WAITING_FOR_REQUEST);
+                il2cpp::vm::Atomic::CompareExchange(&s_MonitorStatus, MONITOR_STATUS_REQUESTED, MONITOR_STATUS_WAITING_FOR_REQUEST);
                 break;
             case MONITOR_STATUS_NOT_RUNNING:
                 if (il2cpp::vm::Runtime::IsShuttingDown())
                     return;
-                if (il2cpp::os::Atomic::CompareExchange(&s_MonitorStatus, MONITOR_STATUS_REQUESTED, MONITOR_STATUS_NOT_RUNNING) == MONITOR_STATUS_NOT_RUNNING)
+                if (il2cpp::vm::Atomic::CompareExchange(&s_MonitorStatus, MONITOR_STATUS_REQUESTED, MONITOR_STATUS_NOT_RUNNING) == MONITOR_STATUS_NOT_RUNNING)
                 {
                     if (!il2cpp::vm::Thread::CreateInternal(monitor_thread, NULL, true, SMALL_STACK))
                         s_MonitorStatus = MONITOR_STATUS_NOT_RUNNING;

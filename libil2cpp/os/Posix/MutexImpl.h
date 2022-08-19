@@ -1,6 +1,6 @@
 #pragma once
 
-#if IL2CPP_THREADS_PTHREAD && !RUNTIME_TINY
+#if IL2CPP_THREADS_PTHREAD && !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include "os/ErrorCodes.h"
 #include "os/WaitStatus.h"

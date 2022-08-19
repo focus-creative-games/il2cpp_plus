@@ -1,7 +1,7 @@
 #include "il2cpp-config.h"
 #include "MacOsIPInterfaceProperties.h"
 
-#if IL2CPP_TARGET_OSX || IL2CPP_TARGET_IOS
+#if IL2CPP_TARGET_OSX
 
 #include "il2cpp-class-internals.h"
 #include "gc/GarbageCollector.h"
@@ -19,55 +19,7 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <net/if_dl.h>
-#if IL2CPP_TARGET_OSX
 #include <net/route.h>
-#else
-
-// Borrowed necessary defines and structs from the macOS route.h for use on iOS/tvOS
-
-/*
- * These numbers are used by reliable protocols for determining
- * retransmission behavior and are included in the routing structure.
- */
-struct rt_metrics
-{
-    u_int32_t       rmx_locks;      /* Kernel leaves these values alone */
-    u_int32_t       rmx_mtu;        /* MTU for this path */
-    u_int32_t       rmx_hopcount;   /* max hops expected */
-    int32_t         rmx_expire;     /* lifetime for route, e.g. redirect */
-    u_int32_t       rmx_recvpipe;   /* inbound delay-bandwidth product */
-    u_int32_t       rmx_sendpipe;   /* outbound delay-bandwidth product */
-    u_int32_t       rmx_ssthresh;   /* outbound gateway buffer limit */
-    u_int32_t       rmx_rtt;        /* estimated round trip time */
-    u_int32_t       rmx_rttvar;     /* estimated rtt variance */
-    u_int32_t       rmx_pksent;     /* packets sent using this route */
-    u_int32_t       rmx_state;      /* route state */
-    u_int32_t       rmx_filler[3];  /* will be used for T/TCP later */
-};
-
-/*
- * Structures for routing messages.
- */
-struct rt_msghdr
-{
-    u_short rtm_msglen;     /* to skip over non-understood messages */
-    u_char  rtm_version;    /* future binary compatibility */
-    u_char  rtm_type;       /* message type */
-    u_short rtm_index;      /* index for associated ifp */
-    int     rtm_flags;      /* flags, incl. kern & message, e.g. DONE */
-    int     rtm_addrs;      /* bitmask identifying sockaddrs in msg */
-    pid_t   rtm_pid;        /* identify sender */
-    int     rtm_seq;        /* for sender to identify action */
-    int     rtm_errno;      /* why failed */
-    int     rtm_use;        /* from rtentry */
-    u_int32_t rtm_inits;    /* which metrics we are initializing */
-    struct rt_metrics rtm_rmx; /* metrics themselves */
-};
-
-#define RTA_GATEWAY     0x2     /* gateway sockaddr present */
-#define RTM_VERSION     5       /* Up the ante and ignore older versions */
-#endif
-
 #include <netinet/in.h>
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -96,7 +48,7 @@ static in_addr_t gateway_from_rtm(struct rt_msghdr *rtm)
     return 0;
 }
 
-#endif // IL2CPP_TARGET_OSX || IL2CPP_TARGET_IOS
+#endif // IL2CPP_TARGET_OSX
 
 namespace il2cpp
 {
@@ -112,7 +64,7 @@ namespace NetworkInformation
 {
     bool MacOsIPInterfaceProperties::ParseRouteInfo_internal(Il2CppString* iface, Il2CppArray** gw_addr_list)
     {
-#if IL2CPP_TARGET_OSX || IL2CPP_TARGET_IOS
+#if IL2CPP_TARGET_OSX
         size_t needed;
         in_addr_t in;
         int mib[6];

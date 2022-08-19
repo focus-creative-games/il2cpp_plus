@@ -1,8 +1,6 @@
 #include "il2cpp-config.h"
 #include "il2cpp-class-internals.h"
 
-#include "vm/GlobalMetadataFileInternals.h"
-
 #if _MSC_VER
 
 // These structs aren't actually used anywhere, but they are used by the VS debugger visualizer to help visualize various types

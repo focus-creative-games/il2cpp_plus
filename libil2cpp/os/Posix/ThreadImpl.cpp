@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_PTHREAD && !RUNTIME_TINY
+#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_PTHREAD && !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include <limits>
 #include <unistd.h>
@@ -17,6 +17,7 @@
 #include "ThreadImpl.h"
 #include "PosixHelpers.h"
 #include "os/Mutex.h"
+
 
 namespace il2cpp
 {

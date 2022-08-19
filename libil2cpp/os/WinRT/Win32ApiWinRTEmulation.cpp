@@ -16,9 +16,6 @@
 #include "Win32ApiSharedEmulation.h"
 #include "Win32ApiWinRTEmulation.h"
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 using namespace ABI::Windows::Foundation;
 using namespace ABI::Windows::System::Profile;
 using namespace ABI::Windows::System::UserProfile;
@@ -44,7 +41,7 @@ public:
 
 typedef Il2CppHashMap<std::wstring, std::wstring, WideStringHash> EnvironmentVariableMap;
 static EnvironmentVariableMap s_EnvironmentVariables;
-static baselib::ReentrantLock s_EnvironmentVariablesMutex;
+static il2cpp::os::FastMutex s_EnvironmentVariablesMutex;
 
 #endif
 

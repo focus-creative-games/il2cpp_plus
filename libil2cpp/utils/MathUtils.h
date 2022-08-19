@@ -1,6 +1,7 @@
 #pragma once
 
 #include "il2cpp-config.h"
+#include <assert.h>
 #include <cmath>
 #include <limits>
 #include <stdint.h>

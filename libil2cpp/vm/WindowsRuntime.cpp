@@ -394,7 +394,7 @@ namespace vm
             Il2CppClass* elementClass = NULL;
 
             utils::StringView<Il2CppNativeChar> elementTypeName(utils::StringView<Il2CppNativeChar>::Empty());
-            Il2CppHString elementMetadataTypeName = NULL;
+            Il2CppHString elementMetadataTypeName;
 
             bool isElementTypePrimitive = IsWindowsRuntimePrimitiveType(elementType, elementClass);
             if (isElementTypePrimitive)

@@ -1,6 +1,6 @@
 #pragma once
 
-#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_PTHREAD && !RUNTIME_TINY
+#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_PTHREAD && !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include <pthread.h>
 #include <vector>

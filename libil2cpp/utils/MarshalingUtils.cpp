@@ -7,7 +7,7 @@ namespace utils
 {
     void MarshalingUtils::MarshalStructToNative(void* managedStructure, void* marshaledStructure, const Il2CppInteropData* interopData)
     {
-#if RUNTIME_TINY
+#if IL2CPP_TINY_WITHOUT_DEBUGGER
         IL2CPP_ASSERT(0 && "Not supported with the Tiny runtime");
 #else
         IL2CPP_ASSERT(interopData);
@@ -18,7 +18,7 @@ namespace utils
 
     void MarshalingUtils::MarshalStructFromNative(void* marshaledStructure, void* managedStructure, const Il2CppInteropData* interopData)
     {
-#if RUNTIME_TINY
+#if IL2CPP_TINY_WITHOUT_DEBUGGER
         IL2CPP_ASSERT(0 && "Not supported with the Tiny runtime");
 #else
         IL2CPP_ASSERT(interopData);
@@ -29,7 +29,7 @@ namespace utils
 
     bool MarshalingUtils::MarshalFreeStruct(void* marshaledStructure, const Il2CppInteropData* interopData)
     {
-#if RUNTIME_TINY
+#if IL2CPP_TINY_WITHOUT_DEBUGGER
         IL2CPP_ASSERT(0 && "Not supported with the Tiny runtime");
         return false;
 #else

@@ -328,7 +328,7 @@ namespace Reflection
 
     Il2CppReflectionAssembly* Assembly::LoadFrom(Il2CppString* assemblyFile, bool refonly)
     {
-        IL2CPP_ASSERT(!refonly && "This icall is not supported by il2cpp when refonly=true");
+        assert(!refonly && "This icall is not supported by il2cpp when refonly=true");
 
         // Our implementation is going to behave a bit different.  We can't actually load any assembly.  If we didn't know about the assembly at conversion time,
         // then we won't be able to do anything.

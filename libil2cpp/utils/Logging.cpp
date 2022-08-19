@@ -1,6 +1,5 @@
-#include <stdarg.h>
-#include <cstdio>
 #include <cassert>
+#include <stdarg.h>
 #include "Logging.h"
 #include "Output.h"
 
@@ -16,7 +15,7 @@ Il2CppLogCallback Logging::s_Callback = DefaultLogCallback;
 
 void Logging::Write(const char* format, ...)
 {
-    IL2CPP_ASSERT(s_Callback != NULL);
+    assert(s_Callback != NULL);
 
     if (format == NULL)
         return;
@@ -37,7 +36,7 @@ void Logging::Write(const char* format, ...)
 
 void Logging::SetLogCallback(Il2CppLogCallback method)
 {
-    IL2CPP_ASSERT(method != NULL);
+    assert(method != NULL);
     s_Callback = method;
 }
 

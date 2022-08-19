@@ -1,10 +1,11 @@
 #include "il2cpp-config.h"
 #include "gc/GCHandle.h"
 #include "utils/Memory.h"
+#include "vm/Atomic.h"
 #include "vm/CCW.h"
 #include "vm/ScopedThreadAttacher.h"
 #include "WeakReference.h"
-#include "utils/New.h"
+#include "os/Unity/UnityPlatformConfigure.h"
 
 il2cpp_hresult_t il2cpp::vm::WeakReference::Create(Il2CppObject* managedObject, Il2CppIWeakReference** result)
 {
@@ -37,12 +38,12 @@ il2cpp_hresult_t STDCALL il2cpp::vm::WeakReference::QueryInterface(const Il2CppG
 
 uint32_t STDCALL il2cpp::vm::WeakReference::AddRef()
 {
-    return ++m_RefCount;
+    return Atomic::Increment(&m_RefCount);
 }
 
 uint32_t STDCALL il2cpp::vm::WeakReference::Release()
 {
-    const uint32_t refCount = --m_RefCount;
+    const uint32_t refCount = Atomic::Decrement(&m_RefCount);
     if (refCount == 0)
     {
         this->~WeakReference();

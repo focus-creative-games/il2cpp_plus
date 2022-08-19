@@ -9,7 +9,6 @@ namespace vm
     {
     public:
         static void* LoadMetadataFile(const char* fileName);
-        static void UnloadMetadataFile(void* fileBuffer);
     };
 } // namespace vm
 } // namespace il2cpp

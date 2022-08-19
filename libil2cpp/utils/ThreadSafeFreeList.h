@@ -1,24 +1,30 @@
 #pragma once
 
-#include "Baselib.h"
-#include "Cpp/mpmc_node_queue.h"
+#include "os/Unity/AtomicQueue.h"
 
 namespace il2cpp
 {
 namespace utils
 {
-    typedef baselib::mpmc_node ThreadSafeFreeListNode;
+    struct ThreadSafeFreeListNode
+    {
+        ThreadSafeFreeListNode* nextFreeListNode;
+
+        ThreadSafeFreeListNode()
+            : nextFreeListNode(NULL) {}
+    };
 
 /// Lockless allocator that keeps instances of T on a free list.
 ///
 /// T must be derived from ThreadSafeFreeListNode.
 ///
+/// NOTE: T must have sizeof(T) >= sizeof(void*).
     template<typename T>
     struct ThreadSafeFreeList
     {
         T* Allocate()
         {
-            T* instance = m_NodePool.try_pop_front();
+            T* instance = reinterpret_cast<T*>(m_FreeList.Pop());
             if (!instance)
                 instance = new T();
 
@@ -27,19 +33,20 @@ namespace utils
 
         void Release(T* instance)
         {
-            m_NodePool.push_back(instance);
+            ThreadSafeFreeListNode* node = static_cast<ThreadSafeFreeListNode*>(instance);
+            m_FreeList.Push(reinterpret_cast<il2cpp::os::AtomicNode*>(node));
         }
 
         ~ThreadSafeFreeList()
         {
             T* instance;
-            while ((instance = m_NodePool.try_pop_front()) != NULL)
+            while ((instance = reinterpret_cast<T*>(m_FreeList.Pop())) != NULL)
                 delete instance;
         }
 
     private:
 
-        baselib::mpmc_node_queue<T> m_NodePool;
+        ALIGN_TYPE(64) il2cpp::os::AtomicStack m_FreeList;
     };
 } /* utils */
 } /* il2cpp */

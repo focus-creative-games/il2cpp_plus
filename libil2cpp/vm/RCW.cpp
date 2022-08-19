@@ -22,9 +22,6 @@
 #include "utils/HashUtils.h"
 #include "utils/StringUtils.h"
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 const Il2CppGuid Il2CppIUnknown::IID = { 0x00000000, 0x0000, 0x0000, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 };
 const Il2CppGuid Il2CppISequentialStream::IID = { 0x0c733a30, 0x2a1c, 0x11ce, 0xad, 0xe5, 0x00, 0xaa, 0x00, 0x44, 0x77, 0x3d };
 const Il2CppGuid Il2CppIStream::IID = { 0x0000000c, 0x0000, 0x0000, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 };
@@ -45,7 +42,7 @@ namespace vm
 {
     typedef Il2CppHashMap<Il2CppIUnknown*, /* Weak GC Handle */ uint32_t, il2cpp::utils::PointerHash<Il2CppIUnknown> > RCWCache;
 
-    static baselib::ReentrantLock s_RCWCacheMutex;
+    static os::FastMutex s_RCWCacheMutex;
     static RCWCache s_RCWCache;
 
     void RCW::Register(Il2CppComObject* rcw)
@@ -179,7 +176,7 @@ namespace vm
 
         for (uint16_t i = 0; i < 2; i++)
         {
-            const MethodInfo* methodToInvoke = NULL;
+            const MethodInfo* methodToInvoke;
             const FieldInfo& field = keyValuePairGenericInstance->fields[i];
 
             // Figure out which getter to call
@@ -479,16 +476,17 @@ namespace vm
 
         if (targetInterface->generic_class != NULL)
         {
-            Il2CppMetadataGenericContainerHandle containerHandle = MetadataCache::GetGenericContainerFromGenericClass(targetInterface->image, targetInterface->generic_class);
+            const Il2CppTypeDefinition* genericInterface = MetadataCache::GetTypeDefinitionFromIndex(targetInterface->generic_class->typeDefinitionIndex);
+            const Il2CppGenericContainer* genericContainer = MetadataCache::GetGenericContainerFromIndex(genericInterface->genericContainerIndex);
 
-            if (Class::IsGenericClassAssignableFrom(targetInterface, queriedInterface, targetInterface->image, containerHandle))
+            if (Class::IsGenericClassAssignableFrom(targetInterface, queriedInterface, genericContainer))
                 return NULL;
 
             const Il2CppRuntimeInterfaceOffsetPair* interfaceOffsets = queriedInterface->interfaceOffsets;
             uint16_t interfaceOffsetsCount = queriedInterface->interface_offsets_count;
             for (uint16_t i = 0; i < interfaceOffsetsCount; i++)
             {
-                if (Class::IsGenericClassAssignableFrom(targetInterface, interfaceOffsets[i].interfaceType, targetInterface->image, containerHandle))
+                if (Class::IsGenericClassAssignableFrom(targetInterface, interfaceOffsets[i].interfaceType, genericContainer))
                 {
                     Il2CppMethodSlot slotWithOffset = interfaceOffsets[i].offset + slot;
                     if (slotWithOffset < vtableCount)

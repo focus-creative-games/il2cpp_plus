@@ -6,6 +6,14 @@
 #include "utils/StringUtils.h"
 #include "utils/Environment.h"
 
+
+#if defined(RUNTIME_MONO)
+extern "C"
+{
+#include <mono/metadata/unity-utils.h>
+}
+#endif
+
 namespace il2cpp
 {
 namespace utils
@@ -17,6 +25,7 @@ namespace utils
 
     static std::string s_DataDirFallback;
 
+#if !defined(RUNTIME_MONO)
     static std::string s_DataDir;
 
     void Runtime::SetDataDir(const char *path)
@@ -24,12 +33,25 @@ namespace utils
         s_DataDir = path;
     }
 
+#endif
+
     std::string Runtime::GetDataDir()
     {
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
+#if defined(RUNTIME_MONO)
+        // use explicit value if set
+        char* dataDirCS = mono_unity_get_data_dir();
+        if (dataDirCS)
+        {
+            std::string dataDir(dataDirCS, strlen(dataDirCS));
+            if (dataDir.size() > 0)
+                return dataDir;
+        }
+#else
         // use explicit value if set
         if (s_DataDir.size() > 0)
             return s_DataDir;
+#endif
 
         std::string executablePath = os::Path::GetExecutablePath();
         if (!executablePath.empty())

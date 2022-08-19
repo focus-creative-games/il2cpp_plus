@@ -1,11 +1,5 @@
 #pragma once
-#include "il2cpp-config.h"
 #include <limits.h>
-#if IL2CPP_TARGET_WINDOWS
-#include <malloc.h>
-#else
-#include <alloca.h>
-#endif
 
 #if IL2CPP_TARGET_LINUX
 #define GCC_VERSION (__GNUC__ * 10000 \
@@ -185,7 +179,7 @@ namespace utils
     const CharType* variableName; \
     do \
     { \
-        if (!stringView.IsEmpty() && stringView.IsNullTerminated()) \
+        if (stringView.IsNullTerminated()) \
         { \
             variableName = stringView.Str(); \
         } \

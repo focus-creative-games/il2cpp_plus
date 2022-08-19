@@ -18,7 +18,6 @@
     #include "gc_typed.h"
     #include "gc_mark.h"
     #include "gc_gcj.h"
-    #include "gc_vector.h"
 
     #define GC_NO_DESCRIPTOR ((void*)(0 | GC_DS_LENGTH))
 

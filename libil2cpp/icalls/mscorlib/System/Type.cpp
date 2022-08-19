@@ -76,7 +76,7 @@ namespace System
     int32_t Type::GetGenericParameterPosition(Il2CppReflectionType* type)
     {
         if (MonoType::get_IsGenericParameter(type))
-            return vm::Type::GetGenericParameterInfo(type->type).num;
+            return vm::Type::GetGenericParameter(type->type)->num;
         return -1;
     }
 
@@ -279,7 +279,7 @@ namespace System
         if ((strcmp(klass->namespaze, "System") == 0 && strcmp(klass->name, "TypedReference") == 0))
         {
             std::string message;
-            message + "Could not create array type '" + klass->namespaze + "." + klass->name + "[]'.";
+            message = "Could not create array type '" + std::string(klass->namespaze) + "." + klass->name + "[]'.";
             il2cpp_raise_exception(vm::Exception::GetTypeLoadException(message.c_str()));
         }
     }
@@ -436,27 +436,22 @@ namespace System
 
     Il2CppGenericParameterAttributes Type::GetGenericParameterAttributes(Il2CppReflectionType* type)
     {
-        Il2CppGenericParameterInfo genericParameter = vm::Type::GetGenericParameterInfo(type->type);
-        if (genericParameter.containerHandle == NULL)
+        const Il2CppGenericParameter* genericParameter = vm::Type::GetGenericParameter(type->type);
+        if (genericParameter->ownerIndex == kGenericContainerIndexInvalid)
             return 0;
 
-        return genericParameter.flags;
+        return genericParameter->flags;
     }
 
     Il2CppArray* Type::GetGenericParameterConstraints_impl(Il2CppReflectionType* type)
     {
-        Il2CppMetadataGenericParameterHandle handle = vm::Type::GetGenericParameterHandle(type->type);
-        Il2CppGenericParameterInfo genericParameter = vm::Type::GetGenericParameterInfo(type->type);
-        if (genericParameter.containerHandle == NULL)
+        const Il2CppGenericParameter* genericParameter = vm::Type::GetGenericParameter(type->type);
+        if (genericParameter->ownerIndex == kGenericContainerIndexInvalid)
             return NULL;
 
-        int16_t constraintsCount = vm::MetadataCache::GetGenericConstraintCount(handle);
-        Il2CppArray* res = il2cpp_array_new(il2cpp_defaults.monotype_class, constraintsCount);
-        for (int i = 0; i < constraintsCount; i++)
-        {
-            const Il2CppType* constarintType = vm::MetadataCache::GetGenericParameterConstraintFromIndex(handle, i);
-            il2cpp_array_setref(res, i, il2cpp_type_get_object(constarintType));
-        }
+        Il2CppArray* res = il2cpp_array_new(il2cpp_defaults.monotype_class, genericParameter->constraintsCount);
+        for (int i = 0; i < genericParameter->constraintsCount; i++)
+            il2cpp_array_setref(res, i, il2cpp_type_get_object(vm::MetadataCache::GetGenericParameterConstraintFromIndex(genericParameter->constraintsStart + i)));
 
         return res;
     }
@@ -464,17 +459,17 @@ namespace System
     void Type::GetPacking(Il2CppReflectionType* type, int32_t* packing, int32_t* size)
     {
         const Il2CppType* runtimeType = vm::Type::IsGenericInstance(type->type) ? vm::Type::GetGenericTypeDefintion(type->type) : type->type;
-        Il2CppMetadataTypeHandle handle = il2cpp::vm::MetadataCache::GetTypeHandleFromType(runtimeType);
-
-        if (vm::MetadataCache::StructLayoutPackIsDefault(handle))
+        Il2CppClass* klass = vm::Class::FromIl2CppType(runtimeType);
+        TypeDefinitionIndex index = vm::MetadataCache::GetIndexForTypeDefinition(klass);
+        if (vm::MetadataCache::StructLayoutPackIsDefault(index))
             *packing = 8;
         else
-            *packing = vm::MetadataCache::StructLayoutPack(handle);
+            *packing = vm::MetadataCache::StructLayoutPack(index);
 
-        if (vm::MetadataCache::StructLayoutSizeIsDefault(handle))
+        if (vm::MetadataCache::StructLayoutSizeIsDefault(index))
             *size = 0;
         else
-            *size = vm::Class::FromIl2CppType(runtimeType)->native_size;
+            *size = klass->native_size;
     }
 } /* namespace System */
 } /* namespace mscorlib */

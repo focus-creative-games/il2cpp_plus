@@ -7,6 +7,7 @@
 #include "Type.h"
 
 #include "vm/Class.h"
+#include "vm/GenericContainer.h"
 #include "vm/Image.h"
 #include "vm/Reflection.h"
 #include "vm/MetadataCache.h"
@@ -128,11 +129,9 @@ namespace System
         const Il2CppType *thisType = type->type.type;
         if ((thisType->type == IL2CPP_TYPE_VAR) || (thisType->type == IL2CPP_TYPE_MVAR))
         {
-            Il2CppMetadataGenericParameterHandle param = il2cpp::vm::MetadataCache::GetGenericParameterFromType(thisType);
+            const Il2CppGenericParameter *param = il2cpp::vm::MetadataCache::GetGenericParameterFromIndex(thisType->data.genericParameterIndex);
             if (param)
             {
-                Il2CppGenericParameterInfo paramInfo = il2cpp::vm::MetadataCache::GetGenericParameterInfo(param);
-
                 MonoGenericParameterInfo *monoParam = (MonoGenericParameterInfo*)il2cpp::vm::Reflection::GetMonoGenericParameterInfo(param);
                 if (monoParam)
                 {
@@ -141,22 +140,22 @@ namespace System
                 else
                 {
                     monoParam = (MonoGenericParameterInfo*)IL2CPP_MALLOC(sizeof(MonoGenericParameterInfo));
-                    monoParam->flags = paramInfo.flags;
-                    monoParam->token = paramInfo.num;
-                    monoParam->name = paramInfo.name;
+                    monoParam->flags = param->flags;
+                    monoParam->token = param->num;
+                    monoParam->name = il2cpp::vm::MetadataCache::GetStringFromIndex(param->nameIndex);
+                    const Il2CppGenericContainer *container = il2cpp::vm::MetadataCache::GetGenericContainerFromIndex(param->ownerIndex);
                     monoParam->pklass = NULL;
-                    if (paramInfo.containerHandle)
-                        monoParam->pklass = il2cpp::vm::MetadataCache::GetContainerDeclaringType(paramInfo.containerHandle);
+                    if (container)
+                        monoParam->pklass = il2cpp::vm::GenericContainer::GetDeclaringType(container);
 
-                    int16_t constraintsCount = il2cpp::vm::MetadataCache::GetGenericConstraintCount(param);
-                    monoParam->constraints = (Il2CppClass**)IL2CPP_MALLOC(sizeof(Il2CppClass*) * (constraintsCount + 1));
-                    for (int i = 0; i < constraintsCount; ++i)
+                    monoParam->constraints = (Il2CppClass**)IL2CPP_MALLOC(sizeof(Il2CppClass*) * (param->constraintsCount + 1));
+                    for (int i = 0; i < param->constraintsCount; ++i)
                     {
-                        const Il2CppType *constraintType = il2cpp::vm::MetadataCache::GetGenericParameterConstraintFromIndex(param, i);
+                        const Il2CppType *constraintType = il2cpp::vm::MetadataCache::GetGenericParameterConstraintFromIndex(param->constraintsStart + i);
                         monoParam->constraints[i] = il2cpp::vm::Class::FromIl2CppType(constraintType);
                     }
 
-                    monoParam->constraints[constraintsCount] = NULL;
+                    monoParam->constraints[param->constraintsCount] = NULL;
 
                     il2cpp::vm::Reflection::SetMonoGenericParameterInfo(param, monoParam);
                     retVal = reinterpret_cast<intptr_t>(monoParam);

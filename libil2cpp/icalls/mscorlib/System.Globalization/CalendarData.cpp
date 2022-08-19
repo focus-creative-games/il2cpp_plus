@@ -7,7 +7,6 @@
 #include "vm/Array.h"
 #include "vm/String.h"
 #include <string>
-#include <cstdlib>
 #include "utils/StringUtils.h"
 
 namespace il2cpp

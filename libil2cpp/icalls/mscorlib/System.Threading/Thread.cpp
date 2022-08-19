@@ -19,6 +19,7 @@
 #include "vm/StackTrace.h"
 #include "utils/Memory.h"
 #include "utils/StringUtils.h"
+#include "vm/Atomic.h"
 
 using il2cpp::gc::GarbageCollector;
 
@@ -548,10 +549,10 @@ namespace Threading
         internal->state = vm::kThreadStateUnstarted;
         internal->handle = osThread;
         internal->tid = osThread->Id();
-        internal->synch_cs = new baselib::ReentrantLock;
+        internal->synch_cs = new il2cpp::os::FastMutex();
         internal->apartment_state = il2cpp::os::kApartmentStateUnknown;
         internal->managed_id = GetNewManagedId_internal();
-        os::Atomic::CompareExchangePointer<Il2CppInternalThread>(&_this->internal_thread, internal, NULL);
+        vm::Atomic::CompareExchangePointer<Il2CppInternalThread>(&_this->internal_thread, internal, NULL);
         il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)&_this->internal_thread);
     }
 

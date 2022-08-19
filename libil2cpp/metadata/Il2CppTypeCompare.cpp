@@ -32,7 +32,7 @@ namespace metadata
         {
             case IL2CPP_TYPE_VALUETYPE:
             case IL2CPP_TYPE_CLASS:
-                return Compare(t1->data.typeHandle, t2->data.typeHandle);
+                return Compare(t1->data.klassIndex, t2->data.klassIndex);
 
             case IL2CPP_TYPE_PTR:
             case IL2CPP_TYPE_SZARRAY:
@@ -63,7 +63,7 @@ namespace metadata
                 if (result != 0)
                     return result;
 
-                result = Compare(t1->data.generic_class->type, t2->data.generic_class->type);
+                result = Compare(t1->data.generic_class->typeDefinitionIndex, t2->data.generic_class->typeDefinitionIndex);
                 if (result != 0)
                     return result;
 
@@ -79,7 +79,7 @@ namespace metadata
             }
             case IL2CPP_TYPE_VAR:
             case IL2CPP_TYPE_MVAR:
-                return Compare(t1->data.genericParameterHandle, t2->data.genericParameterHandle);
+                return Compare(t1->data.genericParameterIndex, t2->data.genericParameterIndex);
             default:
                 return 0;
         }

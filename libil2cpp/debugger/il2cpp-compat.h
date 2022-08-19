@@ -4,7 +4,6 @@
 #if defined(RUNTIME_IL2CPP)
 #include "il2cpp-c-types.h"
 #include "il2cpp-api.h"
-#include "vm/GlobalMetadataFileInternals.h"
 #else
 #include <mono/mini/mini.h>
 #include <mono/sgen/sgen-conf.h>

@@ -303,7 +303,7 @@ namespace System
 
     Il2CppArray* MonoType::GetConstructors_internal(Il2CppReflectionType* type, int32_t bflags, Il2CppReflectionType *reftype)
     {
-        Il2CppClass *system_Reflection_ConstructorInfo = il2cpp::vm::Reflection::GetConstructorInfo();
+        static Il2CppClass *System_Reflection_ConstructorInfo = NULL;
         Il2CppClass *startklass, *klass, *refklass;
         Il2CppArray *res;
         const MethodInfo *method;
@@ -317,6 +317,9 @@ namespace System
         klass = startklass = vm::Class::FromIl2CppType(type->type);
 
         refklass = vm::Class::FromIl2CppType(reftype->type);
+
+        if (!System_Reflection_ConstructorInfo)
+            System_Reflection_ConstructorInfo = vm::Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "ConstructorInfo");
 
         iter = NULL;
         while ((method = vm::Class::GetMethods(klass, &iter)))
@@ -355,7 +358,7 @@ namespace System
             tmp_vec.push_back(std::make_pair(method, refklass));
         }
 
-        res = il2cpp::vm::Array::NewCached(system_Reflection_ConstructorInfo, (il2cpp_array_size_t)tmp_vec.size());
+        res = il2cpp::vm::Array::NewCached(System_Reflection_ConstructorInfo, (il2cpp_array_size_t)tmp_vec.size());
 
         for (size_t i = 0; i < tmp_vec.size(); ++i)
             il2cpp_array_setref(res, i, (Il2CppObject*)vm::Reflection::GetMethodObject(tmp_vec[i].first, tmp_vec[i].second));

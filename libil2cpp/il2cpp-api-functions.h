@@ -101,7 +101,6 @@ DO_API(Il2CppException*, il2cpp_get_exception_argument_null, (const char *arg));
 DO_API(void, il2cpp_format_exception, (const Il2CppException * ex, char* message, int message_size));
 DO_API(void, il2cpp_format_stack_trace, (const Il2CppException * ex, char* output, int output_size));
 DO_API(void, il2cpp_unhandled_exception, (Il2CppException*));
-DO_API(void, il2cpp_native_stack_trace, (const Il2CppException * ex, uintptr_t** addresses, int* numFrames, char* imageUUID));
 
 // field
 DO_API(int, il2cpp_field_get_flags, (FieldInfo * field));
@@ -120,11 +119,9 @@ DO_API(bool, il2cpp_field_is_literal, (FieldInfo * field));
 // gc
 DO_API(void, il2cpp_gc_collect, (int maxGenerations));
 DO_API(int32_t, il2cpp_gc_collect_a_little, ());
-DO_API(void, il2cpp_gc_start_incremental_collection , ());
 DO_API(void, il2cpp_gc_disable, ());
 DO_API(void, il2cpp_gc_enable, ());
 DO_API(bool, il2cpp_gc_is_disabled, ());
-DO_API(void, il2cpp_gc_set_mode, (Il2CppGCMode mode));
 DO_API(int64_t, il2cpp_gc_get_max_time_slice_ns, ());
 DO_API(void, il2cpp_gc_set_max_time_slice_ns, (int64_t maxTimeSlice));
 DO_API(bool, il2cpp_gc_is_incremental, ());

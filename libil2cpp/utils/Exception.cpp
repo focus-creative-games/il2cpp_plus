@@ -10,7 +10,7 @@ namespace utils
 {
     std::string Exception::FormatException(const Il2CppException* ex)
     {
-#if RUNTIME_TINY
+#if IL2CPP_TINY_WITHOUT_DEBUGGER
         IL2CPP_ASSERT(0 && "Exceptions are not supported with the Tiny runtime");
         return std::string();
 #else
@@ -26,7 +26,7 @@ namespace utils
     std::string Exception::FormatInvalidCastException(const Il2CppClass* fromType, const Il2CppClass* toType)
     {
         std::string message;
-#if RUNTIME_TINY
+#if IL2CPP_TINY_WITHOUT_DEBUGGER
         IL2CPP_ASSERT(0 && "Exceptions are not supported with the Tiny runtime");
 #else
         if (fromType != NULL && toType != NULL)

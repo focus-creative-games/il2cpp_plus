@@ -6,7 +6,7 @@
 #include "../../LibraryLoader.h"
 #include "utils/StringUtils.h"
 
-#if IL2CPP_TARGET_POSIX && !IL2CPP_TARGET_PS4
+#if IL2CPP_TARGET_POSIX && !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PS5
 #include "dlfcn.h"
 #else
 #define RTLD_LAZY 0
@@ -15,13 +15,16 @@
 #if IL2CPP_TARGET_PS4
 static const char* POSIX_DL_NAME = "/app0/test.prx";
 static const char* POSIX_FUNC_NAME = "prx_func";
+#elif IL2CPP_TARGET_PS5
+static const char* POSIX_DL_NAME = "/app0/test.prx";
+static const char* POSIX_FUNC_NAME = "prx_func";
 #elif IL2CPP_TARGET_LINUX
 static const char* POSIX_DL_NAME = "libm.so.6";
 static const char* POSIX_FUNC_NAME = "abs";
 #else
 static const char* POSIX_DL_NAME = "libm";
 static const char* POSIX_FUNC_NAME = "abs";
-#endif // IL2CPP_TARGET_PS4
+#endif
 static const char* WINDOWS_DL_NAME = "user32";
 static const char* WINDOWS_FUNC_NAME = "CalcMenuBar";
 

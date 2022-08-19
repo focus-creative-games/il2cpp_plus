@@ -1,13 +1,10 @@
 #pragma once
 
 #include "gc/GCHandle.h"
-#include "os/Atomic.h"
+#include "vm/Atomic.h"
 #include "vm/CCWBase.h"
 #include "utils/Memory.h"
 #include "utils/TemplateUtils.h"
-
-#include "Baselib.h"
-#include "Cpp/Atomic.h"
 
 namespace il2cpp
 {
@@ -30,7 +27,7 @@ namespace vm
     struct NOVTABLE CachedCCWBase : CCWBase
     {
     private:
-        baselib::atomic<uint32_t> m_RefCount;
+        volatile uint32_t m_RefCount;
         uint32_t m_GCHandle;
 
     public:
@@ -56,7 +53,7 @@ namespace vm
         // managed objects are passed to native code
         IL2CPP_NO_INLINE uint32_t AddRefImpl()
         {
-            const uint32_t refCount = ++m_RefCount;
+            const uint32_t refCount = Atomic::Increment(&m_RefCount);
 
             if (refCount == 1)
             {
@@ -65,7 +62,7 @@ namespace vm
                 // it decrements the gccount to 0 but hasn't released m_GCHandle
                 // yet. We spin until it is released.
                 uint32_t gcHandle = gc::GCHandle::New(GetManagedObjectInline(), false);
-                while (os::Atomic::CompareExchange(&m_GCHandle, gcHandle, 0) != 0) {}
+                while (Atomic::CompareExchange(&m_GCHandle, gcHandle, 0) != 0) {}
             }
 
             return refCount;
@@ -75,7 +72,7 @@ namespace vm
         // and the AddRef call that has increased the ref count above 0 has returned
         IL2CPP_NO_INLINE uint32_t ReleaseImpl()
         {
-            const uint32_t count = --m_RefCount;
+            const uint32_t count = Atomic::Decrement(&m_RefCount);
             if (count == 0)
             {
                 // We decreased the ref count to 0, so we are responsible
@@ -83,7 +80,7 @@ namespace vm
                 // ref count to 0 will ever be in flight at the same time
                 // because AddRefImpl that takes us out of this state halts until
                 // we set m_GCHandle to zero.
-                uint32_t gcHandle = os::Atomic::Exchange(&m_GCHandle, 0);
+                uint32_t gcHandle = Atomic::Exchange(&m_GCHandle, 0);
                 IL2CPP_ASSERT(gcHandle != 0);
                 gc::GCHandle::Free(gcHandle);
             }

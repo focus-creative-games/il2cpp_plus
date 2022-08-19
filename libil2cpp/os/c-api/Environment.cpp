@@ -6,7 +6,7 @@
 
 extern "C"
 {
-#if !RUNTIME_TINY
+#if !IL2CPP_TINY_WITHOUT_DEBUGGER
 
     char* UnityPalGetOsUserName()
     {

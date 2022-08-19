@@ -19,8 +19,8 @@ namespace vm
 
     public:
         //internal
-        static Il2CppClass* GetDeclaringType(Il2CppMetadataGenericContainerHandle handle);
-        static Il2CppMetadataGenericParameterHandle GetGenericParameter(Il2CppMetadataGenericContainerHandle handle, uint16_t index);
+        static Il2CppClass* GetDeclaringType(const Il2CppGenericContainer* genericContainer);
+        static const Il2CppGenericParameter* GetGenericParameter(const Il2CppGenericContainer* genericContainer, uint16_t index);
     };
 } /* namespace vm */
 } /* namespace il2cpp */

@@ -2,6 +2,8 @@
 
 #if IL2CPP_TARGET_PS4
 #define FILE_PATH_PREFIX "/app0/"
+#elif IL2CPP_TARGET_PS5
+#define FILE_PATH_PREFIX "/app0/"
 #else
 #define FILE_PATH_PREFIX
 #endif

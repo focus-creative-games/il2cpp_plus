@@ -16,7 +16,6 @@
 
 #include <vector>
 #include <string>
-#include <cstdlib>
 
 namespace il2cpp
 {

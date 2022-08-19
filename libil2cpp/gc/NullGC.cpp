@@ -114,22 +114,12 @@ il2cpp::gc::GarbageCollector::CollectALittle()
 }
 
 void
-il2cpp::gc::GarbageCollector::StartIncrementalCollection()
-{
-}
-
-void
 il2cpp::gc::GarbageCollector::Enable()
 {
 }
 
 void
 il2cpp::gc::GarbageCollector::Disable()
-{
-}
-
-void
-il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
 {
 }
 

@@ -8,9 +8,6 @@
 #include "os/Mutex.h"
 #include "utils/StringUtils.h"
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 #include "vm/Array.h"
 #include "vm/Assembly.h"
 #include "vm/Class.h"
@@ -193,7 +190,7 @@ namespace System
         NOT_SUPPORTED_IL2CPP(AppDomain::InternalUnload, "This icall is not supported by il2cpp.");
     }
 
-    baselib::ReentrantLock s_DomainDataMutex;
+    os::FastMutex s_DomainDataMutex;
     typedef std::vector<std::pair<UTF16String, Il2CppObject*>, il2cpp::gc::Allocator<std::pair<UTF16String, Il2CppObject*> > > DomainDataStorage;
     DomainDataStorage* s_DomainData;
 

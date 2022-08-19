@@ -3,7 +3,6 @@
 #include "il2cpp-runtime-stats.h"
 
 #include "os/StackTrace.h"
-#include "os/Image.h"
 #include "vm/Array.h"
 #include "vm/Assembly.h"
 #include "vm/Class.h"
@@ -580,38 +579,6 @@ void il2cpp_unhandled_exception(Il2CppException* exc)
     Runtime::UnhandledException(exc);
 }
 
-void il2cpp_native_stack_trace(const Il2CppException * ex, uintptr_t** addresses, int* numFrames, char* imageUUID)
-{
-#if IL2CPP_ENABLE_NATIVE_INSTRUCTION_POINTER_EMISSION
-    if (ex == NULL || ex->native_trace_ips == NULL)
-    {
-        *numFrames = 0;
-        *addresses = NULL;
-        *imageUUID = '\0';
-        return;
-    }
-
-    *numFrames = il2cpp_array_length(ex->native_trace_ips);
-
-    if (*numFrames <= 0)
-    {
-        *addresses = NULL;
-        *imageUUID = '\0';
-    }
-    else
-    {
-        *addresses = static_cast<uintptr_t*>(il2cpp_alloc((*numFrames) * sizeof(uintptr_t)));
-        for (int i = 0; i < *numFrames; i++)
-        {
-            uintptr_t ptrAddr = il2cpp_array_get(ex->native_trace_ips, uintptr_t, i);
-            (*addresses)[i] = ptrAddr;
-        }
-
-        il2cpp::os::Image::GetImageUUID(imageUUID);
-    }
-#endif
-}
-
 // field
 
 const char* il2cpp_field_get_name(FieldInfo *field)
@@ -690,11 +657,6 @@ int32_t il2cpp_gc_collect_a_little()
     return GarbageCollector::CollectALittle();
 }
 
-void il2cpp_gc_start_incremental_collection()
-{
-    GarbageCollector::StartIncrementalCollection();
-}
-
 void il2cpp_gc_enable()
 {
     GarbageCollector::Enable();
@@ -708,11 +670,6 @@ void il2cpp_gc_disable()
 bool il2cpp_gc_is_disabled()
 {
     return GarbageCollector::IsDisabled();
-}
-
-void il2cpp_gc_set_mode(Il2CppGCMode mode)
-{
-    GarbageCollector::SetMode(mode);
 }
 
 bool il2cpp_gc_is_incremental()
@@ -1352,7 +1309,7 @@ size_t il2cpp_image_get_class_count(const Il2CppImage * image)
 
 const Il2CppClass* il2cpp_image_get_class(const Il2CppImage * image, size_t index)
 {
-    return Image::GetType(image, static_cast<AssemblyTypeIndex>(index));
+    return Image::GetType(image, index);
 }
 
 Il2CppManagedMemorySnapshot* il2cpp_capture_memory_snapshot()
@@ -1414,27 +1371,27 @@ void il2cpp_unity_install_unitytls_interface(const void* unitytlsInterfaceStruct
 // Custom Attributes
 Il2CppCustomAttrInfo* il2cpp_custom_attrs_from_class(Il2CppClass *klass)
 {
-    return (Il2CppCustomAttrInfo*)(MetadataCache::GetCustomAttributeTypeToken(klass->image, klass->token));
+    return (Il2CppCustomAttrInfo*)(uintptr_t)MetadataCache::GetCustomAttributeIndex(klass->image, klass->token);
 }
 
 Il2CppCustomAttrInfo* il2cpp_custom_attrs_from_method(const MethodInfo * method)
 {
-    return (Il2CppCustomAttrInfo*)(MetadataCache::GetCustomAttributeTypeToken(method->klass->image, method->token));
+    return (Il2CppCustomAttrInfo*)(uintptr_t)MetadataCache::GetCustomAttributeIndex(method->klass->image, method->token);
 }
 
 bool il2cpp_custom_attrs_has_attr(Il2CppCustomAttrInfo *ainfo, Il2CppClass *attr_klass)
 {
-    return MetadataCache::HasAttribute(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo), attr_klass);
+    return MetadataCache::HasAttribute((CustomAttributeIndex)(uintptr_t)ainfo, attr_klass);
 }
 
 Il2CppObject* il2cpp_custom_attrs_get_attr(Il2CppCustomAttrInfo *ainfo, Il2CppClass *attr_klass)
 {
-    return Reflection::GetCustomAttribute(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo), attr_klass);
+    return Reflection::GetCustomAttribute((CustomAttributeIndex)(uintptr_t)ainfo, attr_klass);
 }
 
 Il2CppArray*  il2cpp_custom_attrs_construct(Il2CppCustomAttrInfo *ainfo)
 {
-    return Reflection::ConstructCustomAttributes(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo));
+    return Reflection::ConstructCustomAttributes((CustomAttributeIndex)(uintptr_t)ainfo);
 }
 
 void il2cpp_custom_attrs_free(Il2CppCustomAttrInfo *ainfo)

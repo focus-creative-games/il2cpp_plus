@@ -39,7 +39,7 @@ SUITE(Time)
     }
 
 // GetSystemTimeAsFileTime is not implemented on PS4
-#if !IL2CPP_TARGET_PS4
+#if !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PS5
     TEST(GetSystemTimeAsFileTime)
     {
         CHECK(UnityPalGetSystemTimeAsFileTime() > 0);

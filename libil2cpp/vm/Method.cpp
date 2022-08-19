@@ -79,8 +79,8 @@ namespace vm
 
     uint32_t Method::GetGenericParamCount(const MethodInfo *method)
     {
-        if (IsGeneric(method) && method->genericContainerHandle != NULL)
-            return MetadataCache::GetGenericContainerCount(method->genericContainerHandle);
+        if (IsGeneric(method) && method->genericContainer != NULL)
+            return method->genericContainer->type_argc;
         return 0;
     }
 
@@ -259,7 +259,19 @@ namespace vm
 
     const char* Method::GetParameterDefaultValue(const MethodInfo* method, const ParameterInfo *parameter, const Il2CppType** type, bool* isExplicitySetNullDefaultValue)
     {
-        return reinterpret_cast<const char*>(MetadataCache::GetParameterDefaultValue(method, parameter, type, isExplicitySetNullDefaultValue));
+        *isExplicitySetNullDefaultValue = false;
+        const Il2CppParameterDefaultValue *entry = MetadataCache::GetParameterDefaultValueForParameter(method, parameter);
+        if (entry == NULL)
+            return NULL;
+
+        *type = MetadataCache::GetIl2CppTypeFromIndex(entry->typeIndex);
+        if (entry->dataIndex == kDefaultValueIndexNull)
+        {
+            *isExplicitySetNullDefaultValue = true;
+            return NULL;
+        }
+
+        return (const char*)MetadataCache::GetParameterDefaultValueDataFromIndex(entry->dataIndex);
     }
 
     std::string Method::GetFullName(const MethodInfo* method)

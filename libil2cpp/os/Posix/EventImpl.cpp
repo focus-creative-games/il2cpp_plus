@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_THREADS_PTHREAD && !RUNTIME_TINY
+#if IL2CPP_THREADS_PTHREAD && !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include "EventImpl.h"
 #include "PosixHelpers.h"

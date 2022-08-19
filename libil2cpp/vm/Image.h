@@ -50,8 +50,8 @@ namespace vm
         static const MethodInfo* GetEntryPoint(const Il2CppImage* image);
         static const Il2CppImage* GetExecutingImage();
         static const Il2CppImage* GetCallingImage();
-        static uint32_t GetNumTypes(const Il2CppImage* image);
-        static const Il2CppClass* GetType(const Il2CppImage* image, AssemblyTypeIndex index);
+        static size_t GetNumTypes(const Il2CppImage* image);
+        static const Il2CppClass* GetType(const Il2CppImage* image, size_t index);
         static Il2CppClass* FromTypeNameParseInfo(const Il2CppImage* image, const TypeNameParseInfo &info, bool ignoreCase);
         static Il2CppClass* ClassFromName(const Il2CppImage* image, const char* namespaze, const char *name);
         static void GetTypes(const Il2CppImage* image, bool exportedOnly, TypeVector* target);

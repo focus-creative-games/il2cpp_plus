@@ -15,9 +15,6 @@
 
 #include <limits>
 
-#include "Baselib.h"
-#include "Cpp/Atomic.h"
-
 
 // Mostly follows the algorithm outlined in "Implementing Fast Java Monitors with Relaxed-Locks".
 
@@ -46,7 +43,7 @@ struct MonitorData : public il2cpp::utils::ThreadSafeFreeListNode
     ///    thread ID first.
     /// 3) Contains kHasBeenReturnedToFreeList. Means monitor is not attached to any object and can be
     ///    acquired by any thread *but* only through the free list.
-    baselib::atomic<il2cpp::os::Thread::ThreadId> owningThreadId;
+    ALIGN_TYPE(8) volatile uint64_t owningThreadId;
 
     /// Number of times the object has been locked on the owning thread. Everything above 1 indicates
     /// a recursive lock.
@@ -58,7 +55,7 @@ struct MonitorData : public il2cpp::utils::ThreadSafeFreeListNode
     il2cpp::os::Semaphore semaphore;
 
     /// Number of threads that are already waiting or are about to wait for a lock on the monitor.
-    baselib::atomic<uint32_t> numThreadsWaitingForSemaphore;
+    volatile uint32_t numThreadsWaitingForSemaphore;
 
     /// Event that a waiting thread fires to acknowledge that it has been kicked off a monitor by the thread
     /// already holding a lock on the object being waited for. This happens when the locking thread decides
@@ -138,30 +135,27 @@ struct MonitorData : public il2cpp::utils::ThreadSafeFreeListNode
 
     bool TryAcquire(size_t threadId)
     {
-        // The compare_exchange_strong method can change its first argument.
-        // We don't care about the changed valuem, though, so ignore it.
-        il2cpp::os::Thread::ThreadId local = kCanBeAcquiredByOtherThread;
-        return owningThreadId.compare_exchange_strong(local, threadId);
+        return (il2cpp::os::Atomic::CompareExchange64(&owningThreadId, threadId, kCanBeAcquiredByOtherThread) == kCanBeAcquiredByOtherThread);
     }
 
     void Unacquire()
     {
         IL2CPP_ASSERT(owningThreadId == il2cpp::os::Thread::CurrentThreadId());
-        owningThreadId = kCanBeAcquiredByOtherThread;
+        il2cpp::os::Atomic::ExchangePointer((size_t*volatile*)&owningThreadId, (size_t*)kCanBeAcquiredByOtherThread);
     }
 
     /// Mark current thread as being blocked in Monitor.Enter(), i.e. as "ready to acquire monitor
     /// whenever it becomes available."
     void AddCurrentThreadToReadyList()
     {
-        numThreadsWaitingForSemaphore++;
+        il2cpp::os::Atomic::Increment(&numThreadsWaitingForSemaphore);
         il2cpp::vm::Thread::SetState(il2cpp::vm::Thread::Current(), il2cpp::vm::kThreadStateWaitSleepJoin);
     }
 
     /// Mark current thread is no longer being blocked on the monitor.
     int RemoveCurrentThreadFromReadyList()
     {
-        int numRemainingWaitingThreads = --numThreadsWaitingForSemaphore;
+        int numRemainingWaitingThreads = il2cpp::os::Atomic::Decrement(&numThreadsWaitingForSemaphore);
         il2cpp::vm::Thread::ClrState(il2cpp::vm::Thread::Current(), il2cpp::vm::kThreadStateWaitSleepJoin);
         return numRemainingWaitingThreads;
     }
@@ -303,8 +297,9 @@ namespace vm
             {
                 // Set up a new monitor.
                 MonitorData* newlyAllocatedMonitorForThisThread = MonitorData::s_FreeList.Allocate();
-                il2cpp::os::Thread::ThreadId previousOwnerThreadId = newlyAllocatedMonitorForThisThread->owningThreadId.exchange(currentThreadId);
-                IL2CPP_ASSERT(previousOwnerThreadId == MonitorData::kHasBeenReturnedToFreeList && "Monitor on freelist cannot be owned by thread!");
+                IL2CPP_ASSERT(il2cpp::os::Atomic::Read64((int64_t*)&newlyAllocatedMonitorForThisThread->owningThreadId) == MonitorData::kHasBeenReturnedToFreeList
+                    && "Monitor on freelist cannot be owned by thread!");
+                il2cpp::os::Atomic::ExchangePointer((size_t*volatile*)&newlyAllocatedMonitorForThisThread->owningThreadId, (size_t*)currentThreadId);
 
                 // Try to install the monitor on the object (aka "inflate" the object).
                 if (il2cpp::os::Atomic::CompareExchangePointer(&obj->monitor, newlyAllocatedMonitorForThisThread, (MonitorData*)NULL) == NULL)
@@ -319,14 +314,14 @@ namespace vm
                 else
                 {
                     // Some other thread raced us and won. Retry.
-                    newlyAllocatedMonitorForThisThread->owningThreadId = MonitorData::kHasBeenReturnedToFreeList;
+                    il2cpp::os::Atomic::ExchangePointer((size_t*volatile*)&newlyAllocatedMonitorForThisThread->owningThreadId, (size_t*)MonitorData::kHasBeenReturnedToFreeList);
                     MonitorData::s_FreeList.Release(newlyAllocatedMonitorForThisThread);
                     continue;
                 }
             }
 
             // Object was locked previously. See if we already have the lock.
-            if (installedMonitor->owningThreadId == currentThreadId)
+            if (il2cpp::os::Atomic::Read64(&installedMonitor->owningThreadId) == currentThreadId)
             {
                 // Yes, recursive lock. Just increase count.
                 ++installedMonitor->recursiveLockingCount;
@@ -481,7 +476,7 @@ namespace vm
         }
 
         // See if there are already threads ready to take over the lock.
-        if (monitor->numThreadsWaitingForSemaphore != 0)
+        if (il2cpp::os::Atomic::Add(&monitor->numThreadsWaitingForSemaphore, 0) != 0)
         {
             // Yes, so relinquish ownership of the object and signal the next thread.
             monitor->Unacquire();
@@ -506,7 +501,7 @@ namespace vm
             // Fix: double check 'numThreadsWaitingForSemaphore' after we've unacquired
             // Worst case might be an extra post, which will just incur an additional
             // pass through the loop with an extra attempt to acquire the monitor with a CAS
-            if (monitor->numThreadsWaitingForSemaphore != 0)
+            if (il2cpp::os::Atomic::Add(&monitor->numThreadsWaitingForSemaphore, 0) != 0)
                 monitor->semaphore.Post();
         }
         else
@@ -522,7 +517,7 @@ namespace vm
             //  we must not let go of the monitor until we have kicked all other threads off of it.
 
             monitor->flushAcknowledged.Reset();
-            while (monitor->numThreadsWaitingForSemaphore != 0)
+            while (il2cpp::os::Atomic::Add(&monitor->numThreadsWaitingForSemaphore, 0) != 0)
             {
                 monitor->semaphore.Post(monitor->numThreadsWaitingForSemaphore);
                 // If a thread starts waiting right after we have read numThreadsWaitingForSemaphore,
@@ -543,7 +538,7 @@ namespace vm
 
             // Release monitor back to free list.
             IL2CPP_ASSERT(monitor->owningThreadId == il2cpp::os::Thread::CurrentThreadId());
-            monitor->owningThreadId = MonitorData::kHasBeenReturnedToFreeList;
+            il2cpp::os::Atomic::ExchangePointer((size_t*volatile*)&monitor->owningThreadId, (size_t*)MonitorData::kHasBeenReturnedToFreeList);
             MonitorData::s_FreeList.Release(monitor);
         }
     }

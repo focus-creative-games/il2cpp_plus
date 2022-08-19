@@ -63,7 +63,7 @@ typedef ReflectionMap<std::pair<const MethodInfo*, Il2CppClass*>, Il2CppArray*> 
 
 typedef il2cpp::gc::AppendOnlyGCHashMap<const Il2CppType*, Il2CppReflectionType*, il2cpp::metadata::Il2CppTypeHash, il2cpp::metadata::Il2CppTypeEqualityComparer> TypeMap;
 
-typedef Il2CppHashMap<Il2CppMetadataGenericParameterHandle, const MonoGenericParameterInfo*, il2cpp::utils::PassThroughHash<Il2CppMetadataGenericParameterHandle> > MonoGenericParameterMap;
+typedef Il2CppHashMap<const Il2CppGenericParameter*, const MonoGenericParameterInfo*, il2cpp::utils::PointerHash<const Il2CppGenericParameter> > MonoGenericParameterMap;
 typedef Il2CppHashMap<const  Il2CppAssembly*, const Il2CppMonoAssemblyName*, il2cpp::utils::PointerHash<const Il2CppAssembly> > MonoAssemblyNameMap;
 
 // these needs to be pointers and allocated after GC is initialized since it uses GC Allocator
@@ -84,28 +84,9 @@ namespace vm
 {
     static il2cpp::os::ReaderWriterLock s_ReflectionICallsLock;
 
-    static Il2CppClass *s_System_Reflection_Assembly;
-    static Il2CppClass *s_MonoFieldKlass;
-    static Il2CppClass *s_System_Reflection_Module;
-    static Il2CppClass *s_MonoPropertyKlass;
-    static Il2CppClass *s_MonoEventKlass;
-    static FieldInfo *s_DbNullValueField;
-    static FieldInfo *s_ReflectionMissingField;
-    static Il2CppClass *s_System_Reflection_ParameterInfo;
-    static Il2CppClass *s_System_Reflection_ParameterInfo_array;
-    static Il2CppClass *s_System_Reflection_ConstructorInfo;
-/*
- * We use the same C representation for methods and constructors, but the type
- * name in C# is different.
- */
-    static Il2CppClass *System_Reflection_MonoMethod;
-    static Il2CppClass *System_Reflection_MonoCMethod;
-
-    static Il2CppClass *System_Reflection_MonoGenericCMethod;
-    static Il2CppClass *System_Reflection_MonoGenericMethod;
-
     Il2CppReflectionAssembly* Reflection::GetAssemblyObject(const Il2CppAssembly *assembly)
     {
+        static Il2CppClass *System_Reflection_Assembly;
         Il2CppReflectionAssembly *res;
 
         AssemblyMap::key_type::wrapped_type key(assembly, (Il2CppClass*)NULL);
@@ -117,9 +98,9 @@ namespace vm
                 return value;
         }
 
-        if (!s_System_Reflection_Assembly)
-            s_System_Reflection_Assembly = il2cpp_defaults.mono_assembly_class;
-        res = (Il2CppReflectionAssembly*)Object::New(s_System_Reflection_Assembly);
+        if (!System_Reflection_Assembly)
+            System_Reflection_Assembly = il2cpp_defaults.mono_assembly_class;
+        res = (Il2CppReflectionAssembly*)Object::New(System_Reflection_Assembly);
         res->assembly = assembly;
 
         il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
@@ -141,6 +122,7 @@ namespace vm
     Il2CppReflectionField* Reflection::GetFieldObject(Il2CppClass *klass, FieldInfo *field)
     {
         Il2CppReflectionField *res;
+        static Il2CppClass *monofield_klass;
 
         FieldMap::key_type::wrapped_type key(field, klass);
         FieldMap::data_type value = NULL;
@@ -151,9 +133,9 @@ namespace vm
                 return value;
         }
 
-        if (!s_MonoFieldKlass)
-            s_MonoFieldKlass = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoField");
-        res = (Il2CppReflectionField*)Object::New(s_MonoFieldKlass);
+        if (!monofield_klass)
+            monofield_klass = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoField");
+        res = (Il2CppReflectionField*)Object::New(monofield_klass);
         res->klass = klass;
         res->field = field;
         IL2CPP_OBJECT_SETREF(res, name, String::New(Field::GetName(field)));
@@ -172,6 +154,16 @@ namespace vm
     {
         return method->method;
     }
+
+/*
+ * We use the same C representation for methods and constructors, but the type
+ * name in C# is different.
+ */
+    static Il2CppClass *System_Reflection_MonoMethod = NULL;
+    static Il2CppClass *System_Reflection_MonoCMethod = NULL;
+
+    static Il2CppClass *System_Reflection_MonoGenericCMethod = NULL;
+    static Il2CppClass *System_Reflection_MonoGenericMethod = NULL;
 
     Il2CppReflectionMethod* Reflection::GetMethodObject(const MethodInfo *method, Il2CppClass *refclass)
     {
@@ -216,6 +208,7 @@ namespace vm
 
     Il2CppReflectionModule* Reflection::GetModuleObject(const Il2CppImage *image)
     {
+        static Il2CppClass *System_Reflection_Module;
         Il2CppReflectionModule *res;
         //char* basename;
 
@@ -228,11 +221,11 @@ namespace vm
                 return value;
         }
 
-        if (!s_System_Reflection_Module)
+        if (!System_Reflection_Module)
         {
-            s_System_Reflection_Module = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoModule");
+            System_Reflection_Module = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoModule");
         }
-        res = (Il2CppReflectionModule*)Object::New(s_System_Reflection_Module);
+        res = (Il2CppReflectionModule*)Object::New(System_Reflection_Module);
 
         res->image = image;
         IL2CPP_OBJECT_SETREF(res, assembly, (Il2CppReflectionAssembly*)Reflection::GetAssemblyObject(image->assembly));
@@ -271,6 +264,7 @@ namespace vm
     Il2CppReflectionProperty* Reflection::GetPropertyObject(Il2CppClass *klass, const PropertyInfo *property)
     {
         Il2CppReflectionProperty *res;
+        static Il2CppClass *monoproperty_klass;
 
         PropertyMap::key_type::wrapped_type key(property, klass);
         PropertyMap::data_type value = NULL;
@@ -281,9 +275,9 @@ namespace vm
                 return value;
         }
 
-        if (!s_MonoPropertyKlass)
-            s_MonoPropertyKlass = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoProperty");
-        res = (Il2CppReflectionProperty*)Object::New(s_MonoPropertyKlass);
+        if (!monoproperty_klass)
+            monoproperty_klass = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoProperty");
+        res = (Il2CppReflectionProperty*)Object::New(monoproperty_klass);
         res->klass = klass;
         res->property = property;
 
@@ -298,8 +292,7 @@ namespace vm
     Il2CppReflectionEvent* Reflection::GetEventObject(Il2CppClass* klass, const EventInfo* event)
     {
         Il2CppReflectionEvent* result;
-        if (s_MonoEventKlass == NULL)
-            s_MonoEventKlass = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoEvent");
+        static Il2CppClass* monoproperty_klass = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "MonoEvent");
 
         EventMap::key_type::wrapped_type key(event, klass);
         EventMap::data_type value = NULL;
@@ -310,7 +303,7 @@ namespace vm
                 return value;
         }
 
-        Il2CppReflectionMonoEvent* monoEvent = reinterpret_cast<Il2CppReflectionMonoEvent*>(Object::New(s_MonoEventKlass));
+        Il2CppReflectionMonoEvent* monoEvent = reinterpret_cast<Il2CppReflectionMonoEvent*>(Object::New(monoproperty_klass));
         monoEvent->eventInfo = event;
         monoEvent->reflectedType = Reflection::GetTypeObject(&klass->byval_arg);
         result = reinterpret_cast<Il2CppReflectionEvent*>(monoEvent);
@@ -348,38 +341,33 @@ namespace vm
     Il2CppObject* Reflection::GetDBNullObject()
     {
         Il2CppObject* valueFieldValue;
+        static FieldInfo *dbNullValueField = NULL;
 
-        if (!s_DbNullValueField)
+        if (!dbNullValueField)
         {
-            s_DbNullValueField = Class::GetFieldFromName(il2cpp_defaults.dbnull_class, "Value");
-            IL2CPP_ASSERT(s_DbNullValueField);
+            dbNullValueField = Class::GetFieldFromName(il2cpp_defaults.dbnull_class, "Value");
+            IL2CPP_ASSERT(dbNullValueField);
         }
 
-        valueFieldValue = Field::GetValueObject(s_DbNullValueField, NULL);
+        valueFieldValue = Field::GetValueObject(dbNullValueField, NULL);
         IL2CPP_ASSERT(valueFieldValue);
         return valueFieldValue;
-    }
-
-    Il2CppClass* Reflection::GetConstructorInfo()
-    {
-        if (s_System_Reflection_ConstructorInfo == NULL)
-            s_System_Reflection_ConstructorInfo = vm::Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "ConstructorInfo");
-        return s_System_Reflection_ConstructorInfo;
     }
 
     static Il2CppObject* GetReflectionMissingObject()
     {
         Il2CppObject* valueFieldValue;
+        static FieldInfo *reflectionMissingField = NULL;
 
-        if (!s_ReflectionMissingField)
+        if (!reflectionMissingField)
         {
             Il2CppClass* klass = Image::ClassFromName(il2cpp_defaults.corlib, "System.Reflection", "Missing");
             Class::Init(klass);
-            s_ReflectionMissingField = Class::GetFieldFromName(klass, "Value");
-            IL2CPP_ASSERT(s_ReflectionMissingField);
+            reflectionMissingField = Class::GetFieldFromName(klass, "Value");
+            IL2CPP_ASSERT(reflectionMissingField);
         }
 
-        valueFieldValue = Field::GetValueObject(s_ReflectionMissingField, NULL);
+        valueFieldValue = Field::GetValueObject(reflectionMissingField, NULL);
         IL2CPP_ASSERT(valueFieldValue);
         return valueFieldValue;
     }
@@ -394,26 +382,28 @@ namespace vm
 
     Il2CppArray* Reflection::GetParamObjects(const MethodInfo *method, Il2CppClass *refclass)
     {
+        static Il2CppClass *System_Reflection_ParameterInfo;
+        static Il2CppClass *System_Reflection_ParameterInfo_array;
         Il2CppArray *res = NULL;
         Il2CppReflectionMethod *member = NULL;
 
         IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(Reflection::GetParamObjects, "Work in progress!");
 
-        if (!s_System_Reflection_ParameterInfo_array)
+        if (!System_Reflection_ParameterInfo_array)
         {
             Il2CppClass *klass;
 
             klass = il2cpp_defaults.mono_parameter_info_class;
             //mono_memory_barrier ();
-            s_System_Reflection_ParameterInfo = klass;
+            System_Reflection_ParameterInfo = klass;
 
             klass = Class::GetArrayClass(klass, 1);
             //mono_memory_barrier ();
-            s_System_Reflection_ParameterInfo_array = klass;
+            System_Reflection_ParameterInfo_array = klass;
         }
 
         if (!method->parameters_count)
-            return Array::NewSpecific(s_System_Reflection_ParameterInfo_array, 0);
+            return Array::NewSpecific(System_Reflection_ParameterInfo_array, 0);
 
         // Mono caches based on the address of the method pointer in the MethodInfo
         // since they put everything in one cache and the MethodInfo is already used as key for GetMethodObject caching
@@ -429,10 +419,10 @@ namespace vm
         }
 
         member = GetMethodObject(method, refclass);
-        res = Array::NewSpecific(s_System_Reflection_ParameterInfo_array, method->parameters_count);
+        res = Array::NewSpecific(System_Reflection_ParameterInfo_array, method->parameters_count);
         for (int i = 0; i < method->parameters_count; ++i)
         {
-            Il2CppReflectionParameter* param = (Il2CppReflectionParameter*)Object::New(s_System_Reflection_ParameterInfo);
+            Il2CppReflectionParameter* param = (Il2CppReflectionParameter*)Object::New(System_Reflection_ParameterInfo);
             IL2CPP_OBJECT_SETREF(param, ClassImpl, GetTypeObject(method->parameters[i].parameter_type));
             IL2CPP_OBJECT_SETREF(param, MemberImpl, (Il2CppObject*)member);
             IL2CPP_OBJECT_SETREF(param, NameImpl, method->parameters[i].name ? String::New(method->parameters[i].name) : NULL);
@@ -661,9 +651,9 @@ namespace vm
         return MetadataCache::HasAttribute(klass->image, klass->token, attribute);
     }
 
-    Il2CppObject* Reflection::GetCustomAttribute(Il2CppMetadataCustomAttributeHandle token, Il2CppClass* attribute)
+    Il2CppObject* Reflection::GetCustomAttribute(CustomAttributeIndex index, Il2CppClass* attribute)
     {
-        CustomAttributesCache* cache = MetadataCache::GenerateCustomAttributesCache(token);
+        CustomAttributesCache* cache = MetadataCache::GenerateCustomAttributesCache(index);
         if (cache == NULL)
             return NULL;
 
@@ -679,9 +669,9 @@ namespace vm
         return NULL;
     }
 
-    Il2CppArray* Reflection::ConstructCustomAttributes(Il2CppMetadataCustomAttributeHandle token)
+    Il2CppArray* Reflection::ConstructCustomAttributes(CustomAttributeIndex index)
     {
-        CustomAttributesCache* cache = MetadataCache::GenerateCustomAttributesCache(token);
+        CustomAttributesCache* cache = MetadataCache::GenerateCustomAttributesCache(index);
         if (cache == NULL)
             return il2cpp::vm::Array::New(il2cpp_defaults.attribute_class, 0);
 
@@ -729,7 +719,7 @@ namespace vm
         return Class::FromSystemType(ref);
     }
 
-    const MonoGenericParameterInfo* Reflection::GetMonoGenericParameterInfo(Il2CppMetadataGenericParameterHandle param)
+    const MonoGenericParameterInfo* Reflection::GetMonoGenericParameterInfo(const Il2CppGenericParameter *param)
     {
         MonoGenericParameterMap::const_iterator it = s_MonoGenericParamterMap->find(param);
         if (it == s_MonoGenericParamterMap->end())
@@ -738,7 +728,7 @@ namespace vm
         return it->second;
     }
 
-    void Reflection::SetMonoGenericParameterInfo(Il2CppMetadataGenericParameterHandle param, const MonoGenericParameterInfo *monoParam)
+    void Reflection::SetMonoGenericParameterInfo(const Il2CppGenericParameter *param, const MonoGenericParameterInfo *monoParam)
     {
         s_MonoGenericParamterMap->insert(std::make_pair(param, monoParam));
     }
@@ -755,26 +745,6 @@ namespace vm
     void Reflection::SetMonoAssemblyName(const Il2CppAssembly *assembly, const Il2CppMonoAssemblyName *aname)
     {
         s_MonoAssemblyNameMap->insert(std::make_pair(assembly, aname));
-    }
-
-    void Reflection::ClearStatics()
-    {
-        s_System_Reflection_Assembly = NULL;
-        s_MonoFieldKlass = NULL;
-        s_System_Reflection_Module = NULL;
-        s_MonoPropertyKlass = NULL;
-        s_MonoEventKlass = NULL;
-        s_DbNullValueField = NULL;
-        s_ReflectionMissingField = NULL;
-        s_System_Reflection_ParameterInfo = NULL;
-        s_System_Reflection_ParameterInfo_array = NULL;
-        s_System_Reflection_ConstructorInfo = NULL;
-
-        System_Reflection_MonoMethod = NULL;
-        System_Reflection_MonoCMethod = NULL;
-
-        System_Reflection_MonoGenericCMethod = NULL;
-        System_Reflection_MonoGenericMethod = NULL;
     }
 } /* namespace vm */
 } /* namespace il2cpp */

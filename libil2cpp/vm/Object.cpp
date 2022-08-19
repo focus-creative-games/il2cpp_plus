@@ -101,8 +101,7 @@ namespace vm
 
             typeInfo = Class::GetNullableArgument(typeInfo);
             Class::Init(typeInfo);
-            uint8_t* hasValueByte = static_cast<uint8_t*>(val) + typeInfo->instance_size - sizeof(Il2CppObject);
-            bool hasValue = *hasValueByte != 0;
+            bool hasValue = *reinterpret_cast<bool*>(static_cast<uint8_t*>(val) + typeInfo->instance_size - sizeof(Il2CppObject));
 
             if (!hasValue)
                 return NULL;
@@ -361,7 +360,6 @@ namespace vm
 
         if (obj == NULL)
         {
-            memset(storage, 0, valueSize);
             *(static_cast<uint8_t*>(storage) + valueSize) = false;
         }
         else

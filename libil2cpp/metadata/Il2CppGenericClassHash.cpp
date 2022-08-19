@@ -18,7 +18,7 @@ namespace metadata
 
     size_t Il2CppGenericClassHash::Hash(const Il2CppGenericClass* item)
     {
-        size_t containerHash = Il2CppTypeHash::Hash(item->type);
+        size_t containerHash = item->typeDefinitionIndex;
         size_t contextHash = Il2CppGenericContextHash::Hash(&item->context);
 
         return HashUtils::Combine(containerHash, contextHash);

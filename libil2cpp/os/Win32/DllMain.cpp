@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_TARGET_WINDOWS && !RUNTIME_TINY
+#if IL2CPP_TARGET_WINDOWS && !IL2CPP_TINY_WITHOUT_DEBUGGER
 
 #include "DllMain.h"
 #include "ThreadImpl.h"

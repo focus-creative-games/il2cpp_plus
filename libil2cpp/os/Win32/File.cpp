@@ -33,6 +33,7 @@ namespace il2cpp
 namespace os
 {
 #if IL2CPP_TARGET_WINDOWS_DESKTOP
+
     bool File::Isatty(FileHandle* fileHandle)
     {
         DWORD mode;
@@ -49,6 +50,7 @@ namespace os
 #endif
 
 #if IL2CPP_TARGET_WINDOWS_DESKTOP || IL2CPP_TARGET_WINDOWS_GAMES
+
     FileHandle* File::GetStdInput()
     {
         return (FileHandle*)GetStdHandle(STD_INPUT_HANDLE);

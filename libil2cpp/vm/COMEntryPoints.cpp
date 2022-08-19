@@ -60,7 +60,7 @@ private:
 
 typedef std::map<Il2CppHString, ActivationFactoryWrapper, HStringLess> FactoryCache;
 static FactoryCache s_FactoryCache;
-static baselib::ReentrantLock s_FactoryCacheMutex;
+static il2cpp::os::FastMutex s_FactoryCacheMutex;
 static bool s_InitializedIl2CppFromWindowsRuntime;
 
 typedef Il2CppIActivationFactory* (*FactoryCreationFunction)();

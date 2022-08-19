@@ -8,9 +8,6 @@
 #include "os/Atomic.h"
 #include "os/Mutex.h"
 
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
-
 #if IL2CPP_TARGET_POSIX
 # include "os/Posix/SocketImpl.h"
 #elif IL2CPP_TARGET_WINDOWS
@@ -35,7 +32,7 @@ namespace os
     typedef std::map<SocketHandle, SocketHandleEntry> SocketHandleTable;
 
     SocketHandle g_LastSocketHandle;
-    baselib::ReentrantLock g_SocketHandleTableMutex;
+    FastMutex g_SocketHandleTableMutex;
     SocketHandleTable g_SocketHandleTable;
 
     SocketHandle CreateSocketHandle(Socket* socket)

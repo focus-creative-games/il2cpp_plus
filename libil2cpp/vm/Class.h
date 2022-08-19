@@ -5,7 +5,6 @@
 #include "il2cpp-blob.h"
 #include "il2cpp-class-internals.h"
 #include "metadata/Il2CppTypeVector.h"
-#include "metadata/Il2CppTypeCompare.h"
 #include "utils/dynamic_array.h"
 #include "il2cpp-class-internals.h"
 #include "il2cpp-object-internals.h"
@@ -27,6 +26,7 @@ struct Il2CppReflectionType;
 struct Il2CppType;
 struct Il2CppGenericContainer;
 struct Il2CppGenericContext;
+struct Il2CppGenericParameter;
 
 namespace il2cpp
 {
@@ -48,7 +48,7 @@ namespace vm
         static Il2CppClass* FromIl2CppType(const Il2CppType* type, bool throwOnError = true);
         static Il2CppClass* FromName(const Il2CppImage* image, const char* namespaze, const char *name);
         static Il2CppClass* FromSystemType(Il2CppReflectionType *type);
-        static Il2CppClass* FromGenericParameter(Il2CppMetadataGenericParameterHandle param);
+        static Il2CppClass* FromGenericParameter(const Il2CppGenericParameter *param);
         static Il2CppClass* GetElementClass(Il2CppClass *klass);
         static const Il2CppType* GetEnumBaseType(Il2CppClass *klass);
         static const EventInfo* GetEvents(Il2CppClass *klass, void* *iter);
@@ -108,7 +108,7 @@ namespace vm
         static Il2CppClass* InflateGenericClass(Il2CppClass* klass, Il2CppGenericContext *context);
         static const Il2CppType* InflateGenericType(const Il2CppType* type, Il2CppGenericContext *context);
 
-        static Il2CppMetadataGenericContainerHandle GetGenericContainer(Il2CppClass *klass);
+        static const Il2CppGenericContainer* GetGenericContainer(Il2CppClass *klass);
         static const MethodInfo* GetCCtor(Il2CppClass *klass);
         static const char* GetFieldDefaultValue(const FieldInfo *field, const Il2CppType** type);
         static int GetFieldMarshaledSize(const FieldInfo *field);
@@ -135,15 +135,15 @@ namespace vm
 
         static void UpdateInitializedAndNoError(Il2CppClass *klass);
 
-        static IL2CPP_FORCE_INLINE bool IsGenericClassAssignableFrom(const Il2CppClass* klass, const Il2CppClass* oklass, const Il2CppImage* genericContainerImage, Il2CppMetadataGenericContainerHandle genericContainer)
+        static IL2CPP_FORCE_INLINE bool IsGenericClassAssignableFrom(const Il2CppClass* klass, const Il2CppClass* oklass, const Il2CppGenericContainer* genericContainer)
         {
             const Il2CppGenericClass* genericClass = klass->generic_class;
             const Il2CppGenericClass* oGenericClass = oklass->generic_class;
 
-            if (oGenericClass == NULL || !metadata::Il2CppTypeEqualityComparer::AreEqual(oGenericClass->type, genericClass->type))
+            if (oGenericClass == NULL || oGenericClass->typeDefinitionIndex != genericClass->typeDefinitionIndex)
                 return false;
 
-            const int32_t genericParameterCount = MetadataCache::GetGenericContainerCount(genericContainer);
+            const int32_t genericParameterCount = genericContainer->type_argc;
 
             const Il2CppGenericInst* genericInst = genericClass->context.class_inst;
             IL2CPP_ASSERT(genericInst->type_argc == genericParameterCount);
@@ -153,8 +153,8 @@ namespace vm
 
             for (int32_t i = 0; i < genericParameterCount; ++i)
             {
-                uint16_t flags = MetadataCache::GetGenericParameterFlags(genericContainer, i);
-                const int32_t parameterVariance = flags & IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_VARIANCE_MASK;
+                const Il2CppGenericParameter* genericParameter = MetadataCache::GetGenericParameterFromIndex(genericContainer->genericParameterStart + i);
+                const int32_t parameterVariance = genericParameter->flags & IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_VARIANCE_MASK;
                 Il2CppClass* genericParameterType = Class::FromIl2CppType(genericInst->type_argv[i]);
                 Il2CppClass* oGenericParameterType = Class::FromIl2CppType(oGenericInst->type_argv[i]);
 

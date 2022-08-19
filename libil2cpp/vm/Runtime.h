@@ -18,8 +18,6 @@ struct Il2CppObject;
 struct MethodInfo;
 struct Il2CppClass;
 
-typedef void (*MetadataInitializerCleanupFunc)();
-
 namespace il2cpp
 {
 namespace vm

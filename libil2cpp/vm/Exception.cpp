@@ -40,7 +40,6 @@ namespace vm
             const StackFrames& frames = *StackTrace::GetStackFrames();
 
             Il2CppArray* ips = NULL;
-            Il2CppArray* raw_ips = NULL;
             size_t numberOfFrames = frames.size();
             if (numberOfFrames == 0 && lastManagedFrame != NULL)
             {
@@ -52,17 +51,12 @@ namespace vm
             {
                 size_t i = numberOfFrames - 1;
                 ips = Array::New(il2cpp_defaults.int_class, numberOfFrames);
-                raw_ips = Array::New(il2cpp_defaults.int_class, numberOfFrames);
                 for (StackFrames::const_iterator iter = frames.begin(); iter != frames.end(); ++iter, --i)
-                {
                     il2cpp_array_set(ips, const MethodInfo*, i, (*iter).method);
-                    il2cpp_array_set(raw_ips, uintptr_t, i, (*iter).raw_ip);
-                }
             }
 
             IL2CPP_ASSERT(ips != NULL);
             IL2CPP_OBJECT_SETREF(ex, trace_ips, ips);
-            IL2CPP_OBJECT_SETREF(ex, native_trace_ips, raw_ips);
         }
     }
 
