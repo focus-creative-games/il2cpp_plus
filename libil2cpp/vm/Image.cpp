@@ -15,6 +15,11 @@
 #include "utils/StringUtils.h"
 #include "vm-utils/VmStringUtils.h"
 
+// ==={{ hybridclr
+#include "os/Atomic.h"
+#include "hybridclr/metadata/Image.h"
+// ===}} hybridclr
+
 struct NamespaceAndNamePairHash
 {
     size_t operator()(const std::pair<const char*, const char*>& pair) const
@@ -147,7 +152,8 @@ namespace vm
 
     static os::FastMutex s_ClassFromNameMutex;
 
-    static void AddNestedTypesToNametoClassHashTable(Il2CppNameToTypeDefinitionIndexHashTable* hashTable, const char *namespaze, const std::string& parentName, Il2CppClass *klass)
+    static void AddNestedTypesToNametoClassHashTable(const Il2CppImage* image, Il2CppNameToTypeHandleHashTable* hashTable, const char *namespaze, const std::string& parentName, Il2CppMetadataTypeHandle handle)
+    //**static void AddNestedTypesToNametoClassHashTable(Il2CppNameToTypeDefinitionIndexHashTable* hashTable, const char *namespaze, const std::string& parentName, Il2CppClass *klass)
     {
         std::string name = parentName + "/" + klass->name;
         char *pName = (char*)IL2CPP_CALLOC(name.size() + 1, sizeof(char));
@@ -157,20 +163,26 @@ namespace vm
 
         void *iter = NULL;
         while (Il2CppClass *nestedClass = Class::GetNestedTypes(klass, &iter))
-            AddNestedTypesToNametoClassHashTable(hashTable, namespaze, name, nestedClass);
+            AddNestedTypesToNametoClassHashTable(image, hashTable, namespaze, name, nestedClass);
     }
 
-    static void AddNestedTypesToNametoClassHashTable(const Il2CppImage* image, const Il2CppTypeDefinition* typeDefinition)
+    static void AddNestedTypesToNametoClassHashTable(const Il2CppImage* image, Il2CppNameToTypeHandleHashTable* table, Il2CppMetadataTypeHandle handle)
+    //** static void AddNestedTypesToNametoClassHashTable(const Il2CppImage* image, const Il2CppTypeDefinition* typeDefinition)
     {
         for (int i = 0; i < typeDefinition->nested_type_count; ++i)
         {
-            Il2CppClass *klass = MetadataCache::GetNestedTypeFromIndex(typeDefinition->nestedTypesStart + i);
-            AddNestedTypesToNametoClassHashTable(image->nameToClassHashTable, MetadataCache::GetStringFromIndex(typeDefinition->namespaceIndex), MetadataCache::GetStringFromIndex(typeDefinition->nameIndex), klass);
+            // ==={{ hybridclr
+            AddNestedTypesToNametoClassHashTable(image, table, namespaceAndName.first, namespaceAndName.second, nestedClass);
+            // ===}} hybridclr
+            //** Il2CppClass *klass = MetadataCache::GetNestedTypeFromIndex(typeDefinition->nestedTypesStart + i);
+            //** AddNestedTypesToNametoClassHashTable(image->nameToClassHashTable, MetadataCache::GetStringFromIndex(typeDefinition->namespaceIndex), MetadataCache::GetStringFromIndex(typeDefinition->nameIndex), klass);
         }
     }
 
 // This must be called when the s_ClassFromNameMutex is held.
-    static void AddTypeToNametoClassHashTable(const Il2CppImage* image, TypeDefinitionIndex typeIndex)
+    // ==={{ hybridclr
+    static void AddTypeToNametoClassHashTable(const Il2CppImage* image, Il2CppNameToTypeHandleHashTable* table, Il2CppMetadataTypeHandle typeHandle)
+    //** static void AddTypeToNametoClassHashTable(const Il2CppImage* image, TypeDefinitionIndex typeIndex)
     {
         const Il2CppTypeDefinition* typeDefinition = MetadataCache::GetTypeDefinitionFromIndex(typeIndex);
         // don't add nested types
@@ -178,10 +190,13 @@ namespace vm
             return;
 
         if (image != il2cpp_defaults.corlib)
-            AddNestedTypesToNametoClassHashTable(image, typeDefinition);
+            AddNestedTypesToNametoClassHashTable(image, table, typeHandle);
+            //** AddNestedTypesToNametoClassHashTable(image, typeDefinition);
 
-        image->nameToClassHashTable->insert(std::make_pair(std::make_pair(MetadataCache::GetStringFromIndex(typeDefinition->namespaceIndex), MetadataCache::GetStringFromIndex(typeDefinition->nameIndex)), typeIndex));
+        table->insert(std::make_pair(MetadataCache::GetTypeNamespaceAndName(typeHandle), typeHandle));
+        //** image->nameToClassHashTable->insert(std::make_pair(std::make_pair(MetadataCache::GetStringFromIndex(typeDefinition->namespaceIndex), MetadataCache::GetStringFromIndex(typeDefinition->nameIndex)), typeIndex));
     }
+    // ===}} hybridclr
 
     void Image::InitNestedTypes(const Il2CppImage *image)
     {
@@ -194,7 +209,10 @@ namespace vm
             if (typeDefinition->declaringTypeIndex != kTypeIndexInvalid)
                 return;
 
-            AddNestedTypesToNametoClassHashTable(image, typeDefinition);
+            // ==={{ hybridclr
+            AddNestedTypesToNametoClassHashTable(image, image->nameToClassHashTable, handle);
+            // ===}} hybridclr
+            //** AddNestedTypesToNametoClassHashTable(image, typeDefinition);
         }
 
         for (uint32_t index = 0; index < image->exportedTypeCount; index++)
@@ -207,8 +225,11 @@ namespace vm
                 // don't add nested types
                 if (typeDefinition->declaringTypeIndex != kTypeIndexInvalid)
                     return;
+            // ==={{ hybridclr
+            AddNestedTypesToNametoClassHashTable(image, image->nameToClassHashTable, handle);
+            // ===}} hybridclr
 
-                AddNestedTypesToNametoClassHashTable(image, typeDefinition);
+                //** AddNestedTypesToNametoClassHashTable(image, typeDefinition);
             }
         }
     }
@@ -220,19 +241,27 @@ namespace vm
             os::FastAutoLock lock(&s_ClassFromNameMutex);
             if (!image->nameToClassHashTable)
             {
-                image->nameToClassHashTable = new Il2CppNameToTypeDefinitionIndexHashTable();
+                // ==={{ hybridclr
+                // image->nameToClassHashTable = new Il2CppNameToTypeHandleHashTable(); --- il2cpp
+                auto nameToClassHashTable = new Il2CppNameToTypeHandleHashTable();
+                //** image->nameToClassHashTable = new Il2CppNameToTypeDefinitionIndexHashTable();
                 for (uint32_t index = 0; index < image->typeCount; index++)
                 {
-                    TypeDefinitionIndex typeIndex = image->typeStart + index;
-                    AddTypeToNametoClassHashTable(image, typeIndex);
+                    AddTypeToNametoClassHashTable(image, nameToClassHashTable, MetadataCache::GetAssemblyTypeHandle(image, index));
+                    //**TypeDefinitionIndex typeIndex = image->typeStart + index;
+                    //**AddTypeToNametoClassHashTable(image, typeIndex);
                 }
 
                 for (uint32_t index = 0; index < image->exportedTypeCount; index++)
                 {
-                    TypeDefinitionIndex typeIndex = MetadataCache::GetExportedTypeFromIndex(image->exportedTypeStart + index);
-                    if (typeIndex != kTypeIndexInvalid)
-                        AddTypeToNametoClassHashTable(image, typeIndex);
+                    AddTypeToNametoClassHashTable(image, nameToClassHashTable, MetadataCache::GetAssemblyExportedTypeHandle(image, index));
+                    //**TypeDefinitionIndex typeIndex = MetadataCache::GetExportedTypeFromIndex(image->exportedTypeStart + index);
+                    //**if (typeIndex != kTypeIndexInvalid)
+                        //**AddTypeToNametoClassHashTable(image, typeIndex);
                 }
+                os::Atomic::FullMemoryBarrier();
+                image->nameToClassHashTable = nameToClassHashTable;
+                // ===}} hybridclr
             }
         }
 
@@ -293,6 +322,21 @@ namespace vm
             {
                 return type;
             }
+        }
+
+        // ==={{ hybridclr
+        std::pair<const char*, const char*> namespaceAndName = MetadataCache::GetTypeNamespaceAndName(typeHandle);
+        // ===}} hybridclr
+        return StringsMatch(namespaze, namespaceAndName.first, ignoreCase) && StringsMatch(name, namespaceAndName.second, ignoreCase);
+    }
+
+    static Il2CppClass* FindClassMatching(const Il2CppImage* image, const char* namespaze, const char *name, Il2CppClass* declaringType, bool ignoreCase)
+    {
+        for (uint32_t i = 0; i < image->typeCount; i++)
+        {
+            Il2CppMetadataTypeHandle typeHandle = MetadataCache::GetAssemblyTypeHandle(image, i);
+            if (ClassMatches(declaringType, typeHandle, namespaze, ignoreCase, name))
+                return MetadataCache::GetTypeInfoFromHandle(typeHandle);
         }
 
         return NULL;

@@ -14,6 +14,8 @@
 #include "il2cpp-tabledefs.h"
 #include "vm-utils/BlobReader.h"
 
+#include "hybridclr/metadata/MetadataUtil.h"
+
 using il2cpp::utils::StringUtils;
 
 namespace il2cpp
@@ -120,6 +122,7 @@ namespace Reflection
         const Il2CppType* type = NULL;
         const char* data = vm::Class::GetFieldDefaultValue(fieldInfo, &type);
 
+        bool useCompressBlobSize = hybridclr::metadata::IsInterpreterType(fieldInfo->parent);
         switch (type->type)
         {
             case IL2CPP_TYPE_U1:
@@ -136,7 +139,7 @@ namespace Reflection
             case IL2CPP_TYPE_R8:
             {
                 Il2CppObject* obj = vm::Object::New(vm::Class::FromIl2CppType(type));
-                utils::BlobReader::GetConstantValueFromBlob(type->type, data, vm::Object::Unbox(obj));
+                utils::BlobReader::GetConstantValueFromBlob(type->type, data, vm::Object::Unbox(obj), useCompressBlobSize);
                 return obj;
             }
             case IL2CPP_TYPE_STRING:
@@ -145,7 +148,7 @@ namespace Reflection
             case IL2CPP_TYPE_GENERICINST:
             {
                 Il2CppObject* obj = NULL;
-                utils::BlobReader::GetConstantValueFromBlob(type->type, data, &obj);
+                utils::BlobReader::GetConstantValueFromBlob(type->type, data, &obj, useCompressBlobSize);
                 return obj;
             }
             default:

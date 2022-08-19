@@ -8,11 +8,13 @@
 #include "il2cpp-object-internals.h"
 #include "il2cpp-vm-support.h"
 
+#include "hybridclr/metadata/RawImage.h"
+
 namespace il2cpp
 {
 namespace utils
 {
-    int BlobReader::GetConstantValueFromBlob(Il2CppTypeEnum type, const char *blob, void *value)
+    int BlobReader::GetConstantValueFromBlob(Il2CppTypeEnum type, const char *blob, void *value, bool compressBlogSize)
     {
         int retval = 0;
         const char *p = blob;
@@ -50,9 +52,18 @@ namespace utils
                 *(void**)value = NULL;
                 if (p != NULL)
                 {
-                    // int32_t length followed by non-null terminated utf-8 byte stream
-                    uint32_t length = Read32(p);
-                    *(VmString**)value = IL2CPP_VM_STRING_NEW_LEN(p + sizeof(uint32_t), length);
+                    if (compressBlogSize)
+                    {
+                        // origin IL metadata use compress encode length
+                        hybridclr::metadata::BlobReader blob = hybridclr::metadata::RawImage::DecodeBlob((const hybridclr::byte*)p);
+                        *(VmString**)value = IL2CPP_VM_STRING_NEW_UTF16((const Il2CppChar*)blob.GetData(), blob.GetLength()/2);
+                    }
+                    else
+                    {
+                        // int32_t length followed by non-null terminated utf-8 byte stream
+                        uint32_t length = Read32(p);
+                        *(VmString**)value = IL2CPP_VM_STRING_NEW_LEN(p + sizeof(uint32_t), length);
+                    }
                 }
                 break;
             }
