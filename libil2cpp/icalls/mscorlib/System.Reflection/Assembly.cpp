@@ -330,7 +330,6 @@ namespace Reflection
     {
         assert(!refonly && "This icall is not supported by il2cpp when refonly=true");
 
-        // ==={{ hybridclr 
         // Our implementation is going to behave a bit different.  We can't actually load any assembly.  If we didn't know about the assembly at conversion time,
         // then we won't be able to do anything.
         // On the other hand, if the name of the assembly matches the name of an assembly that we converted, then lets return the assembly that we know about.
@@ -343,11 +342,10 @@ namespace Reflection
 
         if (!foundAssembly)
         {
-            /*vm::Exception::Raise(vm::Exception::GetFileLoadException(utf8Path.c_str()));
-            IL2CPP_UNREACHABLE;*/
+            // vm::Exception::Raise(vm::Exception::GetFileLoadException(utf8Path.c_str()));
+            // IL2CPP_UNREACHABLE;
             return nullptr;
         }
-        // ===}} hybridclr
 
         return vm::Reflection::GetAssemblyObject(foundAssembly);
     }

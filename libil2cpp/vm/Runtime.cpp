@@ -369,15 +369,9 @@ namespace vm
             utils::Environment::SetMainArgs(mainArgs, 1);
         }
 
-<<<<<<< HEAD
-=======
-        vm::MetadataCache::ExecuteEagerStaticClassConstructors();
-        vm::MetadataCache::ExecuteModuleInitializers();
-
         // ==={{ hybridclr
         hybridclr::ModuleManager::Initialize();
         // ===}} hybridclr
->>>>>>> 2020.3.33
         return true;
     }
 

@@ -7,11 +7,8 @@
 #include "il2cpp-tabledefs.h"
 #include "il2cpp-class-internals.h"
 
-// ==={{ hybridclr
-#include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
+#include "os/Mutex.h"
 #include "os/Atomic.h"
-// ===}} hybridclr
 
 #include <vector>
 #include <string>
@@ -21,7 +18,7 @@ namespace il2cpp
 namespace vm
 {
     // ==={{ hybridclr
-    static baselib::ReentrantLock s_assemblyLock;
+    static il2cpp::os::FastMutex s_assemblyLock;
     // copy on write
     static AssemblyVector s_emptyAssemblies;
     static AssemblyVector* s_Assemblies = &s_emptyAssemblies;
@@ -161,19 +158,6 @@ namespace vm
         {
             // can't delete
             // delete oldAssemblies;
-        }
-// ===}} hybridclr
-    }
-
-    void Assembly::ClearAllAssemblies()
-    {
-// ==={{ hybridclr
-        os::FastAutoLock lock(&s_assemblyLock);
-        AssemblyVector* oldAssemblies = s_Assemblies;
-        s_Assemblies = nullptr;
-        if (oldAssemblies)
-        {
-            // TODO ???
         }
 // ===}} hybridclr
     }
