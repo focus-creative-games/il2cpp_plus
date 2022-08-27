@@ -995,7 +995,8 @@ static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2Cpp
     // ==={{ hybridclr
     if (hybridclr::metadata::IsInterpreterImage(imageMetadata->image))
     {
-        return hybridclr::metadata::MetadataModule::GetImage(imageMetadata->image)->GenerateCustomAttributesCacheInternal(index);
+        return hybridclr::metadata::MetadataModule::GetImage(imageMetadata->image)
+            ->GenerateCustomAttributesCacheInternal(hybridclr::metadata::DecodeMetadataIndex(index));
     }
     // ===}} hybridclr
 
