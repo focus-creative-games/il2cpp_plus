@@ -140,7 +140,7 @@ namespace vm
             const Il2CppGenericClass* genericClass = klass->generic_class;
             const Il2CppGenericClass* oGenericClass = oklass->generic_class;
 
-            if (oGenericClass == NULL || oGenericClass->typeDefinitionIndex != genericClass->typeDefinitionIndex)
+            if (oGenericClass == NULL || oGenericClass->type != genericClass->type)
                 return false;
 
             const int32_t genericParameterCount = genericContainer->type_argc;

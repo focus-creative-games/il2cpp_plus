@@ -13,6 +13,8 @@
 #include <vector>
 #include <string>
 
+#include "hybridclr/metadata/MetadataModule.h"
+
 namespace il2cpp
 {
 namespace vm
@@ -81,8 +83,15 @@ namespace vm
     {
         for (int32_t sourceIndex = 0; sourceIndex < assembly->referencedAssemblyCount; sourceIndex++)
         {
+            if (hybridclr::metadata::IsInterpreterImage(assembly->image))
+            {
+                const Il2CppAssembly* refAssembly = hybridclr::metadata::MetadataModule::GetImage(assembly->image)
+                    ->GetReferencedAssembly(sourceIndex, nullptr, assembly->referencedAssemblyCount);
+                target->push_back(&refAssembly->aname);
+                continue;
+            }
             int32_t indexIntoMainAssemblyTable = MetadataCache::GetReferenceAssemblyIndexIntoAssemblyTable(assembly->referencedAssemblyStart + sourceIndex);
-            const Il2CppAssembly* refAssembly = MetadataCache::GetAssemblyFromIndex(indexIntoMainAssemblyTable);
+            const Il2CppAssembly* refAssembly = MetadataCache::GetAssemblyFromIndex(assembly->image, indexIntoMainAssemblyTable);
 
             target->push_back(&refAssembly->aname);
         }

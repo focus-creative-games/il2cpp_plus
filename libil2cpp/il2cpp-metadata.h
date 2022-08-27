@@ -39,6 +39,19 @@ typedef int32_t ImageIndex;
 typedef int32_t AssemblyIndex;
 typedef int32_t InteropDataIndex;
 
+
+typedef int32_t TypeFieldIndex;
+typedef int32_t TypeMethodIndex;
+typedef int32_t MethodParameterIndex;
+typedef int32_t TypePropertyIndex;
+typedef int32_t TypeEventIndex;
+typedef int32_t TypeInterfaceIndex;
+typedef int32_t TypeNestedTypeIndex;
+typedef int32_t TypeInterfaceOffsetIndex;
+typedef int32_t GenericContainerParameterIndex;
+typedef int32_t AssemblyTypeIndex;
+typedef int32_t AssemblyExportedTypeIndex;
+
 static const TypeIndex kTypeIndexInvalid = -1;
 static const TypeDefinitionIndex kTypeDefinitionIndexInvalid = -1;
 static const DefaultValueDataIndex kDefaultValueIndexNull = -1;
@@ -476,3 +489,9 @@ typedef struct Il2CppGlobalMonoMetadataHeader
 } Il2CppGlobalMonoMetadataHeader;
 #pragma pack(pop, p1)
 #endif
+
+typedef const Il2CppTypeDefinition* Il2CppMetadataTypeHandle;
+// typedef const struct ___Il2CppMetadataImageHandle* Il2CppMetadataImageHandle;
+typedef const Il2CppCustomAttributeTypeRange* Il2CppMetadataCustomAttributeHandle;
+//typedef const struct ___Il2CppMetadataTypeHandle* Il2CppMetadataTypeHandle;
+typedef const Il2CppMethodDefinition* Il2CppMetadataMethodDefinitionHandle;

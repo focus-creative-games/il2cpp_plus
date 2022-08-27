@@ -27,7 +27,7 @@ namespace metadata
             case IL2CPP_TYPE_VALUETYPE:
             case IL2CPP_TYPE_CLASS:
             {
-                return HashUtils::Combine(hash, t1->data.klassIndex);
+                return HashUtils::Combine(hash, (size_t)t1->data.typeHandle);
             }
             case IL2CPP_TYPE_SZARRAY:
             case IL2CPP_TYPE_PTR:
@@ -37,7 +37,7 @@ namespace metadata
             case IL2CPP_TYPE_GENERICINST:
             {
                 const Il2CppGenericInst *inst = t1->data.generic_class->context.class_inst;
-                hash = HashUtils::Combine(hash, t1->data.generic_class->typeDefinitionIndex);
+                hash = HashUtils::Combine(hash, (size_t)t1->data.generic_class->type->data.typeHandle);
                 for (uint32_t i = 0; i < inst->type_argc; ++i)
                 {
                     hash = HashUtils::Combine(hash, Hash(inst->type_argv[i]));

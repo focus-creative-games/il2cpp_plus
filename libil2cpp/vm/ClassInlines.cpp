@@ -31,7 +31,7 @@ namespace vm
     {
         if (itf->generic_class != NULL)
         {
-            const Il2CppTypeDefinition* genericInterface = MetadataCache::GetTypeDefinitionFromIndex(itf->generic_class->typeDefinitionIndex);
+            const Il2CppTypeDefinition* genericInterface = MetadataCache::GetTypeDefinitionFromIl2CppType(itf->generic_class->type);
             const Il2CppGenericContainer* genericContainer = MetadataCache::GetGenericContainerFromIndex(genericInterface->genericContainerIndex);
 
             for (uint16_t i = 0; i < klass->interface_offsets_count; ++i)

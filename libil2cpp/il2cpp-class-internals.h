@@ -362,6 +362,7 @@ typedef struct MethodInfo
     {
         const Il2CppRGCTXData* rgctx_data; /* is_inflated is true and is_generic is false, i.e. a generic instance method */
         const Il2CppMethodDefinition* methodDefinition;
+        const Il2CppMethodDefinition* methodMetadataHandle;
     };
 
     /* note, when is_generic == true and is_inflated == true the method represents an uninflated generic method on an inflated type. */
@@ -369,6 +370,7 @@ typedef struct MethodInfo
     {
         const Il2CppGenericMethod* genericMethod; /* is_inflated is true */
         const Il2CppGenericContainer* genericContainer; /* is_inflated is false and is_generic is true */
+        Il2CppMetadataGenericContainerHandle genericContainerHandle; /* is_inflated is false and is_generic is true */
         Il2CppMethodPointer nativeFunction; /* if is_marshaled_from_native is true */
     };
 
@@ -417,7 +419,10 @@ typedef struct Il2CppClass
     Il2CppClass* declaringType;
     Il2CppClass* parent;
     Il2CppGenericClass *generic_class;
-    const Il2CppTypeDefinition* typeDefinition; // non-NULL for Il2CppClass's constructed from type defintions
+    union {
+        const Il2CppTypeDefinition* typeDefinition; // non-NULL for Il2CppClass's constructed from type defintions
+        Il2CppMetadataTypeHandle typeMetadataHandle;
+    };
     const Il2CppInteropData* interopData;
     Il2CppClass* klass; // hack to pretend we are a MonoVTable. Points to ourself
     // End always valid fields

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <functional>
 #include "il2cpp-config.h"
 #include "Assembly.h"
 #include "metadata/Il2CppTypeVector.h"
@@ -26,6 +27,30 @@ namespace vm
         int32_t count;
         const Il2CppRGCTXDefinition* items;
     };
+
+    enum PackingSize
+    {
+        Zero,
+        One,
+        Two,
+        Four,
+        Eight,
+        Sixteen,
+        ThirtyTwo,
+        SixtyFour,
+        OneHundredTwentyEight
+    };
+
+    const int kBitIsValueType = 1;
+    const int kBitIsEnum = 2;
+    const int kBitHasFinalizer = 3;
+    const int kBitHasStaticConstructor = 4;
+    const int kBitIsBlittable = 5;
+    const int kBitIsImportOrWindowsRuntime = 6;
+    const int kPackingSize = 7; // This uses 4 bits from bit 7 to bit 10
+    const int kPackingSizeIsDefault = 11;
+    const int kClassSizeIsDefault = 12;
+    const int kSpecifiedPackingSize = 13; // This uses 4 bits from bit 13 to bit 16
 
     class LIBIL2CPP_CODEGEN_API MetadataCache
     {
@@ -76,7 +101,7 @@ namespace vm
 
         static Il2CppMethodPointer GetUnresolvedVirtualCallStub(const MethodInfo* method);
 
-        static const Il2CppAssembly* GetAssemblyFromIndex(AssemblyIndex index);
+        static const Il2CppAssembly* GetAssemblyFromIndex(const Il2CppImage* image, AssemblyIndex index);
         static const Il2CppAssembly* GetAssemblyByName(const char* nameToFind);
         static Il2CppImage* GetImageFromIndex(ImageIndex index);
         static Il2CppClass* GetTypeInfoFromTypeDefinitionIndex(TypeDefinitionIndex index);
@@ -85,10 +110,12 @@ namespace vm
         static const Il2CppGenericContainer* GetGenericContainerFromIndex(GenericContainerIndex index);
         static const Il2CppGenericParameter* GetGenericParameterFromIndex(GenericParameterIndex index);
         static const Il2CppType* GetGenericParameterConstraintFromIndex(GenericParameterConstraintIndex index);
-        static Il2CppClass* GetNestedTypeFromIndex(NestedTypeIndex index);
-        static const Il2CppType* GetInterfaceFromIndex(InterfacesIndex index);
+        //static Il2CppClass* GetNestedTypeFromIndex(NestedTypeIndex index);
+        static Il2CppClass* GetNestedTypeFromOffset(const Il2CppTypeDefinition* typeDefinition, NestedTypeIndex index);
+        static const Il2CppType* GetInterfaceFromIndex(Il2CppClass* klass, InterfacesIndex index);
         static EncodedMethodIndex GetVTableMethodFromIndex(VTableIndex index);
-        static Il2CppInterfaceOffsetPair GetInterfaceOffsetIndex(InterfaceOffsetIndex index);
+        //static Il2CppInterfaceOffsetPair GetInterfaceOffsetIndex(InterfaceOffsetIndex index);
+        static Il2CppInterfaceOffsetInfo GetInterfaceOffsetInfo(const Il2CppTypeDefinition* typeDefine, TypeInterfaceOffsetIndex index);
         static RGCTXCollection GetRGCTXs(const Il2CppImage* image, uint32_t token);
         static const Il2CppEventDefinition* GetEventDefinitionFromIndex(EventIndex index);
         static const Il2CppFieldDefinition* GetFieldDefinitionFromIndex(FieldIndex index);
@@ -101,8 +128,8 @@ namespace vm
         static const Il2CppMethodDefinition* GetMethodDefinitionFromIndex(MethodIndex index);
         static const MethodInfo* GetMethodInfoFromMethodDefinitionIndex(MethodIndex index);
         static const Il2CppPropertyDefinition* GetPropertyDefinitionFromIndex(PropertyIndex index);
-        static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(ParameterIndex index);
-
+        static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(Il2CppImage* image, ParameterIndex index);
+        static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppMethodDefinition* methodDef, ParameterIndex index);
         // returns the compiler computer field offset for type definition fields
         static int32_t GetFieldOffsetFromIndexLocked(TypeIndex typeIndex, int32_t fieldIndexInType, FieldInfo* field, const il2cpp::os::FastAutoLock& lock);
         static int32_t GetThreadLocalStaticOffsetForField(FieldInfo* field);
@@ -133,21 +160,43 @@ namespace vm
         static void InitializeWindowsRuntimeTypeNamesTables();
         static void InitializeGuidToClassTable();
         static void IntializeMethodMetadataRange(uint32_t start, uint32_t count, const utils::dynamic_array<Il2CppMetadataUsage>& expectedUsages, bool throwOnError);
-        // ==={{ hybridclr begin
     public:
-        // ===}} hybridclr end
-        static Il2CppImage* GetImageFromIndex(ImageIndex index);
-        static const Il2CppAssembly* GetAssemblyFromIndex(AssemblyIndex index);
-        static Il2CppMetadataTypeHandle GetTypeHandleFromIndex(const Il2CppImage* image, TypeDefinitionIndex typeIndex);
+        static const Il2CppTypeDefinition* GetTypeHandleFromIndex(TypeDefinitionIndex typeIndex);
+        static const Il2CppTypeDefinition* GetTypeDefinitionFromIl2CppType(const Il2CppType* type);
+        static const Il2CppType* GetIl2CppTypeFromClass(const Il2CppClass* klass);
+        static Il2CppClass* GetIl2CppClassFromTypeDefinition(const Il2CppTypeDefinition* typeDefinition);
+        static const TypeDefinitionIndex GetTypeDefinitionIndexFromTypeDefinition(const Il2CppTypeDefinition* typeDefinition);
+        static const MethodInfo* GetMethodInfoFromVTableSlot(const Il2CppClass* klass, int32_t vTableSlot);
 
-        // ==={{ hybridclr
+        static const MethodInfo* GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle);
+        static const Il2CppTypeDefinition* GetAssemblyTypeHandle(const Il2CppImage* image, int32_t index);
         static const Il2CppAssembly* LoadAssemblyByName(const char* assemblyPath);
         static const Il2CppAssembly* GetOrLoadAssemblyByName(const char* assemblyNameOrPath, bool tryLoad);
         static const Il2CppAssembly* LoadAssemblyFromBytes(const char* assemblyBytes, size_t length);
         static const Il2CppGenericMethod* FindGenericMethod(std::function<bool(const Il2CppGenericMethod*)> predic);
         static void FixThreadLocalStaticOffsetForFieldLocked(FieldInfo* field, int32_t offset, const il2cpp::os::FastAutoLock& lock);
-        // ===}} hybridclr
 
+        static const Il2CppFieldDefinition* GetFieldDefinitionFromTypeDefAndFieldIndex(const Il2CppTypeDefinition* typeDefinition, int32_t offset)
+        {
+            return GetFieldDefinitionFromIndex(typeDefinition->fieldStart + offset);
+        }
+
+        static const Il2CppGenericParameter* GetGenericParameterFromIndex(Il2CppMetadataGenericContainerHandle container, GenericParameterIndex offset)
+        {
+            return GetGenericParameterFromIndex(((Il2CppGenericContainer*)container)->genericParameterStart + offset);
+        }
+        
+        static Il2CppMetadataTypeHandle GetNestedTypes(Il2CppMetadataTypeHandle handle, void** iter);
+        static PackingSize ConvertPackingSizeToEnum(uint8_t packingSize);
+        static Il2CppClass* FromTypeDefinition(TypeDefinitionIndex index);
+        static Il2CppClass* GetTypeInfoFromHandle(Il2CppMetadataTypeHandle typeHandle)
+        {
+            return GetIl2CppClassFromTypeDefinition(typeHandle);
+        }
+
+        static const Il2CppType* GetInterfaceFromOffset(const Il2CppTypeDefinition* typeDefinition, InterfacesIndex index);
+        static Il2CppMetadataGenericContainerHandle GetGenericContainerFromGenericClass(const Il2CppGenericClass* genericClass);
+        static const Il2CppMethodDefinition* GetMethodDefinitionFromVTableSlot(const Il2CppTypeDefinition* typeDefinition, int32_t vTableSlot);
     };
 } // namespace vm
 } // namespace il2cpp

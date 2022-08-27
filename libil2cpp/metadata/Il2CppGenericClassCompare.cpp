@@ -14,7 +14,7 @@ namespace metadata
 
     bool Il2CppGenericClassCompare::Compare(const Il2CppGenericClass* gc1, const Il2CppGenericClass* gc2)
     {
-        if (gc1->typeDefinitionIndex != gc2->typeDefinitionIndex)
+        if (gc1->type->data.typeHandle != gc2->type->data.typeHandle)
             return false;
 
         return Il2CppGenericInstCompare::Compare(gc1->context.class_inst, gc2->context.class_inst);

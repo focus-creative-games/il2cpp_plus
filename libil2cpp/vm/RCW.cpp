@@ -476,7 +476,7 @@ namespace vm
 
         if (targetInterface->generic_class != NULL)
         {
-            const Il2CppTypeDefinition* genericInterface = MetadataCache::GetTypeDefinitionFromIndex(targetInterface->generic_class->typeDefinitionIndex);
+            const Il2CppTypeDefinition* genericInterface = MetadataCache::GetTypeDefinitionFromIl2CppType(targetInterface->generic_class->type);
             const Il2CppGenericContainer* genericContainer = MetadataCache::GetGenericContainerFromIndex(genericInterface->genericContainerIndex);
 
             if (Class::IsGenericClassAssignableFrom(targetInterface, queriedInterface, genericContainer))

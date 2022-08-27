@@ -169,7 +169,7 @@ namespace vm
     {
         for (int i = 0; i < typeDefinition->nested_type_count; ++i)
         {
-            Il2CppClass *klass = MetadataCache::GetNestedTypeFromIndex(typeDefinition->nestedTypesStart + i);
+            Il2CppClass *klass = MetadataCache::GetNestedTypeFromOffset(typeDefinition, i);
             AddNestedTypesToNametoClassHashTable(image, image->nameToClassHashTable, MetadataCache::GetStringFromIndex(typeDefinition->namespaceIndex), MetadataCache::GetStringFromIndex(typeDefinition->nameIndex), klass);
         }
     }
@@ -227,6 +227,7 @@ namespace vm
             if (!image->nameToClassHashTable)
             {
                 auto nameToClassHashTable = new Il2CppNameToTypeDefinitionIndexHashTable();
+                image->nameToClassHashTable = nameToClassHashTable;
                 for (uint32_t index = 0; index < image->typeCount; index++)
                 {
                     TypeDefinitionIndex typeIndex = image->typeStart + index;
@@ -239,8 +240,6 @@ namespace vm
                     if (typeIndex != kTypeIndexInvalid)
                         AddTypeToNametoClassHashTable(image, nameToClassHashTable, typeIndex);
                 }
-                os::Atomic::FullMemoryBarrier();
-                image->nameToClassHashTable = nameToClassHashTable;
             }
         }
 

@@ -257,6 +257,7 @@ namespace vm
             // TODO thread safe error! hybridclr
             InitCacheClass(definition, gclass, throwOnError);
             s_GenericClassSet.insert(gclass);
+            IL2CPP_ASSERT(s_GenericClassSet.find(gclass) != s_GenericClassSet.end());
         }
 
         return gclass->cached_class;
@@ -270,7 +271,7 @@ namespace vm
 
     Il2CppClass* GenericClass::GetTypeDefinition(Il2CppGenericClass *gclass)
     {
-        return MetadataCache::GetTypeInfoFromTypeDefinitionIndex(gclass->typeDefinitionIndex);
+        return il2cpp::vm::Class::FromIl2CppType(gclass->type);
     }
 
     bool GenericClass::IsEnum(Il2CppGenericClass *gclass)

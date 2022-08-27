@@ -129,7 +129,7 @@ namespace System
         const Il2CppType *thisType = type->type.type;
         if ((thisType->type == IL2CPP_TYPE_VAR) || (thisType->type == IL2CPP_TYPE_MVAR))
         {
-            const Il2CppGenericParameter *param = il2cpp::vm::MetadataCache::GetGenericParameterFromIndex(thisType->data.genericParameterIndex);
+            const Il2CppGenericParameter *param = thisType->data.genericParameterHandle;
             if (param)
             {
                 MonoGenericParameterInfo *monoParam = (MonoGenericParameterInfo*)il2cpp::vm::Reflection::GetMonoGenericParameterInfo(param);

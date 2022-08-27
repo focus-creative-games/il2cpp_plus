@@ -1023,13 +1023,13 @@ namespace vm
             return Class::FromIl2CppType(type->data.type);
 
         // IL2CPP_TYPE_SZARRAY stores element class in klass
-        return MetadataCache::GetTypeInfoFromTypeDefinitionIndex(type->data.klassIndex);
+        return il2cpp::vm::MetadataCache::GetIl2CppClassFromTypeDefinition(type->data.typeHandle);
     }
 
     const Il2CppType* Type::GetUnderlyingType(const Il2CppType *type)
     {
-        if (type->type == IL2CPP_TYPE_VALUETYPE && MetadataCache::GetTypeInfoFromTypeDefinitionIndex(type->data.klassIndex)->enumtype && !type->byref)
-            return Class::GetEnumBaseType(MetadataCache::GetTypeInfoFromTypeDefinitionIndex(type->data.klassIndex));
+        if (type->type == IL2CPP_TYPE_VALUETYPE && MetadataCache::GetIl2CppClassFromTypeDefinition(type->data.typeHandle)->enumtype && !type->byref)
+            return Class::GetEnumBaseType(MetadataCache::GetIl2CppClassFromTypeDefinition(type->data.typeHandle));
         if (IsGenericInstance(type))
         {
             Il2CppClass* definition = GenericClass::GetTypeDefinition(type->data.generic_class);
@@ -1140,7 +1140,7 @@ namespace vm
         if (type->byref)
             return false;
 
-        if (type->type == IL2CPP_TYPE_VALUETYPE && !MetadataCache::GetTypeInfoFromTypeDefinitionIndex(type->data.klassIndex)->enumtype)
+        if (type->type == IL2CPP_TYPE_VALUETYPE && !MetadataCache::GetIl2CppClassFromTypeDefinition(type->data.typeHandle)->enumtype)
             return true;
 
         if (type->type == IL2CPP_TYPE_TYPEDBYREF)
@@ -1177,7 +1177,7 @@ namespace vm
 
     bool Type::IsEmptyType(const Il2CppType *type)
     {
-        return IsGenericInstance(type) && type->data.generic_class->typeDefinitionIndex == kTypeIndexInvalid;
+        return IsGenericInstance(type) && type->data.generic_class->type == nullptr;
     }
 
     bool Type::IsSystemDBNull(const Il2CppType *type)
@@ -1201,13 +1201,13 @@ namespace vm
     Il2CppClass* Type::GetClass(const Il2CppType *type)
     {
         IL2CPP_ASSERT(type->type == IL2CPP_TYPE_CLASS || type->type == IL2CPP_TYPE_VALUETYPE);
-        return MetadataCache::GetTypeInfoFromTypeDefinitionIndex(type->data.klassIndex);
+        return MetadataCache::GetIl2CppClassFromTypeDefinition(type->data.typeHandle);
     }
 
     const Il2CppGenericParameter* Type::GetGenericParameter(const Il2CppType *type)
     {
         IL2CPP_ASSERT(type->type == IL2CPP_TYPE_VAR || type->type == IL2CPP_TYPE_MVAR);
-        return MetadataCache::GetGenericParameterFromIndex(type->data.genericParameterIndex);
+        return type->data.genericParameterHandle;
     }
 
     const Il2CppType* Type::GetGenericTypeDefintion(const Il2CppType* type)

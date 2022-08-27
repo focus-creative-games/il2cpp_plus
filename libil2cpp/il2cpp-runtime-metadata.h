@@ -55,7 +55,11 @@ typedef struct Il2CppGenericContainer
 
 typedef struct Il2CppGenericClass
 {
-    TypeDefinitionIndex typeDefinitionIndex;    /* the generic type definition */
+    union
+    {
+        TypeDefinitionIndex __typeDefinitionIndex;    /* the generic type definition */
+        const Il2CppType* type;
+    };
     Il2CppGenericContext context;   /* a context that contains the type instantiation doesn't contain any method instantiation */
     Il2CppClass *cached_class;  /* if present, the Il2CppClass corresponding to the instantiation.  */
 } Il2CppGenericClass;
@@ -72,11 +76,13 @@ typedef struct Il2CppType
     {
         // We have this dummy field first because pre C99 compilers (MSVC) can only initializer the first value in a union.
         void* dummy;
-        TypeDefinitionIndex klassIndex; /* for VALUETYPE and CLASS */
+        TypeDefinitionIndex __klassIndex; /* for VALUETYPE and CLASS */
+        const Il2CppTypeDefinition* typeHandle;
         const Il2CppType *type;   /* for PTR and SZARRAY */
         Il2CppArrayType *array; /* for ARRAY */
         //MonoMethodSignature *method;
-        GenericParameterIndex genericParameterIndex; /* for VAR and MVAR */
+        GenericParameterIndex __genericParameterIndex; /* for VAR and MVAR */
+        const Il2CppGenericParameter* genericParameterHandle;
         Il2CppGenericClass *generic_class; /* for GENERICINST */
     } data;
     unsigned int attrs    : 16; /* param attributes or field flags */
@@ -86,3 +92,39 @@ typedef struct Il2CppType
     unsigned int pinned   : 1;  /* valid when included in a local var signature */
     //MonoCustomMod modifiers [MONO_ZERO_LEN_ARRAY]; /* this may grow */
 } Il2CppType;
+
+typedef struct Il2CppInterfaceOffsetInfo
+{
+    const Il2CppType* interfaceType;
+    int32_t offset;
+} Il2CppInterfaceOffsetInfo;
+
+typedef struct Il2CppMetadataParameterInfo
+{
+    const char* name;
+    uint32_t token;
+    const Il2CppType* type;
+} Il2CppMetadataParameterInfo;
+
+typedef struct Il2CppMetadataPropertyInfo
+{
+    const char* name;
+    const MethodInfo* get;
+    const MethodInfo* set;
+    uint32_t attrs;
+    uint32_t token;
+} Il2CppMetadataPropertyInfo;
+
+typedef struct Il2CppMetadataEventInfo
+{
+    const char* name;
+    const Il2CppType* type;
+    const MethodInfo* add;
+    const MethodInfo* remove;
+    const MethodInfo* raise;
+    uint32_t token;
+} Il2CppMetadataEventInfo;
+
+
+typedef const Il2CppGenericContainer* Il2CppMetadataGenericContainerHandle;
+typedef const Il2CppGenericParameter* Il2CppMetadataGenericParameterHandle;

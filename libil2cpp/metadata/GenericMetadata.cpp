@@ -161,14 +161,15 @@ namespace metadata
 
     Il2CppGenericClass* GenericMetadata::GetGenericClass(const Il2CppClass* containerClass, const Il2CppGenericInst* inst)
     {
-        return GetGenericClass(MetadataCache::GetIndexForTypeDefinition(containerClass), inst);
+        return GetGenericClass(MetadataCache::GetIl2CppTypeFromClass(containerClass), inst);
     }
 
-    Il2CppGenericClass* GenericMetadata::GetGenericClass(TypeDefinitionIndex elementClassIndex, const Il2CppGenericInst* inst)
+    //Il2CppGenericClass* GenericMetadata::GetGenericClass(TypeDefinitionIndex elementClassIndex, const Il2CppGenericInst* inst)
+    Il2CppGenericClass* GenericMetadata::GetGenericClass(const Il2CppType* type, const Il2CppGenericInst* inst)
     {
         // temporary inst to lookup a permanent one that may already exist
         Il2CppGenericClass genericClass = { 0 };
-        genericClass.typeDefinitionIndex = elementClassIndex;
+        genericClass.type = type;
         genericClass.context.class_inst = inst;
 
         FastAutoLock lock(&s_GenericClassMutex);
@@ -177,7 +178,7 @@ namespace metadata
             return *iter;
 
         Il2CppGenericClass* newClass = MetadataAllocGenericClass();
-        newClass->typeDefinitionIndex = elementClassIndex;
+        newClass->type = type;
         newClass->context.class_inst = inst;
 
         s_GenericClassSet.insert(newClass);
