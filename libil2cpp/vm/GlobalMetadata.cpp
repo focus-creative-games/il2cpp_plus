@@ -25,7 +25,6 @@
 #include "metadata/Il2CppSignature.h"
 #include "os/Atomic.h"
 #include "os/Mutex.h"
-#include "os/Path.h"
 #include "utils/CallOnce.h"
 #include "utils/Collections.h"
 #include "utils/HashUtils.h"
@@ -57,14 +56,6 @@
 #include "hybridclr/metadata/MetadataUtil.h"
 #include "hybridclr/metadata/MetadataModule.h"
 // ===hybridclr}}
-#if IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_OSX
-#include <dlfcn.h>
-#define nullptr NULL
-#endif
-
-#define SHIELDCODE 0
-
-
 
 static int32_t s_MetadataImagesCount = 0;
 static Il2CppImageGlobalMetadata* s_MetadataImagesTable = NULL;
@@ -99,66 +90,6 @@ static T MetadataOffset(const void* metadata, size_t sectionOffset, size_t itemI
     return reinterpret_cast<T>(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata)) + sectionOffset) + itemIndex;
 }
 
-#if __ENABLE_UNITY_PLUGIN__
-
-def_query_call_back g_query_callback;
-def_il2cpp_get_global_metadata g_get_global_metadata;
-def_il2cpp_get_string g_get_string;
-bool il2cpp::vm::GlobalMetadata::il2cpp_plugin_init()
-{
-    bool ret_val = false;
-    do
-    {
-        void* plugin_module = 0;
-#if SHIELDCODE
-        plugin_module = (void*)LoadLibraryA("UnityPlugin.dll");
-        if (plugin_module != 0)
-        {
-            g_query_callback = (def_query_call_back)GetProcAddress((HMODULE)plugin_module, "query_call_back");
-        }
-#endif
-#if IL2CPP_TARGET_ANDROID
-        plugin_module = dlopen("libUnityPlugin.so", RTLD_LAZY);
-        if (plugin_module != 0)
-        {
-            g_query_callback = (def_query_call_back)dlsym(plugin_module, "query_call_back");
-        }
-#endif
-#if SHIELDCODE
-        std::string plugin_path = utils::PathUtils::Combine(os::Path::GetFrameworksPath(), utils::StringView<char>("libUnityPlugin.dylib"));
-        if (plugin_path.empty())
-        {
-            break;
-        }
-        plugin_module = dlopen(plugin_path.c_str(), RTLD_LAZY);
-        if (plugin_module != 0)
-        {
-            g_query_callback = (def_query_call_back)dlsym(plugin_module, "query_call_back");
-        }
-#endif
-
-#if IL2CPP_TARGET_IOS
-        g_query_callback = query_call_back;
-#endif
-        if (g_query_callback == 0)
-        {
-            break;
-        }
-
-        g_get_global_metadata = (def_il2cpp_get_global_metadata)g_query_callback(IL2CPP_GET_GLOBAL_METADATA);
-        g_get_string = (def_il2cpp_get_string)g_query_callback(IL2CPP_GET_STRING);
-        if (g_get_global_metadata == 0 || g_get_string == 0)
-        {
-            break;
-        }
-        ret_val = true;
-    }
-    while (false);
-    return ret_val;
-}
-
-#endif
-
 const char* il2cpp::vm::GlobalMetadata::GetStringFromIndex(StringIndex index)
 {
     // ==={{ hybridclr
@@ -168,14 +99,7 @@ const char* il2cpp::vm::GlobalMetadata::GetStringFromIndex(StringIndex index)
     }
     // ===}} hybridclr
     IL2CPP_ASSERT(index <= s_GlobalMetadataHeader->stringSize);
-    const char* strings = MetadataOffset<const char*>(s_GlobalMetadata, s_GlobalMetadataHeader->stringOffset, index);
-    #if __ENABLE_UNITY_PLUGIN__
-        if (g_get_string != NULL)
-        {
-            g_get_string((char*)strings, index);
-        }
-    #endif // __ENABLE_UNITY_PLUGIN__
-        return strings;
+    return MetadataOffset<const char*>(s_GlobalMetadata, s_GlobalMetadataHeader->stringOffset, index);
 }
 
 static const char* GetWindowsRuntimeStringFromIndex(StringIndex index)
@@ -476,24 +400,7 @@ static void ProcessIl2CppTypeDefinitions(Il2CppTypeUpdater updateTypeDef, Il2Cpp
 
 bool il2cpp::vm::GlobalMetadata::Initialize(int32_t* imagesCount, int32_t* assembliesCount)
 {
-#if __ENABLE_UNITY_PLUGIN__
-    if (il2cpp_plugin_init())
-    {
-        char game_dat[] = { 'g', 'a', 'm', 'e', '.', 'd', 'a', 't', '\0' };
-        s_GlobalMetadata = vm::MetadataLoader::LoadMetadataFile(game_dat);
-    }
-    else
-    {
-        s_GlobalMetadata = vm::MetadataLoader::LoadMetadataFile("global-metadata.dat");
-    }
-    if (s_GlobalMetadata == NULL)
-    {
-        s_GlobalMetadata = vm::MetadataLoader::LoadMetadataFile("global-metadata.dat");
-        g_get_string = NULL;
-    }
-#else
     s_GlobalMetadata = vm::MetadataLoader::LoadMetadataFile("global-metadata.dat");
-#endif
     if (!s_GlobalMetadata)
         return false;
 

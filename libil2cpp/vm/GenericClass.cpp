@@ -1,5 +1,6 @@
 #include "il2cpp-config.h"
 #include "metadata/GenericMetadata.h"
+#include "os/Atomic.h"
 #include "os/Mutex.h"
 #include "utils/Memory.h"
 #include "vm/Class.h"
@@ -213,16 +214,15 @@ namespace vm
         klass->is_import_or_windows_runtime = definition->is_import_or_windows_runtime;
     }
 
-    //static baselib::ReentrantLock s_GenericClassMutex;
-    //typedef Il2CppHashMap<Il2CppGenericClass*, Il2CppClass*, il2cpp::metadata::Il2CppGenericClassHash, il2cpp::metadata::Il2CppGenericClassCompare> Il2CppGenericClassSet;
-    //static Il2CppGenericClassSet s_GenericClassSet;
-
-    //static baselib::ReentrantLock s_GenericClassMutex;
     typedef Il2CppHashSet < Il2CppGenericClass*, il2cpp::metadata::Il2CppGenericClassHash, il2cpp::metadata::Il2CppGenericClassCompare > Il2CppGenericClassSet;
     static Il2CppGenericClassSet s_GenericClassSet;
 
     Il2CppClass* GenericClass::GetClass(Il2CppGenericClass *gclass, bool throwOnError)
     {
+        Il2CppClass* cachedClass = os::Atomic::LoadPointerRelaxed(&gclass->cached_class);
+        if (cachedClass)
+            return cachedClass;
+
         os::FastAutoLock lock(&g_MetadataLock);
         Il2CppClass* definition = GetTypeDefinition(gclass);
         if (definition == NULL)
@@ -241,19 +241,6 @@ namespace vm
                 IL2CPP_ASSERT(cacheGclass->cached_class);
                 return gclass->cached_class = cacheGclass->cached_class;
             }
-            //// === huauto
-            //if (hybridclr::metadata::IsInterpreterType((Il2CppTypeDefinition*)gclass->type->data.typeHandle))
-            //{
-            //     Il2CppGenericClass* cacheGclass = il2cpp::metadata::GenericMetadata::GetGenericClass(gclass->type, gclass->context.class_inst);
-            //     if (cacheGclass->cached_class)
-            //     {
-            //         return cacheGclass->cached_class;
-            //     }
-            //     InitCacheClass(definition, cacheGclass, throwOnError);
-            //     return gclass->cached_class = cacheGclass->cached_class;
-            //}
-            //// === hybridclr
-
             // TODO thread safe error! hybridclr
             InitCacheClass(definition, gclass, throwOnError);
             s_GenericClassSet.insert(gclass);

@@ -17,13 +17,46 @@ namespace mscorlib
 {
 namespace System
 {
+    static bool IsPrimitive(const Il2CppType* type)
+    {
+        switch (type->type)
+        {
+            case IL2CPP_TYPE_U1:
+            case IL2CPP_TYPE_BOOLEAN:
+            case IL2CPP_TYPE_I2:
+            case IL2CPP_TYPE_U2:
+            case IL2CPP_TYPE_CHAR:
+            case IL2CPP_TYPE_I4:
+            case IL2CPP_TYPE_U4:
+            case IL2CPP_TYPE_R4:
+            case IL2CPP_TYPE_I:
+            case IL2CPP_TYPE_U:
+            case IL2CPP_TYPE_I8:
+            case IL2CPP_TYPE_U8:
+            case IL2CPP_TYPE_R8:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    static int32_t ArrayOfPrimitivesByteLength(Il2CppArray* value)
+    {
+        const Il2CppType* elementType = vm::Class::GetType(value->klass->element_class);
+        if (IsPrimitive(elementType))
+            return vm::Array::GetByteLength(value);
+        return -1;
+    }
+
     bool Buffer::BlockCopyInternal(Il2CppArray * src, int src_offset, Il2CppArray * dest, int dest_offset, int count)
     {
         IL2CPP_CHECK_ARG_NULL(src);
         IL2CPP_CHECK_ARG_NULL(dest);
 
-        /* watch out for integer overflow */
-        if (((uint32_t)src_offset > il2cpp::vm::Array::GetByteLength(src) - count) || ((uint32_t)dest_offset > il2cpp::vm::Array::GetByteLength(dest) - count))
+        // Watch out for integer overflow and note that these array byte "lengths" can be -1 (to indicate a failure).
+        int32_t srcLength = ArrayOfPrimitivesByteLength(src);
+        int32_t dstLength = ArrayOfPrimitivesByteLength(dest);
+        if (((int32_t)src_offset > (srcLength - count)) || ((int32_t)dest_offset > (dstLength - count)))
             return false;
 
         char *src_buf = ((char*)il2cpp_array_addr_with_size(src, Class::GetInstanceSize(src->klass->element_class), 0)) + src_offset;
@@ -62,9 +95,12 @@ namespace System
         return BlockCopyInternal(src, srcOffsetBytes, dst, dstOffsetBytes, byteCount);
     }
 
+    // This function should return -1 is the array element type is not a primitive type.
+    // It is possible to compute the byte length for other element types, but the class
+    // libraries assume this special behavior.
     int32_t Buffer::_ByteLength(Il2CppArray* array)
     {
-        return ByteLengthInternal(array);
+        return ArrayOfPrimitivesByteLength(array);
     }
 
     void Buffer::_SetByte(Il2CppArray* array, int32_t index, uint8_t value)

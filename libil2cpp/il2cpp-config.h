@@ -6,19 +6,6 @@
 #include "os/c-api/il2cpp-config-platforms.h"
 #include "os/c-api/il2cpp-config-api-platforms.h"
 
-/*UnityPluing*/
-#ifndef __ENABLE_UNITY_PLUGIN__
-#if IL2CPP_TARGET_ANDROID
-#define __ENABLE_UNITY_PLUGIN__ 1
-#else
-#define __ENABLE_UNITY_PLUGIN__ 0
-#endif
-#endif
-#if __ENABLE_UNITY_PLUGIN__
-
-#include "plugin/plugin.h"
-#endif // __ENABLE_UNITY_PLUGIN__
-
 #include "il2cpp-config-api.h"
 
 #include "il2cpp-sanitizers.h"
@@ -338,7 +325,7 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #if IL2CPP_COMPILER_MSVC
     #define IL2CPP_USE_GENERIC_SOCKET_IMPL  0
 #else
-    #define IL2CPP_USE_GENERIC_SOCKET_IMPL  (!IL2CPP_TARGET_POSIX) &&  (!IL2CPP_TARGET_SWITCH)
+    #define IL2CPP_USE_GENERIC_SOCKET_IMPL  !(IL2CPP_TARGET_POSIX || IL2CPP_TARGET_SWITCH || IL2CPP_SUPPORT_SOCKETS_POSIX_API)
 #endif
 
 #ifndef IL2CPP_USE_GENERIC_SOCKET_BRIDGE
@@ -450,6 +437,22 @@ static const int ipv6AddressSize = 16;
 #endif
 
 #define IL2CPP_SUPPORT_IPV6_SUPPORT_QUERY (IL2CPP_SUPPORT_IPV6 && IL2CPP_TARGET_LINUX)
+
+#if !defined(IL2CPP_SUPPORT_SEND_FILE)
+#define IL2CPP_SUPPORT_SEND_FILE (!IL2CPP_TARGET_SWITCH)
+#endif
+
+#if !defined(IL2CPP_SUPPORT_RECV_MSG)
+#define IL2CPP_SUPPORT_RECV_MSG (!IL2CPP_TARGET_SWITCH)
+#endif
+
+#if !defined(IL2CPP_SUPPORT_SEND_MSG)
+#define IL2CPP_SUPPORT_SEND_MSG (!IL2CPP_TARGET_SWITCH)
+#endif
+
+#ifndef IL2CPP_USE_NETWORK_ACCESS_HANDLER
+#define IL2CPP_USE_NETWORK_ACCESS_HANDLER 0
+#endif
 
 // Android: "There is no support for locales in the C library" https://code.google.com/p/android/issues/detail?id=57313
 // PS4/PS2: strtol_d doesn't exist

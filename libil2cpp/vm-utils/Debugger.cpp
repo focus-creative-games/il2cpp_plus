@@ -51,6 +51,7 @@ struct MonoContext;
 extern "C"
 {
     void mono_debugger_agent_parse_options(const char *options);
+    void mono_debugger_agent_init_minimal();
     void mono_debugger_agent_init();
     void mono_debugger_run_debugger_thread_func(void* arg);
     void debugger_agent_single_step_from_context(MonoContext *ctx, Il2CppSequencePoint* sequencePoint);
@@ -228,9 +229,10 @@ namespace utils
 
     void Debugger::Init()
     {
+        bool debuggerIsInitialized = false;
         if (!s_AgentOptions.empty())
         {
-            TryInitializeDebugger(s_AgentOptions);
+            debuggerIsInitialized = TryInitializeDebugger(s_AgentOptions);
         }
         else
         {
@@ -238,10 +240,14 @@ namespace utils
             for (std::vector<UTF16String>::const_iterator arg = args.begin(); arg != args.end(); ++arg)
             {
                 std::string argument = StringUtils::Utf16ToUtf8(*arg);
-                if (TryInitializeDebugger(argument))
+                debuggerIsInitialized = TryInitializeDebugger(argument);
+                if (debuggerIsInitialized)
                     break;
             }
         }
+
+        if (!debuggerIsInitialized)
+            mono_debugger_agent_init_minimal();
     }
 
     static Debugger::OnBreakPointHitCallback s_BreakCallback;

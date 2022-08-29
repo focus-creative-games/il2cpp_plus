@@ -2,6 +2,7 @@
 #include "gc/Allocator.h"
 #include "gc/GarbageCollector.h"
 #include "gc/GCHandle.h"
+#include "os/Atomic.h"
 #include "os/Mutex.h"
 #include "vm/Exception.h"
 #include "vm/String.h"
@@ -152,16 +153,17 @@ namespace vm
 
     typedef il2cpp::gc::AppendOnlyGCHashMap<InternedString, Il2CppString*, InternedStringHash, InternedStringCompare> InternedStringMap;
 
-    static baselib::ReentrantLock s_InternedStringMapMutex;
     static InternedStringMap* s_InternedStringMap;
 
     Il2CppString* String::Intern(Il2CppString* str)
     {
-        os::FastAutoLock lockMap(&s_InternedStringMapMutex);
-
-        // allocate this are runtime since it uses GC allocator to keep managed strings alive and needs GC initialized
+        // allocate this at runtime since it uses GC allocator to keep managed strings alive and needs GC initialized
         if (s_InternedStringMap == NULL)
-            s_InternedStringMap = new InternedStringMap();
+        {
+            InternedStringMap* newMap = new InternedStringMap();
+            if (os::Atomic::CompareExchangePointer<InternedStringMap>(&s_InternedStringMap, newMap, NULL) != NULL)
+                delete newMap;
+        }
 
         InternedString internedString = { str->length, str->chars };
         Il2CppString* value = NULL;
@@ -169,15 +171,11 @@ namespace vm
             return value;
 
         internedString.chars = utils::StringUtils::GetChars(str);
-        s_InternedStringMap->Add(internedString, str);
-
-        return str;
+        return s_InternedStringMap->GetOrAdd(internedString, str);
     }
 
     Il2CppString* String::IsInterned(Il2CppString* str)
     {
-        os::FastAutoLock lockMap(&s_InternedStringMapMutex);
-
         // if this is NULL, it means we have no interned strings
         if (s_InternedStringMap == NULL)
             return NULL;

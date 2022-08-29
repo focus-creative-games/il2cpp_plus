@@ -58,6 +58,7 @@ namespace vm
     static il2cpp::utils::dynamic_array<Il2CppClass*> s_staticFieldData;
     static int32_t s_FinalizerSlot = -1;
     static int32_t s_GetHashCodeSlot = -1;
+    static Il2CppClass* s_EmptyClassList[] = {NULL};
 
     static void SetupGCDescriptor(Il2CppClass* klass);
     static void GetBitmapNoInit(Il2CppClass* klass, size_t* bitmap, size_t& maxSetBit, size_t parentOffset);
@@ -216,6 +217,12 @@ namespace vm
                 for (uint16_t i = 0; i < klass->interfaces_count; i++)
                     klass->implementedInterfaces[i] = Class::FromIl2CppType(MetadataCache::GetInterfaceFromOffset(klass, i));
             }
+        }
+
+        if (klass->implementedInterfaces == NULL)
+        {
+            IL2CPP_ASSERT(klass->interfaces_count == 0);
+            klass->implementedInterfaces = s_EmptyClassList;
         }
     }
 
@@ -1514,14 +1521,20 @@ namespace vm
 
     void Class::SetupTypeHierarchy(Il2CppClass *klass)
     {
-        il2cpp::os::FastAutoLock lock(&g_MetadataLock);
-        SetupTypeHierarchyLocked(klass, lock);
+        if (klass->typeHierarchy == NULL)
+        {
+            il2cpp::os::FastAutoLock lock(&g_MetadataLock);
+            SetupTypeHierarchyLocked(klass, lock);
+        }
     }
 
     void Class::SetupInterfaces(Il2CppClass *klass)
     {
-        il2cpp::os::FastAutoLock lock(&g_MetadataLock);
-        SetupInterfacesLocked(klass, lock);
+        if (klass->implementedInterfaces == NULL)
+        {
+            il2cpp::os::FastAutoLock lock(&g_MetadataLock);
+            SetupInterfacesLocked(klass, lock);
+        }
     }
 
     static bool InitLocked(Il2CppClass *klass, const il2cpp::os::FastAutoLock& lock)
@@ -1903,9 +1916,15 @@ namespace vm
 
     Il2CppClass* Class::GetPtrClass(Il2CppClass* elementClass)
     {
+        // Check if the pointer class was created before taking the g_MetadataLock
+        Il2CppClass* pointerClass = MetadataCache::GetPointerType(elementClass);
+        if (pointerClass)
+            return pointerClass;
+
         il2cpp::os::FastAutoLock lock(&g_MetadataLock);
 
-        Il2CppClass* pointerClass = MetadataCache::GetPointerType(elementClass);
+        // Check if the pointer class was created while we were waiting for the g_MetadataLock
+        pointerClass = MetadataCache::GetPointerType(elementClass);
         if (pointerClass)
             return pointerClass;
 
@@ -1927,7 +1946,7 @@ namespace vm
         pointerClass->parent = NULL;
         pointerClass->castClass = pointerClass->element_class = elementClass;
 
-        MetadataCache::AddPointerType(elementClass, pointerClass);
+        MetadataCache::AddPointerTypeLocked(elementClass, pointerClass, lock);
 
         return pointerClass;
     }

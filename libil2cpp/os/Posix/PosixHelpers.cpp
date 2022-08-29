@@ -1,8 +1,12 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_TARGET_POSIX && !RUNTIME_TINY
+#if (IL2CPP_TARGET_POSIX || IL2CPP_SUPPORT_SOCKETS_POSIX_API) && !RUNTIME_TINY
 
+#if IL2CPP_TARGET_SWITCH
+#include <errno.h>
+#else
 #include <sys/errno.h>
+#endif
 
 #include "os/Posix/PosixHelpers.h"
 

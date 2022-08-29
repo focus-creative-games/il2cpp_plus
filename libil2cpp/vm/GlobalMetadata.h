@@ -69,9 +69,6 @@ namespace vm
     class GlobalMetadata
     {
     public:
-#if __ENABLE_UNITY_PLUGIN__
-        static bool il2cpp_plugin_init();
-#endif
         static void Register(const Il2CppCodeRegistration* const codeRegistration, const Il2CppMetadataRegistration* const metadataRegistration, const Il2CppCodeGenOptions* const codeGenOptions);
         static bool Initialize(int32_t* imagesCount, int32_t* assembliesCount);
 

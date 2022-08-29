@@ -22,6 +22,9 @@ namespace metadata
         static std::string GetFullName(const Il2CppGenericMethod* gmethod);
 
         static void ClearStatics();
+
+    private:
+        static const MethodInfo* CreateMethodLocked(const Il2CppGenericMethod* gmethod, bool copyMethodPtr);
     };
 } /* namespace vm */
 } /* namespace il2cpp */

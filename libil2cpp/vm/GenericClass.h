@@ -27,6 +27,9 @@ namespace vm
         static void SetupFields(Il2CppClass* genericInstanceType);
         static void SetupMethods(Il2CppClass* genericInstanceType);
         static void SetupProperties(Il2CppClass* genericInstanceType);
+
+    private:
+        static Il2CppClass* CreateClass(Il2CppGenericClass *gclass, bool throwOnError = true);
     };
 } /* namespace vm */
 } /* namespace il2cpp */
