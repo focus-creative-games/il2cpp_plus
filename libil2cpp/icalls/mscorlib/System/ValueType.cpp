@@ -144,14 +144,14 @@ namespace System
     {
         Il2CppObject **values = NULL;
         int count = 0;
-        int32_t result = 0;
         FieldInfo* field = NULL;
         void* iter = NULL;
 
         Il2CppClass* klass = vm::Object::GetClass(obj);
+        int32_t result = (int32_t)il2cpp::utils::HashUtils::AlignedPointerHash(klass);
 
         if (vm::Class::GetNumFields(klass) == 0)
-            return vm::Object::GetHash(obj);
+            return result;
 
         /*
          * Compute the starting value of the hashcode for fields of primitive

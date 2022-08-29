@@ -1270,7 +1270,8 @@ namespace vm
             //il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetNotSupportedException("interperter delegate can't be constructed by InvokeDelegateConstructor"));
             return;
         }
-        ((DelegateCtor)ctor->methodPointer)(delegate, target, (intptr_t)method, NULL);
+        void* ctorArgs[2] = { target, (void*)&method };
+        ctor->invoker_method(ctor->methodPointer, ctor, delegate, ctorArgs, NULL);
     }
 
 /**

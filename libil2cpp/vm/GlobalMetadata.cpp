@@ -513,6 +513,10 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
         case kIl2CppMetadataUsageStringLiteral:
             initialized = (void*)GetStringLiteralFromIndex(decodedIndex);
             break;
+        case kIl2CppMetadataUsageFieldRva:
+            const Il2CppType* unused;
+            initialized = (void*)GetFieldDefaultValue(GetFieldInfoFromIndex(decodedIndex), &unused);
+            break;
         case kIl2CppMetadataUsageInvalid:
             break;
         default:
@@ -1259,10 +1263,15 @@ const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromVTableSlot(const 
     return GetMethodInfoFromEncodedIndex(vTableMethodReference);
 }
 
+static int CompareFieldDefaultValues(const void* pkey, const void* pelem)
+{
+    return (int)(((Il2CppFieldDefaultValue*)pkey)->fieldIndex - ((Il2CppFieldDefaultValue*)pelem)->fieldIndex);
+}
+
 static const Il2CppFieldDefaultValue* GetFieldDefaultValueEntry(const FieldInfo* field)
 {
     Il2CppClass* parent = field->parent;
-    size_t fieldIndex = (field - parent->fields);
+    FieldIndex fieldIndex = (FieldIndex)(field - parent->fields);
 
     if (il2cpp::vm::Type::IsGenericInstance(&parent->byval_arg))
         parent = il2cpp::vm::GenericClass::GetTypeDefinition(parent->generic_class);
@@ -1276,18 +1285,12 @@ static const Il2CppFieldDefaultValue* GetFieldDefaultValueEntry(const FieldInfo*
     }
     // ===}} hybridclr
 
-    const Il2CppFieldDefaultValue *start = (const Il2CppFieldDefaultValue*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldDefaultValuesOffset);
-    const Il2CppFieldDefaultValue *entry = start;
-    while (entry < start + s_GlobalMetadataHeader->fieldDefaultValuesSize / sizeof(Il2CppFieldDefaultValue))
-    {
-        if (fieldIndex == entry->fieldIndex)
-        {
-            return entry;
-        }
-        entry++;
-    }
-    IL2CPP_ASSERT(0);
-    return NULL;
+    Il2CppFieldDefaultValue key;
+    key.fieldIndex = fieldIndex;
+
+    const Il2CppFieldDefaultValue* start = (const Il2CppFieldDefaultValue*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldDefaultValuesOffset);
+    const Il2CppFieldDefaultValue* res = (const Il2CppFieldDefaultValue*)bsearch(&key, start, s_GlobalMetadataHeader->fieldDefaultValuesSize / sizeof(Il2CppFieldDefaultValue), sizeof(Il2CppFieldDefaultValue), CompareFieldDefaultValues);
+    return res;
 }
 
 static const uint8_t* GetFieldOrParameterDefalutValue(uint32_t index)
@@ -1319,6 +1322,11 @@ const uint8_t* il2cpp::vm::GlobalMetadata::GetFieldDefaultValue(const FieldInfo*
     return NULL;
 }
 
+static int CompareParameterDefaultValues(const void* pkey, const void* pelem)
+{
+    return (int)(((Il2CppParameterDefaultValue*)pkey)->parameterIndex - ((Il2CppParameterDefaultValue*)pelem)->parameterIndex);
+}
+
 static const Il2CppParameterDefaultValue * GetParameterDefaultValueEntry(const MethodInfo* method, int32_t parameterPosition)
 {
     if (il2cpp::vm::Method::IsGenericInstance(method))
@@ -1331,17 +1339,13 @@ static const Il2CppParameterDefaultValue * GetParameterDefaultValueEntry(const M
     if (methodDefinition == NULL)
         return NULL;
 
-    size_t parameterIndex = methodDefinition->parameterStart + parameterPosition;
-    const Il2CppParameterDefaultValue *start = (const Il2CppParameterDefaultValue*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->parameterDefaultValuesOffset);
-    const Il2CppParameterDefaultValue *entry = start;
-    while (entry < start + s_GlobalMetadataHeader->parameterDefaultValuesSize / sizeof(Il2CppParameterDefaultValue))
-    {
-        if (parameterIndex == entry->parameterIndex)
-            return entry;
-        entry++;
-    }
+    ParameterIndex parameterIndex = methodDefinition->parameterStart + parameterPosition;
+    Il2CppParameterDefaultValue key;
+    key.parameterIndex = parameterIndex;
 
-    return NULL;
+    const Il2CppParameterDefaultValue* start = (const Il2CppParameterDefaultValue*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->parameterDefaultValuesOffset);
+    const Il2CppParameterDefaultValue* res = (const Il2CppParameterDefaultValue*)bsearch(&key, start, s_GlobalMetadataHeader->parameterDefaultValuesSize / sizeof(Il2CppParameterDefaultValue), sizeof(Il2CppParameterDefaultValue), CompareParameterDefaultValues);
+    return res;
 }
 
 const uint8_t* il2cpp::vm::GlobalMetadata::GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue)

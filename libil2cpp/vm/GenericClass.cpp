@@ -1,5 +1,6 @@
 #include "il2cpp-config.h"
 #include "metadata/GenericMetadata.h"
+#include "os/Atomic.h"
 #include "os/Mutex.h"
 #include "utils/Memory.h"
 #include "vm/Class.h"
@@ -223,6 +224,9 @@ namespace vm
 
     Il2CppClass* GenericClass::GetClass(Il2CppGenericClass *gclass, bool throwOnError)
     {
+        Il2CppClass* cachedClass = os::Atomic::LoadPointerRelaxed(&gclass->cached_class);
+        if (cachedClass)
+            return cachedClass;
         os::FastAutoLock lock(&g_MetadataLock);
         Il2CppClass* definition = GetTypeDefinition(gclass);
         if (definition == NULL)

@@ -86,6 +86,14 @@ namespace os
             m_Mutex->Release();
         }
 
+#if IL2CPP_DEBUG
+        bool IsLock(baselib::ReentrantLock* mutex) const
+        {
+            return mutex == m_Mutex;
+        }
+
+#endif
+
     private:
         baselib::ReentrantLock* m_Mutex;
     };

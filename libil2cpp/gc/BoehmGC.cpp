@@ -20,9 +20,9 @@ static bool s_GCInitialized = false;
 static bool s_PendingGC = false;
 #endif
 
+static void on_gc_event(GC_EventType eventType);
 #if IL2CPP_ENABLE_PROFILER
 using il2cpp::vm::Profiler;
-static void on_gc_event(GC_EventType eventType);
 static void on_heap_resize(GC_word newSize);
 #endif
 
@@ -35,6 +35,9 @@ static void push_other_roots(void);
 
 typedef struct ephemeron_node ephemeron_node;
 static ephemeron_node* ephemeron_list;
+
+static void
+clear_ephemerons(void);
 
 static void
 push_ephemerons(void);
@@ -122,8 +125,8 @@ il2cpp::gc::GarbageCollector::Initialize()
     GC_set_mark_stack_empty(push_ephemerons);
 #endif // !RUNTIME_TINY
 
-#if IL2CPP_ENABLE_PROFILER
     GC_set_on_collection_event(&on_gc_event);
+#if IL2CPP_ENABLE_PROFILER
     GC_set_on_heap_resize(&on_heap_resize);
 #endif
 
@@ -478,12 +481,20 @@ il2cpp::gc::GarbageCollector::IsIncremental()
     return GC_is_incremental_mode();
 }
 
-#if IL2CPP_ENABLE_PROFILER
-
 void on_gc_event(GC_EventType eventType)
 {
+#if !RUNTIME_TINY
+    if (eventType == GC_EVENT_RECLAIM_START)
+    {
+        clear_ephemerons();
+    }
+#endif
+#if IL2CPP_ENABLE_PROFILER
     Profiler::GCEvent((Il2CppGCEvent)eventType);
+#endif
 }
+
+#if IL2CPP_ENABLE_PROFILER
 
 void on_heap_resize(GC_word newSize)
 {
@@ -579,7 +590,7 @@ struct Ephemeron
 };
 
 static void
-push_ephemerons(void)
+clear_ephemerons(void)
 {
     ephemeron_node* prev_node = NULL;
     ephemeron_node* current_node = NULL;
@@ -620,7 +631,47 @@ push_ephemerons(void)
                 il2cpp::gc::WriteBarrier::GenericStore(&current_ephemeron->key, tombstone);
                 current_ephemeron->value = NULL;
             }
-            else if (current_ephemeron->value && !GC_is_marked(current_ephemeron->value))
+        }
+    }
+}
+
+static void
+push_ephemerons(void)
+{
+    ephemeron_node* prev_node = NULL;
+    ephemeron_node* current_node = NULL;
+
+    /* iterate all registered Ephemeron[] */
+    for (current_node = ephemeron_list; current_node; current_node = current_node->next)
+    {
+        Ephemeron* current_ephemeron, * array_end;
+        Il2CppObject* tombstone = NULL;
+        /* reveal weak link value*/
+        Il2CppArray* array = (Il2CppArray*)GC_REVEAL_POINTER(current_node->ephemeron_array_weak_link);
+
+        /* unreferenced array */
+        if (!GC_is_marked(array))
+        {
+            continue;
+        }
+
+        prev_node = current_node;
+
+        current_ephemeron = il2cpp_array_addr(array, Ephemeron, 0);
+        array_end = current_ephemeron + array->max_length;
+        tombstone = il2cpp::vm::Domain::GetCurrent()->ephemeron_tombstone;
+
+        for (; current_ephemeron < array_end; ++current_ephemeron)
+        {
+            /* skip a null or tombstone (empty) key */
+            if (!current_ephemeron->key || current_ephemeron->key == tombstone)
+                continue;
+
+            /* If the key is not marked, then don't mark value. */
+            if (!GC_is_marked(current_ephemeron->key))
+                continue;
+
+            if (current_ephemeron->value && !GC_is_marked(current_ephemeron->value))
             {
                 /* the key is marked, so mark the value if needed */
                 GC_push_all(&current_ephemeron->value, &current_ephemeron->value + 1);

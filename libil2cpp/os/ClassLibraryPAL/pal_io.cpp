@@ -443,7 +443,7 @@ int32_t SystemNative_MkDir(const char* path, int32_t mode)
 int32_t SystemNative_ChMod(const char* path, int32_t mode)
 {
     int32_t result = 0;
-    while ((result = chmod(REMAP_PATH(path), (mode_t)mode)) < 0 && errno == EINTR)
+    while ((result = chmod_(REMAP_PATH(path), (mode_t)mode)) < 0 && errno == EINTR)
         ;
     return result;
 }
@@ -451,14 +451,14 @@ int32_t SystemNative_ChMod(const char* path, int32_t mode)
 int32_t SystemNative_Link(const char* source, const char* linkTarget)
 {
     int32_t result = 0;
-    while ((result = link(REMAP_PATH(source), REMAP_PATH(linkTarget))) < 0 && errno == EINTR)
+    while ((result = link_(REMAP_PATH(source), REMAP_PATH(linkTarget))) < 0 && errno == EINTR)
         ;
     return result;
 }
 
 int32_t SystemNative_Symlink(const char* target, const char* linkPath)
 {
-    return symlink(REMAP_PATH(target), REMAP_PATH(linkPath));
+    return symlink_(REMAP_PATH(target), REMAP_PATH(linkPath));
 }
 
 int32_t SystemNative_ReadLink(const char* path, char* buffer, int32_t bufferSize)
@@ -472,7 +472,7 @@ int32_t SystemNative_ReadLink(const char* path, char* buffer, int32_t bufferSize
         return -1;
     }
 
-    ssize_t count = readlink(REMAP_PATH(path), buffer, (size_t)bufferSize);
+    ssize_t count = readlink_(REMAP_PATH(path), buffer, (size_t)bufferSize);
     IL2CPP_ASSERT(count >= -1 && count <= bufferSize);
 
     return (int32_t)count;
