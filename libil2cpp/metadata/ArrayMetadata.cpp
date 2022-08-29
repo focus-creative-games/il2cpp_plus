@@ -470,40 +470,53 @@ namespace metadata
         }
     };
 
-    typedef Il2CppHashMap<Il2CppClass*, Il2CppClass*, SZArrayClassHash, SZArrayClassCompare> SZArrayClassMap;
-    typedef Il2CppHashMap<std::pair<Il2CppClass*, uint32_t>, Il2CppClass*, ArrayClassHash, ArrayClassCompare> ArrayClassMap;
+    typedef Il2CppReaderWriterLockedHashMap<Il2CppClass*, Il2CppClass*, SZArrayClassHash, SZArrayClassCompare> SZArrayClassMap;
+    typedef Il2CppReaderWriterLockedHashMap<std::pair<Il2CppClass*, uint32_t>, Il2CppClass*, ArrayClassHash, ArrayClassCompare> ArrayClassMap;
 
     SZArrayClassMap s_SZArrayClassMap;
     ArrayClassMap s_ArrayClassMap;
 
     void ArrayMetadata::Clear()
     {
-        s_SZArrayClassMap.clear();
-        s_ArrayClassMap.clear();
+        s_SZArrayClassMap.Clear();
+        s_ArrayClassMap.Clear();
+    }
+
+    static Il2CppClass* FindBoundedArrayClass(Il2CppClass* elementClass, uint32_t rank, bool bounded)
+    {
+        Il2CppClass* arrayClass = NULL;
+        if (rank > 1 || bounded)
+        {
+            if (s_ArrayClassMap.TryGet(std::make_pair(elementClass, rank), &arrayClass))
+                return arrayClass;
+        }
+        else
+        {
+            if (s_SZArrayClassMap.TryGet(elementClass, &arrayClass))
+                return arrayClass;
+        }
+
+        return NULL;
     }
 
     Il2CppClass* ArrayMetadata::GetBoundedArrayClass(Il2CppClass* elementClass, uint32_t rank, bool bounded)
     {
-        FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
-        IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(ArrayMetadata::GetBoundedArrayClass, "Use more granular lock for looking up arrays, but then handle race between lookup, construction, and caching");
-
         IL2CPP_ASSERT(rank <= 255);
 
         if (rank > 1)
             bounded = false;
 
-        if (rank > 1 || bounded)
-        {
-            ArrayClassMap::const_iterator iter = s_ArrayClassMap.find(std::make_pair(elementClass, rank));
-            if (iter != s_ArrayClassMap.end())
-                return iter->second;
-        }
-        else
-        {
-            SZArrayClassMap::const_iterator iter = s_SZArrayClassMap.find(elementClass);
-            if (iter != s_SZArrayClassMap.end())
-                return iter->second;
-        }
+        // Check for a cached array class using the reader lock only
+        Il2CppClass* cachedArrayClass = FindBoundedArrayClass(elementClass, rank, bounded);
+        if (cachedArrayClass != NULL)
+            return cachedArrayClass;
+
+        FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
+
+        // Check if the array class was created while we were waiting for the g_MetadataLock
+        cachedArrayClass = FindBoundedArrayClass(elementClass, rank, bounded);
+        if (cachedArrayClass != NULL)
+            return cachedArrayClass;
 
         Il2CppClass* arrayClass = il2cpp_defaults.array_class;
         Class::Init(arrayClass);
@@ -573,10 +586,16 @@ namespace metadata
 
         klass->interopData = MetadataCache::GetInteropDataForType(&klass->byval_arg);
 
+        // Insert the new array class while still holding the g_MetadataLock
+        // This ensures that the class is only added once
+        // And WalkSZArrays and WalkArrays (see below) only take the g_MetadataLock and assume that the maps won't be changed
+        // It's not safe to take the reader/writer lock there because those locks aren't re-entrant and those methods take
+        // call backs that call arbitrary code
+
         if (rank > 1 || bounded)
-            s_ArrayClassMap.insert(std::make_pair(ArrayClassMap::key_type(std::make_pair(klass->element_class, klass->rank)), klass));
+            s_ArrayClassMap.Add(ArrayClassMap::key_type(std::make_pair(klass->element_class, klass->rank)), klass);
         else
-            s_SZArrayClassMap.insert(std::make_pair(klass->element_class, klass));
+            s_SZArrayClassMap.Add(klass->element_class, klass);
 
         return klass;
     }
@@ -585,7 +604,7 @@ namespace metadata
     {
         FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
 
-        for (SZArrayClassMap::iterator it = s_SZArrayClassMap.begin(); it != s_SZArrayClassMap.end(); it++)
+        for (SZArrayClassMap::iterator it = s_SZArrayClassMap.UnlockedBegin(); it != s_SZArrayClassMap.UnlockedEnd(); it++)
         {
             callback(it->second, context);
         }
@@ -595,7 +614,7 @@ namespace metadata
     {
         FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
 
-        for (ArrayClassMap::iterator it = s_ArrayClassMap.begin(); it != s_ArrayClassMap.end(); it++)
+        for (ArrayClassMap::iterator it = s_ArrayClassMap.UnlockedBegin(); it != s_ArrayClassMap.UnlockedEnd(); it++)
         {
             callback(it->second, context);
         }

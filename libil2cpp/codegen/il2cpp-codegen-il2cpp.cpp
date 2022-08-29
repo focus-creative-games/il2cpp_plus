@@ -876,11 +876,6 @@ void il2cpp_codegen_stacktrace_pop_frame()
     il2cpp::vm::StackTrace::PopFrame();
 }
 
-const char* il2cpp_codegen_get_field_data(RuntimeField* field)
-{
-    return il2cpp::vm::Field::GetData(field);
-}
-
 void il2cpp_codegen_array_unsafe_mov(RuntimeClass * destClass, void* dest, RuntimeClass * srcClass, void* src)
 {
     // A runtime implementation of System.Array::UnsafeMov

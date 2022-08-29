@@ -3,6 +3,7 @@
 #include "utils/Il2CppHashMap.h"
 #include "utils/NonCopyable.h"
 #include "GarbageCollector.h"
+#include "os/FastReaderReaderWriterLock.h"
 
 namespace il2cpp
 {
@@ -37,14 +38,22 @@ namespace gc
 
         bool Contains(const Key& k)
         {
+            os::FastReaderReaderWriterAutoSharedLock readLock(&lock);
             return m_Map.find(k) != m_Map.end();
         }
 
-        // Returns true if value was added. False if it already existed
-        bool Add(const Key& k, T value)
+        // Returns the existing value if the it was already added or inserts and returns value
+        T GetOrAdd(const Key& k, T value)
         {
-            if (m_Map.find(k) != m_Map.end())
-                return false;
+            os::FastReaderReaderWriterAutoExclusiveLock writeLock(&lock);
+
+            ConstIterator iter = m_Map.find(k);
+            if (iter != m_Map.end())
+            {
+                size_t index = iter->second;
+                IL2CPP_ASSERT(index <= m_Map.size());
+                return m_Data[index];
+            }
 
             if (m_Size == 0)
             {
@@ -77,11 +86,13 @@ namespace gc
             GarbageCollector::SetWriteBarrier((void**)(m_Data + index));
 
             IL2CPP_ASSERT(m_Map.size() <= m_Size);
-            return true;
+            return value;
         }
 
         bool TryGetValue(const Key& k, T* value)
         {
+            os::FastReaderReaderWriterAutoSharedLock readLock(&lock);
+
             ConstIterator iter = m_Map.find(k);
             if (iter == m_Map.end())
                 return false;
@@ -110,6 +121,7 @@ namespace gc
         Il2CppHashMap<Key, size_t, HashFcn, EqualKey> m_Map;
         T* m_Data;
         size_t m_Size;
+        os::FastReaderReaderWriterLock lock;
     };
 }
 }

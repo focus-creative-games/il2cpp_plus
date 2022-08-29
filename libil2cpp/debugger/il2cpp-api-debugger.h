@@ -11,6 +11,7 @@
 // We don't have tha backend any more, but we will keep these macros to avoid code churn.
 #define VM_DOMAIN_GET_AGENT_INFO(domain) il2cpp_domain_get_agent_info(domain)
 #define VM_DOMAIN_SET_AGENT_INFO(domain, value) il2cpp_domain_set_agent_info(domain, value)
+#define VM_DOMAIN_GET_FRIENDLY_NAME(domain) il2cpp_domain_get_friendly_name(domain)
 #define VM_METHOD_IS_STRING_CTOR(method) il2cpp_method_is_string_ctor(method)
 #define VM_INFLATED_METHOD_GET_DECLARING(imethod) il2cpp_method_get_generic_definition(imethod)
 #define VM_INFLATED_METHOD_GET_CLASS_INST(imethod) il2cpp_method_get_generic_class_inst(imethod)
@@ -90,6 +91,7 @@ MonoMethod* il2cpp_get_generic_method_definition(MonoMethod* method);
 bool il2cpp_class_is_initialized(MonoClass* klass);
 void* il2cpp_domain_get_agent_info(MonoAppDomain* domain);
 void il2cpp_domain_set_agent_info(MonoAppDomain* domain, void* agentInfo);
+const char* il2cpp_domain_get_friendly_name(MonoAppDomain* domain);
 int il2cpp_generic_inst_get_argc(MonoGenericInst * inst);
 MonoType* il2cpp_generic_inst_get_argv(MonoGenericInst * inst, int index);
 MonoObject* il2cpp_assembly_get_object(MonoDomain * domain, MonoAssembly * assembly, MonoError * error);

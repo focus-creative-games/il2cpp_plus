@@ -1259,7 +1259,8 @@ namespace vm
     {
         typedef void (*DelegateCtor)(Il2CppDelegate* delegate, Il2CppObject* target, intptr_t method, MethodInfo* hiddenMethodInfo);
         const MethodInfo* ctor = Class::GetMethodFromName(delegate->object.klass, ".ctor", 2);
-        ((DelegateCtor)ctor->methodPointer)(delegate, target, (intptr_t)method, NULL);
+        void* ctorArgs[2] = {target, (void*)&method};
+        ctor->invoker_method(ctor->methodPointer, ctor, delegate, ctorArgs, NULL);
     }
 
 /**

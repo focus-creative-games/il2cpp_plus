@@ -68,6 +68,12 @@ namespace os
         }
 
         template<typename T>
+        static inline T* LoadPointerRelaxed(const T* const * addr)
+        {
+            return (T*)Baselib_atomic_load_ptr_relaxed((const intptr_t*)addr);
+        }
+
+        template<typename T>
         static inline T* ReadPointer(T** pointer)
         {
         #if IL2CPP_SIZEOF_VOID_P == 4

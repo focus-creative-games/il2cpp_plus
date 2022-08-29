@@ -11,6 +11,7 @@
 #pragma pop_macro("GROUP_SIZE")
 
 #include "KeyWrapper.h"
+#include "os/FastReaderReaderWriterLock.h"
 
 template<class Value,
          class HashFcn = SPARSEHASH_HASH<Value>,
@@ -58,4 +59,68 @@ public:
         Base::set_empty_key(key_type(key_type::KeyType_Empty));
 #endif
     }
+};
+
+template<class Value,
+         class HashFcn = SPARSEHASH_HASH<Value>,
+         class EqualKey = std::equal_to<Value>,
+         class Alloc = GOOGLE_NAMESPACE::libc_allocator_with_realloc<KeyWrapper<Value> > >
+class Il2CppReaderWriterLockedHashSet
+{
+public:
+    typedef typename Il2CppHashSet<Value, HashFcn, EqualKey, Alloc>::key_type key_type;
+    typedef typename Il2CppHashSet<Value, HashFcn, EqualKey, Alloc>::size_type size_type;
+    typedef typename Il2CppHashSet<Value, HashFcn, EqualKey, Alloc>::const_iterator const_iterator;
+    typedef typename Il2CppHashSet<Value, HashFcn, EqualKey, Alloc>::iterator iterator;
+    typedef typename Il2CppHashSet<Value, HashFcn, EqualKey, Alloc>::hasher hasher;
+
+    explicit Il2CppReaderWriterLockedHashSet(size_type n = 0,
+                                             const hasher& hf = hasher(),
+                                             const EqualKey& eql = EqualKey()) :
+        hashSet(n, hf, eql)
+    {
+    }
+
+    bool TryGet(const Value& findValue, Value* value)
+    {
+        il2cpp::os::FastReaderReaderWriterAutoSharedLock readerLock(&lock);
+        const_iterator iter = hashSet.find(findValue);
+        if (iter != hashSet.end())
+        {
+            *value = *iter;
+            return true;
+        }
+        return false;
+    }
+
+    bool Add(const Value& value)
+    {
+        il2cpp::os::FastReaderReaderWriterAutoExclusiveLock writerLock(&lock);
+        return hashSet.insert(value).second;
+    }
+
+    Value GetOrAdd(const Value& value)
+    {
+        il2cpp::os::FastReaderReaderWriterAutoExclusiveLock writerLock(&lock);
+        auto inserted = hashSet.insert(value);
+        if (inserted.second)
+            return value;
+        return *(inserted.first);
+    }
+
+    void Clear()
+    {
+        il2cpp::os::FastReaderReaderWriterAutoExclusiveLock writerLock(&lock);
+        hashSet.clear();
+    }
+
+    void Resize(size_t size)
+    {
+        il2cpp::os::FastReaderReaderWriterAutoExclusiveLock writerLock(&lock);
+        hashSet.resize(size);
+    }
+
+private:
+    il2cpp::os::FastReaderReaderWriterLock lock;
+    Il2CppHashSet<Value, HashFcn, EqualKey, Alloc> hashSet;
 };

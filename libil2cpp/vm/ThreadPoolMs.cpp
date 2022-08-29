@@ -108,7 +108,7 @@ namespace vm
             object_array_klass = klass;
         }
 
-        arr = il2cpp_array_new(object_array_klass, outarg_count);
+        arr = il2cpp_array_new_specific(object_array_klass, outarg_count);
 
         il2cpp::gc::WriteBarrier::GenericStore(out_args, arr);
         il2cpp::gc::WriteBarrier::GenericStoreNull(exc);

@@ -43,7 +43,7 @@ int32_t SystemNative_UTimes(const char* path, TimeValPair* times)
     ConvertTimeValPair(times, temp);
 
     int32_t result;
-    while (CheckInterrupted(result = utimes(path, temp)))
+    while (CheckInterrupted(result = utimes_(path, temp)))
         ;
     return result;
 }

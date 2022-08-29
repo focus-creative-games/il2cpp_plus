@@ -8,7 +8,6 @@
 #include "metadata//CustomAttributeDataReader.h"
 #include "metadata/Il2CppTypeCompare.h"
 #include "metadata/Il2CppTypeHash.h"
-#include "os/ReaderWriterLock.h"
 #include "vm/Array.h"
 #include "vm/Class.h"
 #include "vm/Event.h"
@@ -88,8 +87,6 @@ namespace il2cpp
 {
 namespace vm
 {
-    static il2cpp::os::ReaderWriterLock s_ReflectionICallsLock;
-
     static Il2CppClass *s_System_Reflection_Assembly;
     static Il2CppClass * s_System_Reflection_RuntimeFieldInfoKlass;
     static Il2CppClass *s_System_Reflection_Module;
@@ -113,21 +110,13 @@ namespace vm
         AssemblyMap::key_type::wrapped_type key(assembly, (Il2CppClass*)NULL);
         AssemblyMap::data_type value = NULL;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_AssemblyMap->TryGetValue(key, &value))
-                return value;
-        }
+        if (s_AssemblyMap->TryGetValue(key, &value))
+            return value;
 
         res = (Il2CppReflectionAssembly*)Object::New(s_System_Reflection_Assembly);
         res->assembly = assembly;
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_AssemblyMap->TryGetValue(key, &value))
-            return value;
-
-        s_AssemblyMap->Add(key, res);
-        return res;
+        return s_AssemblyMap->GetOrAdd(key, res);
     }
 
     Il2CppReflectionAssemblyName* Reflection::GetAssemblyNameObject(const Il2CppAssemblyName *assemblyName)
@@ -147,11 +136,8 @@ namespace vm
         FieldMap::key_type::wrapped_type key(field, klass);
         FieldMap::data_type value = NULL;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_FieldMap->TryGetValue(key, &value))
-                return value;
-        }
+        if (s_FieldMap->TryGetValue(key, &value))
+            return value;
 
         res = (Il2CppReflectionField*)Object::New(s_System_Reflection_RuntimeFieldInfoKlass);
         res->klass = klass;
@@ -160,12 +146,7 @@ namespace vm
         res->attrs = field->type->attrs;
         IL2CPP_OBJECT_SETREF(res, type, GetTypeObject(field->type));
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_FieldMap->TryGetValue(key, &value))
-            return value;
-
-        s_FieldMap->Add(key, res);
-        return res;
+        return s_FieldMap->GetOrAdd(key, res);
     }
 
     const MethodInfo* Reflection::GetMethod(const Il2CppReflectionMethod* method)
@@ -184,11 +165,8 @@ namespace vm
         MethodMap::key_type::wrapped_type key(method, refclass);
         MethodMap::data_type value = NULL;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_MethodMap->TryGetValue(key, &value))
-                return value;
-        }
+        if (s_MethodMap->TryGetValue(key, &value))
+            return value;
 
         if (*method->name == '.' && (strcmp(method->name, ".ctor") == 0 || strcmp(method->name, ".cctor") == 0))
         {
@@ -202,12 +180,7 @@ namespace vm
         ret->method = method;
         IL2CPP_OBJECT_SETREF(ret, reftype, GetTypeObject(&refclass->byval_arg));
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_MethodMap->TryGetValue(key, &value))
-            return value;
-
-        s_MethodMap->Add(key, ret);
-        return ret;
+        return s_MethodMap->GetOrAdd(key, ret);
     }
 
     Il2CppReflectionModule* Reflection::GetModuleObject(const Il2CppImage *image)
@@ -218,11 +191,8 @@ namespace vm
         ModuleMap::key_type::wrapped_type key(image, (Il2CppClass*)NULL);
         ModuleMap::data_type value = NULL;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_ModuleMap->TryGetValue(key, &value))
-                return value;
-        }
+        if (s_ModuleMap->TryGetValue(key, &value))
+            return value;
 
         res = (Il2CppReflectionModule*)Object::New(s_System_Reflection_Module);
 
@@ -252,12 +222,7 @@ namespace vm
             }
         }*/
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_ModuleMap->TryGetValue(key, &value))
-            return value;
-
-        s_ModuleMap->Add(key, res);
-        return res;
+        return s_ModuleMap->GetOrAdd(key, res);
     }
 
     Il2CppReflectionProperty* Reflection::GetPropertyObject(Il2CppClass *klass, const PropertyInfo *property)
@@ -267,22 +232,14 @@ namespace vm
         PropertyMap::key_type::wrapped_type key(property, klass);
         PropertyMap::data_type value = NULL;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_PropertyMap->TryGetValue(key, &value))
-                return value;
-        }
+        if (s_PropertyMap->TryGetValue(key, &value))
+            return value;
 
         res = (Il2CppReflectionProperty*)Object::New(s_System_Reflection_RuntimePropertyInfoKlass);
         res->klass = klass;
         res->property = property;
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_PropertyMap->TryGetValue(key, &value))
-            return value;
-
-        s_PropertyMap->Add(key, res);
-        return res;
+        return s_PropertyMap->GetOrAdd(key, res);
     }
 
     Il2CppReflectionEvent* Reflection::GetEventObject(Il2CppClass* klass, const EventInfo* event)
@@ -292,45 +249,29 @@ namespace vm
         EventMap::key_type::wrapped_type key(event, klass);
         EventMap::data_type value = NULL;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_EventMap->TryGetValue(key, &value))
-                return value;
-        }
+        if (s_EventMap->TryGetValue(key, &value))
+            return value;
 
         Il2CppReflectionMonoEvent* monoEvent = reinterpret_cast<Il2CppReflectionMonoEvent*>(Object::New(s_System_Reflection_RuntimeEventInfoKlass));
         monoEvent->eventInfo = event;
         monoEvent->reflectedType = Reflection::GetTypeObject(&klass->byval_arg);
         result = reinterpret_cast<Il2CppReflectionEvent*>(monoEvent);
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_EventMap->TryGetValue(key, &value))
-            return value;
-
-        s_EventMap->Add(key, result);
-        return result;
+        return s_EventMap->GetOrAdd(key, result);
     }
 
     Il2CppReflectionType* Reflection::GetTypeObject(const Il2CppType *type)
     {
         Il2CppReflectionType* object = NULL;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_TypeMap->TryGetValue(type, &object))
-                return object;
-        }
+        if (s_TypeMap->TryGetValue(type, &object))
+            return object;
 
         Il2CppReflectionType* typeObject = (Il2CppReflectionType*)Object::New(il2cpp_defaults.runtimetype_class);
 
         typeObject->type = type;
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_TypeMap->TryGetValue(type, &object))
-            return object;
-
-        s_TypeMap->Add(type, typeObject);
-        return typeObject;
+        return s_TypeMap->GetOrAdd(type, typeObject);
     }
 
     Il2CppObject* Reflection::GetDBNullObject()
@@ -390,11 +331,8 @@ namespace vm
         ParametersMap::key_type::wrapped_type key(method, refclass);
         ParametersMap::data_type value;
 
-        {
-            il2cpp::os::ReaderWriterAutoLock lockShared(&s_ReflectionICallsLock);
-            if (s_ParametersMap->TryGetValue(key, &value))
-                return value;
-        }
+        if (s_ParametersMap->TryGetValue(key, &value))
+            return value;
 
         member = GetMethodObject(method, refclass);
         res = Array::NewSpecific(s_System_Reflection_ParameterInfo_array, method->parameters_count);
@@ -426,12 +364,7 @@ namespace vm
             il2cpp_array_setref(res, i, param);
         }
 
-        il2cpp::os::ReaderWriterAutoLock lockExclusive(&s_ReflectionICallsLock, true);
-        if (s_ParametersMap->TryGetValue(key, &value))
-            return value;
-
-        s_ParametersMap->Add(key, res);
-        return res;
+        return s_ParametersMap->GetOrAdd(key, res);
     }
 
 // TODO: move this somewhere else

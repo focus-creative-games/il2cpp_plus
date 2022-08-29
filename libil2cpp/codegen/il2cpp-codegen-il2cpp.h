@@ -1004,8 +1004,6 @@ inline intptr_t il2cpp_codegen_get_com_interface_for_object(Il2CppObject* object
 
 NORETURN void il2cpp_codegen_raise_profile_exception(const RuntimeMethod* method);
 
-const char* il2cpp_codegen_get_field_data(RuntimeField* field);
-
 void il2cpp_codegen_array_unsafe_mov(RuntimeClass * destClass, void* dest, RuntimeClass * srcClass, void* src);
 NORETURN void il2cpp_codegen_array_unsafe_mov_type_exception(const RuntimeType * destType, const RuntimeType* srcType);
 
