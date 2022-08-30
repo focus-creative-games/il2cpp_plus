@@ -1344,7 +1344,7 @@ namespace vm
                     //EncodedMethodIndex vtableMethodIndex = MetadataCache::GetVTableMethodFromIndex(genericTypeDefinition->typeDefinition->vtableStart + i);
                     //const MethodInfo* method = MetadataCache::GetMethodInfoFromIndex(vtableMethodIndex);
                     //if ( GetEncodedIndexType(vtableMethodIndex) == kIl2CppMetadataUsageMethodRef)
-                    if (method && method->genericMethod)
+                    if (method && method->is_inflated)
                     {
                         const Il2CppGenericMethod* genericMethod = il2cpp::metadata::GenericMetadata::Inflate(method->genericMethod, context);
                         method = il2cpp::metadata::GenericMethod::GetMethod(genericMethod);
