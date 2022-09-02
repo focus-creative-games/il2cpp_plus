@@ -46,10 +46,10 @@ namespace utils
                 *(uint16_t*)value = Read16(blob);
                 break;
             case IL2CPP_TYPE_U4:
-                *(uint32_t*)value = ReadCompressedUInt32(blob);
+                *(uint32_t*)value = useInterpFormat ? Read32(blob) : ReadCompressedUInt32(blob);
                 break;
             case IL2CPP_TYPE_I4:
-                *(int32_t*)value = ReadCompressedInt32(blob);
+                *(int32_t*)value = useInterpFormat ? (int32_t)Read32(blob) : ReadCompressedInt32(blob);
                 break;
             case IL2CPP_TYPE_U8:
             case IL2CPP_TYPE_I8:
