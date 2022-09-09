@@ -14,6 +14,8 @@
 #include "vm/Exception.h"
 #include "vm/MetadataCache.h"
 
+#include "hybridclr/metadata/MetadataModule.h"
+
 namespace il2cpp
 {
 namespace icalls
@@ -71,7 +73,7 @@ namespace System
         return il2cpp::vm::Reflection::HasAttribute(obj, vm::Class::FromIl2CppType(attr_type->type));
     }
 
-    static Il2CppObject* CreateCustomAttributeData(const Il2CppAssembly* assembly, const il2cpp::metadata::LazyCustomAttributeData& data)
+    Il2CppObject* MonoCustomAttrs::CreateCustomAttributeData(const Il2CppAssembly* assembly, const il2cpp::metadata::LazyCustomAttributeData& data)
     {
         static const MethodInfo* customAttributeDataConstructor;
         if (!customAttributeDataConstructor)
@@ -95,6 +97,12 @@ namespace System
 
     Il2CppArray* MonoCustomAttrs::GetCustomAttributesDataInternal(Il2CppObject* obj)
     {
+        il2cpp::vm::ReflectionObjInfo refInfo = il2cpp::vm::Reflection::GetImageOfReflectionObject(obj);
+        if (hybridclr::metadata::IsInterpreterImage(refInfo.image))
+        {
+            return hybridclr::metadata::MetadataModule::GetImage(refInfo.image)->GetCustomAttributesDataInternal(refInfo.token);
+        }
+
         metadata::CustomAttributeDataReader reader = il2cpp::vm::Reflection::GetCustomAttrsDataReader(obj);
 
         Il2CppArray* result = il2cpp::vm::Array::New(il2cpp_defaults.customattribute_data_class, reader.GetCount());

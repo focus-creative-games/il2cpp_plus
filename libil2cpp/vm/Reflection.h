@@ -37,6 +37,13 @@ namespace il2cpp
 {
 namespace vm
 {
+
+    struct ReflectionObjInfo
+    {
+        const Il2CppImage* image;
+        uint32_t token;
+    };
+
     class LIBIL2CPP_CODEGEN_API Reflection
     {
 // exported
@@ -72,6 +79,7 @@ namespace vm
 
         static void ClearStatics();
 
+        static ReflectionObjInfo GetImageOfReflectionObject(Il2CppObject* obj);
 // internal
     public:
         static void Initialize();
