@@ -1063,6 +1063,12 @@ static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2Cpp
 
 static const Il2CppImageGlobalMetadata* GetImageForCustomAttributeIndex(CustomAttributeIndex index)
 {
+    // ==={{ hybridclr
+    if (hybridclr::metadata::IsInterpreterIndex(index)) {
+        return reinterpret_cast<const Il2CppImageGlobalMetadata*>(hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(index)->GetIl2CppImage()->metadataHandle);
+    }
+    // ===}} hybridclr
+
     for (int32_t imageIndex = 0; imageIndex < s_MetadataImagesCount; imageIndex++)
     {
         const Il2CppImageGlobalMetadata* imageMetadta = s_MetadataImagesTable + imageIndex;
