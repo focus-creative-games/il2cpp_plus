@@ -567,7 +567,50 @@ namespace vm
         // in every invoke call as that blows up the code size.
         try
         {
-            RaiseExecutionEngineExceptionIfMethodIsNotFound(method);
+            // ==={{ hybridclr
+            // RaiseExecutionEngineExceptionIfMethodIsNotFound(method);
+            hybridclr::GetInterpreterDirectlyCallMethodPointer(method);
+            if (method->methodPointer == nullptr)
+            {
+                if (method->klass->parent == il2cpp_defaults.multicastdelegate_class)
+                {
+                    Il2CppMulticastDelegate* del = (Il2CppMulticastDelegate*)obj;
+                    if (del->delegates)
+                    {
+                        Il2CppObject* ret = nullptr;
+                        for (int32_t i = 0, n = (int32_t)del->delegates->max_length; i < n; i++)
+                        {
+                            Il2CppDelegate* subDel = il2cpp_array_get(del->delegates, Il2CppDelegate*, i);
+                            if (subDel->invoke_impl)
+                            {
+                                ret = (Il2CppObject*)subDel->invoke_impl(subDel->method_ptr, subDel->method, subDel->target, params);
+                            }
+                            else
+                            {
+                                RaiseExecutionEngineExceptionIfMethodIsNotFound(method);
+                            }
+                        }
+                        return ret;
+                    }
+                    else
+                    {
+                        Il2CppDelegate* subDel = &del->delegate;
+                        if (subDel->invoke_impl)
+                        {
+                            return (Il2CppObject*)subDel->invoke_impl(subDel->method_ptr, subDel->method, subDel->target, params);
+                        }
+                        else
+                        {
+                            RaiseExecutionEngineExceptionIfMethodIsNotFound(method);
+                        }
+                    }
+                }
+                else
+                {
+                    RaiseExecutionEngineExceptionIfMethodIsNotFound(method);
+                }
+            }
+            // ===}} hybridclr
 
             if (!Method::IsInstance(method) && method->klass && method->klass->has_cctor && !method->klass->cctor_finished)
                 ClassInit(method->klass);
