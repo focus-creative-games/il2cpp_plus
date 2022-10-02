@@ -34,6 +34,8 @@ extern "C" {
 }
 #endif
 
+#include "hybridclr/interpreter/InterpreterModule.h"
+
 namespace il2cpp
 {
 namespace vm
@@ -228,7 +230,7 @@ namespace vm
 #if IL2CPP_MONO_DEBUGGER
         utils::Debugger::FreeThreadLocalData();
 #endif
-
+        hybridclr::interpreter::InterpreterModule::FreeThreadLocalMachineState();
         os::Thread::DetachCurrentThread();
         s_CurrentThread.SetValue(NULL);
     }
