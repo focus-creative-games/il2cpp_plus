@@ -174,11 +174,11 @@ static const Il2CppPropertyDefinition* GetPropertyDefinitionFromIndex(const Il2C
 }
 
     // ==={{ hybridclr
-const Il2CppParameterDefinition* il2cpp::vm::GlobalMetadata::GetParameterDefinitionFromIndex(const Il2CppImage* image, ParameterIndex index)
+const Il2CppParameterDefinition* il2cpp::vm::GlobalMetadata::GetParameterDefinitionFromIndex(const Il2CppClass* klass, ParameterIndex index)
 {
-    if (hybridclr::metadata::IsInterpreterImage(image))
+    if (hybridclr::metadata::IsInterpreterType(klass))
     {
-        return hybridclr::metadata::MetadataModule::GetParameterDefinitionFromIndex(image, index);
+        return hybridclr::metadata::MetadataModule::GetParameterDefinitionFromIndex(klass->image, index);
     }
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->parametersSize / sizeof(Il2CppParameterDefinition));    const Il2CppParameterDefinition* parameters = (const Il2CppParameterDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->parametersOffset);
     return parameters + index;
@@ -1472,7 +1472,7 @@ Il2CppMetadataParameterInfo il2cpp::vm::GlobalMetadata::GetParameterInfo(const I
     IL2CPP_ASSERT(methodDefinition != NULL);
     IL2CPP_ASSERT(paramIndex >= 0 && paramIndex < methodDefinition->parameterCount);
 
-    const Il2CppParameterDefinition* parameterDefinition = GetParameterDefinitionFromIndex(klass->image, methodDefinition->parameterStart + paramIndex);
+    const Il2CppParameterDefinition* parameterDefinition = GetParameterDefinitionFromIndex(klass, methodDefinition->parameterStart + paramIndex);
 
     return {
             GetStringFromIndex(parameterDefinition->nameIndex),

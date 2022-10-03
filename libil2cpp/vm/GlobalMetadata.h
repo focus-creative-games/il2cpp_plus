@@ -133,7 +133,7 @@ namespace vm
 
         static const char* GetStringFromIndex(StringIndex index);
         static TypeDefinitionIndex GetIndexForTypeDefinition(const Il2CppClass* klass);
-        static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppImage* image, ParameterIndex index);
+        static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppClass* klass, ParameterIndex index);
         static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppMethodDefinition* methodDef, ParameterIndex index);
 
         // ===}} hybridclr
