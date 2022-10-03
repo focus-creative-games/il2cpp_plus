@@ -1252,7 +1252,7 @@ namespace vm
                 ParameterInfo* newParameter = parameters;
                 for (uint16_t paramIndex = 0; paramIndex < methodDefinition->parameterCount; ++paramIndex)
                 {
-                    const Il2CppParameterDefinition* parameterDefinition = MetadataCache::GetParameterDefinitionFromIndex(const_cast<Il2CppImage*>(klass->image), methodDefinition->parameterStart + paramIndex);
+                    const Il2CppParameterDefinition* parameterDefinition = MetadataCache::GetParameterDefinitionFromIndex(klass, methodDefinition->parameterStart + paramIndex);
                     newParameter->name = MetadataCache::GetStringFromIndex(parameterDefinition->nameIndex);
                     newParameter->position = paramIndex;
                     newParameter->token = parameterDefinition->token;

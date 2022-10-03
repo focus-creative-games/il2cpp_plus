@@ -128,7 +128,7 @@ namespace vm
         static const Il2CppMethodDefinition* GetMethodDefinitionFromIndex(MethodIndex index);
         static const MethodInfo* GetMethodInfoFromMethodDefinitionIndex(MethodIndex index);
         static const Il2CppPropertyDefinition* GetPropertyDefinitionFromIndex(PropertyIndex index);
-        static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(Il2CppImage* image, ParameterIndex index);
+        static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(Il2CppClass* klass, ParameterIndex index);
         static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppMethodDefinition* methodDef, ParameterIndex index);
         // returns the compiler computer field offset for type definition fields
         static int32_t GetFieldOffsetFromIndexLocked(TypeIndex typeIndex, int32_t fieldIndexInType, FieldInfo* field, const il2cpp::os::FastAutoLock& lock);

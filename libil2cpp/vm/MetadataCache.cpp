@@ -1705,11 +1705,11 @@ const Il2CppPropertyDefinition* il2cpp::vm::MetadataCache::GetPropertyDefinition
     return properties + index;
 }
 
-const Il2CppParameterDefinition* il2cpp::vm::MetadataCache::GetParameterDefinitionFromIndex(Il2CppImage* image, ParameterIndex index)
+const Il2CppParameterDefinition* il2cpp::vm::MetadataCache::GetParameterDefinitionFromIndex(Il2CppClass* klass, ParameterIndex index)
 {
-    if (hybridclr::metadata::IsInterpreterImage(image))
+    if (hybridclr::metadata::IsInterpreterType(klass))
     {
-        return hybridclr::metadata::MetadataModule::GetParameterDefinitionFromIndex(image, index);
+        return hybridclr::metadata::MetadataModule::GetParameterDefinitionFromIndex(klass->image, index);
     }
 
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->parametersCount / sizeof(Il2CppParameterDefinition));
