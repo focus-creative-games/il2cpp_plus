@@ -1261,7 +1261,7 @@ namespace vm
     {
         typedef void (*DelegateCtor)(Il2CppDelegate* delegate, Il2CppObject* target, intptr_t method, MethodInfo* hiddenMethodInfo);
         const MethodInfo* ctor = Class::GetMethodFromName(delegate->object.klass, ".ctor", 2);
-        if (ctor->methodPointer == nullptr || hybridclr::metadata::IsInterpreterType(delegate->object.klass))
+        if (ctor->methodPointer == nullptr || ctor->isInterpterImpl)
         {
             delegate->target = target;
             delegate->method = method;
