@@ -166,7 +166,7 @@ extern "C" {
     {
         static const int kBitIsValueType = 1;
         Il2CppType *type = (Il2CppType*)monoType;
-        const Il2CppTypeDefinition *typeDef = il2cpp::vm::MetadataCache::GetTypeDefinitionFromIndex(type->data.generic_class->typeDefinitionIndex);
+        const Il2CppTypeDefinition *typeDef = type->data.generic_class->type->data.typeHandle;
         return (typeDef->bitfield >> (kBitIsValueType - 1)) & 0x1;
     }
 
