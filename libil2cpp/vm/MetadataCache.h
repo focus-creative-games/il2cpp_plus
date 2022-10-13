@@ -81,7 +81,7 @@ namespace vm
         static const Il2CppGenericMethod* GetGenericMethod(const MethodInfo* methodDefinition, const Il2CppGenericInst* classInst, const Il2CppGenericInst* methodInst);
 
         static InvokerMethod GetInvokerMethodPointer(const MethodInfo* methodDefinition, const Il2CppGenericContext* context);
-        static Il2CppMethodPointer GetMethodPointer(const MethodInfo* methodDefinition, const Il2CppGenericContext* context);
+        static Il2CppMethodPointer GetMethodPointer(const MethodInfo* methodDefinition, const Il2CppGenericContext* context, bool adjustorThunk, bool methodPointer);
 
         static Il2CppClass* GetTypeInfoFromTypeIndex(TypeIndex index, bool throwOnError = true);
         static const Il2CppType* GetIl2CppTypeFromIndex(TypeIndex index);

@@ -777,7 +777,7 @@ InvokerMethod il2cpp::vm::MetadataCache::GetInvokerMethodPointer(const MethodInf
     return NULL;
 }
 
-Il2CppMethodPointer il2cpp::vm::MetadataCache::GetMethodPointer(const MethodInfo* methodDefinition, const Il2CppGenericContext* context)
+Il2CppMethodPointer il2cpp::vm::MetadataCache::GetMethodPointer(const MethodInfo* methodDefinition, const Il2CppGenericContext* context, bool adjustorThunk, bool methodPointer)
 {
     Il2CppGenericMethod method = { 0 };
     method.methodDefinition = const_cast<MethodInfo*>(methodDefinition);
@@ -788,10 +788,10 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetMethodPointer(const MethodInfo
     if (iter != s_MethodTableMap.end())
     {
         IL2CPP_ASSERT(iter->second->invokerIndex >= 0);
-        if (iter->second->adjustorThunkIndex != -1)
+        if (iter->second->adjustorThunkIndex != -1 && adjustorThunk)
             return s_Il2CppCodeRegistration->genericAdjustorThunks[iter->second->adjustorThunkIndex];
 
-        if (static_cast<uint32_t>(iter->second->methodIndex) < s_Il2CppCodeRegistration->genericMethodPointersCount)
+        if (static_cast<uint32_t>(iter->second->methodIndex) < s_Il2CppCodeRegistration->genericMethodPointersCount && methodPointer)
             return s_Il2CppCodeRegistration->genericMethodPointers[iter->second->methodIndex];
         return NULL;
     }
@@ -803,10 +803,10 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetMethodPointer(const MethodInfo
     if (iter != s_MethodTableMap.end())
     {
         IL2CPP_ASSERT(iter->second->invokerIndex >= 0);
-        if (iter->second->adjustorThunkIndex != -1)
+        if (iter->second->adjustorThunkIndex != -1 && adjustorThunk)
             return s_Il2CppCodeRegistration->genericAdjustorThunks[iter->second->adjustorThunkIndex];
 
-        if (static_cast<uint32_t>(iter->second->methodIndex) < s_Il2CppCodeRegistration->genericMethodPointersCount)
+        if (static_cast<uint32_t>(iter->second->methodIndex) < s_Il2CppCodeRegistration->genericMethodPointersCount && methodPointer)
             return s_Il2CppCodeRegistration->genericMethodPointers[iter->second->methodIndex];
         return NULL;
     }
