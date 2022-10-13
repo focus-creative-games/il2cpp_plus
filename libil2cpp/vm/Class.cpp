@@ -1237,15 +1237,26 @@ namespace vm
                 {
                     Il2CppMethodPointer adjustorThunk = MetadataCache::GetAdjustorThunk(klass->image, methodInfo.token);
                     if (adjustorThunk != NULL)
+                    {
                         newMethod->methodPointer = adjustorThunk;
+                        newMethod->virtualMethodPointerCallByInterp = adjustorThunk;
+                    }
                 }
 
                 // We did not find an adjustor thunk, or maybe did not need to look for one. Let's get the real method pointer.
                 if (newMethod->methodPointer == NULL)
+                {
                     newMethod->methodPointer = MetadataCache::GetMethodPointer(klass->image, methodInfo.token);
+                    newMethod->methodPointerCallByInterp = newMethod->virtualMethodPointerCallByInterp = newMethod->methodPointer;
+                }
+                else
+                {
+                    newMethod->methodPointerCallByInterp = MetadataCache::GetMethodPointer(klass->image, methodInfo.token);
+                }
 
                 newMethod->invoker_method = MetadataCache::GetMethodInvoker(klass->image, methodInfo.token);
                 newMethod->isInterpterImpl = hybridclr::metadata::IsInterpreterType(klass);
+                newMethod->initInterpCallMethodPointer = true;
 
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;

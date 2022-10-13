@@ -296,6 +296,10 @@ namespace metadata
 
         inflatedMethod->methodPointer = methodToCopyDataFrom->methodPointer;
         inflatedMethod->invoker_method = methodToCopyDataFrom->invoker_method;
+        inflatedMethod->methodPointerCallByInterp = methodToCopyDataFrom->methodPointerCallByInterp;
+        inflatedMethod->virtualMethodPointerCallByInterp = inflatedMethod->virtualMethodPointerCallByInterp;
+        inflatedMethod->isInterpterImpl = methodToCopyDataFrom->isInterpterImpl;
+        inflatedMethod->initInterpCallMethodPointer = methodToCopyDataFrom->initInterpCallMethodPointer;
 
         return inflatedMethod;
     }

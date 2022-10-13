@@ -146,29 +146,39 @@ namespace metadata
             newMethod->rgctx_data = GenericMetadata::InflateRGCTX(gmethod->methodDefinition->klass->image, gmethod->methodDefinition->token, &gmethod->context);
         }
 
-        // ==={{ hybridclr
-        if (hybridclr::metadata::IsInterpreterMethod(newMethod))
+        newMethod->invoker_method = MetadataCache::GetInvokerMethodPointer(methodDefinition, &gmethod->context);
+        newMethod->methodPointer = MetadataCache::GetMethodPointer(methodDefinition, &gmethod->context, true, true);
+
+        bool isAdjustorThunkMethod = newMethod->klass->valuetype && hybridclr::metadata::IsInstanceMethod(newMethod);
+        if (newMethod->methodPointer == nullptr)
         {
-            newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            newMethod->methodPointer = newMethod->klass->valuetype && hybridclr::metadata::IsInstanceMethod(newMethod) ?
-                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
-                : hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-            newMethod->isInterpterImpl = true;
+            if ((hybridclr::metadata::IsInterpreterMethod(newMethod) || hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod)))
+            {
+                newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+                newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+                if (isAdjustorThunkMethod)
+                {
+                    newMethod->virtualMethodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod);
+                }
+                else
+                {
+                    newMethod->virtualMethodPointerCallByInterp = newMethod->methodPointerCallByInterp;
+                }
+                newMethod->methodPointer = newMethod->virtualMethodPointerCallByInterp;
+                newMethod->isInterpterImpl = true;
+                newMethod->initInterpCallMethodPointer = true;
+            }
+            else
+            {
+                // not init anything
+            }
         }
         else
         {
-            newMethod->invoker_method = MetadataCache::GetInvokerMethodPointer(methodDefinition, &gmethod->context);
-            newMethod->methodPointer = MetadataCache::GetMethodPointer(methodDefinition, &gmethod->context);
-            if (!newMethod->methodPointer && hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
-            {
-                newMethod->methodPointer = newMethod->klass->valuetype && hybridclr::metadata::IsInstanceMethod(newMethod) ?
-                    hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod)
-                    : hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-                newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-                newMethod->isInterpterImpl = true;
-            }
+            newMethod->virtualMethodPointerCallByInterp = newMethod->methodPointer;
+            newMethod->methodPointerCallByInterp = isAdjustorThunkMethod ? MetadataCache::GetMethodPointer(methodDefinition, &gmethod->context, false, true) : newMethod->methodPointer;
+            newMethod->initInterpCallMethodPointer = true;
         }
-        // ===}} hybridclr
 
         ++il2cpp_runtime_stats.inflated_method_count;
 
