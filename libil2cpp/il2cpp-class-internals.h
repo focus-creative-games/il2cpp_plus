@@ -362,7 +362,8 @@ typedef struct MethodInfo
 
     // ==={{ hybridclr
     void* interpData;
-    Il2CppMethodPointer interpCallMethodPointer;
+    Il2CppMethodPointer methodPointerCallByInterp;
+    Il2CppMethodPointer virtualMethodPointerCallByInterp;
     bool initInterpCallMethodPointer;
     bool isInterpterImpl;
     // ===}} hybridclr

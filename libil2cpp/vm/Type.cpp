@@ -1265,7 +1265,7 @@ namespace vm
         {
             delegate->target = target;
             delegate->method = method;
-            delegate->invoke_impl = hybridclr::GetInterpreterDirectlyCallMethodPointer(method);
+            delegate->invoke_impl = hybridclr::InitAndGetInterpreterDirectlyCallMethodPointer(method);
             delegate->invoke_impl_this = target;
             //il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetNotSupportedException("interperter delegate can't be constructed by InvokeDelegateConstructor"));
             return;

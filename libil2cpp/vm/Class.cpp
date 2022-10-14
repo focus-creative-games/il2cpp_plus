@@ -1267,7 +1267,10 @@ namespace vm
                 if (newMethod->virtualMethodPointer == NULL)
                     newMethod->virtualMethodPointer = newMethod->methodPointer;
 
+                newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+                newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
                 newMethod->isInterpterImpl = hybridclr::metadata::IsInterpreterType(klass);
+                newMethod->initInterpCallMethodPointer = true;
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
 

@@ -257,42 +257,23 @@ namespace metadata
         {
             newMethod->invoker_method = methodPointers.invoker_method;
         }
-        else if (hybridclr::metadata::IsInterpreterMethod(newMethod) || hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
-        {
-            newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            newMethod->methodPointer = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-            newMethod->virtualMethodPointer = Method::IsInstance(newMethod) ?
-                (IS_CLASS_VALUE_TYPE(newMethod->klass) ? hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod))
-                : nullptr;
-            newMethod->isInterpterImpl = true;
-        }
         else
         {
             newMethod->invoker_method = Runtime::GetMissingMethodInvoker();
             if (Method::IsInstance(newMethod))
                 newMethod->virtualMethodPointer = MetadataCache::GetUnresolvedVirtualCallStub(newMethod);
         }
-        // ===}} hybridclr
 
-        newMethod->has_full_generic_sharing_signature = methodPointers.isFullGenericShared && HasFullGenericSharedParametersOrReturn(gmethod->methodDefinition);
-
-        // Full generic sharing methods should be called via invoker
-        // And invalid static methods can't use the unresolved virtual call stubs
-        newMethod->indirect_call_via_invokers = newMethod->has_full_generic_sharing_signature || (!Method::IsInstance(newMethod) && newMethod->methodPointer == NULL);
-
-        // now we don't support full generic sharing method, so we use interpreter mode
-        if (newMethod->indirect_call_via_invokers)
+        bool isInterpMethod = hybridclr::metadata::IsInterpreterMethod(newMethod);
+        if (!isInterpMethod)
         {
-            if (hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod))
-            {
-                newMethod->interpCallMethodPointer = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-                newMethod->isInterpterImpl = true;
-            }
+            newMethod->has_full_generic_sharing_signature = methodPointers.isFullGenericShared && HasFullGenericSharedParametersOrReturn(gmethod->methodDefinition);
+
+            // Full generic sharing methods should be called via invoker
+            // And invalid static methods can't use the unresolved virtual call stubs
+            newMethod->indirect_call_via_invokers = newMethod->has_full_generic_sharing_signature || (!Method::IsInstance(newMethod) && newMethod->methodPointer == NULL);
         }
-        else
-        {
-            newMethod->interpCallMethodPointer = newMethod->methodPointer;
-        }
+
         ++il2cpp_runtime_stats.inflated_method_count;
 
         if (il2cpp::vm::Runtime::IsFullGenericSharingEnabled())
@@ -302,6 +283,51 @@ namespace metadata
                 sharedMethodInfo->virtualCallMethodPointer = MetadataCache::GetUnresolvedVirtualCallStub(newMethod);
             else
                 sharedMethodInfo->virtualCallMethodPointer = newMethod->virtualMethodPointer;
+        }
+
+        if (!newMethod->indirect_call_via_invokers)
+        {
+            newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+            newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
+        }
+
+        bool isAotImplByInterp = hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod);
+        if (methodPointers.methodPointer == nullptr)
+        {
+            if (isInterpMethod || isAotImplByInterp)
+            {
+                newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+                newMethod->methodPointer = newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+                bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
+                newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
+                    hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : newMethod->methodPointerCallByInterp;
+                newMethod->initInterpCallMethodPointer = true;
+                newMethod->isInterpterImpl = true;
+            }
+        }
+        else
+        {
+            if (newMethod->indirect_call_via_invokers && isAotImplByInterp)
+            {
+                newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+                bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
+                newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
+                    hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : newMethod->methodPointerCallByInterp;
+                if (newMethod->invoker_method == nullptr)
+                {
+                    newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+                }
+                if (newMethod->methodPointer == nullptr)
+                {
+                    newMethod->methodPointer = newMethod->methodPointerCallByInterp;
+                }
+                if (newMethod->virtualMethodPointer == nullptr)
+                {
+                    newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp;
+                }
+                newMethod->initInterpCallMethodPointer = true;
+                newMethod->isInterpterImpl = true;
+            }
         }
 
         // If we are a default interface method on a generic instance interface we need to ensure that the interfaces rgctx is inflated
