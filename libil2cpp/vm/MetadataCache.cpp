@@ -1617,10 +1617,10 @@ const Il2CppParameterDefaultValue * il2cpp::vm::MetadataCache::GetParameterDefau
         return NULL;
 
     ParameterIndex parameterIndex = method->methodDefinition->parameterStart + parameter->position;
-    if (hybridclr::metadata::IsInterpreterIndex((uint32_t)parameterIndex))
+    if (hybridclr::metadata::IsInterpreterMethod(method))
     {
-        return hybridclr::metadata::MetadataModule::GetImageByEncodedIndex((uint32_t)parameterIndex)
-            ->GetParameterDefaultValueEntryByRawIndex(hybridclr::metadata::DecodeMetadataIndex(parameterIndex));
+        return hybridclr::metadata::MetadataModule::GetImage(method->klass)
+            ->GetParameterDefaultValueEntryByRawIndex(parameterIndex);
     }
     const Il2CppParameterDefaultValue *start = (const Il2CppParameterDefaultValue*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->parameterDefaultValuesOffset);
     const Il2CppParameterDefaultValue *entry = start;
