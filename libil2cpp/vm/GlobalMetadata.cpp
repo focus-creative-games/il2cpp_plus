@@ -1262,6 +1262,11 @@ static const Il2CppParameterDefaultValue * GetParameterDefaultValueEntry(const M
         return NULL;
 
     size_t parameterIndex = methodDefinition->parameterStart + parameter->position;
+    if (hybridclr::metadata::IsInterpreterMethod(method))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(method->klass)
+            ->GetParameterDefaultValueEntryByRawIndex(parameterIndex);
+    }
     const Il2CppParameterDefaultValue *start = (const Il2CppParameterDefaultValue*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->parameterDefaultValuesOffset);
     const Il2CppParameterDefaultValue *entry = start;
     while (entry < start + s_GlobalMetadataHeader->parameterDefaultValuesSize / sizeof(Il2CppParameterDefaultValue))
