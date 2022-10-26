@@ -1346,6 +1346,11 @@ static const Il2CppParameterDefaultValue * GetParameterDefaultValueEntry(const M
         return NULL;
 
     ParameterIndex parameterIndex = methodDefinition->parameterStart + parameterPosition;
+    if (hybridclr::metadata::IsInterpreterMethod(method))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(method->klass)
+            ->GetParameterDefaultValueEntryByRawIndex(parameterIndex);
+    }
     Il2CppParameterDefaultValue key;
     key.parameterIndex = parameterIndex;
 
