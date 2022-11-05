@@ -15,10 +15,8 @@
 #include "utils/StringUtils.h"
 #include "vm-utils/VmStringUtils.h"
 
-// ==={{ hybridclr
 #include "os/Atomic.h"
 #include "hybridclr/metadata/Image.h"
-// ===}} hybridclr
 
 struct NamespaceAndNamePairHash
 {
@@ -188,7 +186,6 @@ namespace vm
         //table->insert(std::make_pair(MetadataCache::GetTypeNamespaceAndName(typeHandle), typeHandle));
         table->insert(std::make_pair(std::make_pair(MetadataCache::GetStringFromIndex(typeDefinition->namespaceIndex), MetadataCache::GetStringFromIndex(typeDefinition->nameIndex)), typeIndex));
     }
-    // ===}} hybridclr
 
     void Image::InitNestedTypes(const Il2CppImage *image)
     {
@@ -219,33 +216,53 @@ namespace vm
         }
     }
 
+    static void InitImageNameToTypeHandleHashTable(const Il2CppImage* image)
+    {
+        os::FastAutoLock lock(&s_ClassFromNameMutex);
+        if (!image->nameToClassHashTable)
+        {
+            auto nameToClassHashTable = new Il2CppNameToTypeDefinitionIndexHashTable();
+            image->nameToClassHashTable = nameToClassHashTable;
+            for (uint32_t index = 0; index < image->typeCount; index++)
+            {
+                TypeDefinitionIndex typeIndex = image->typeStart + index;
+                AddTypeToNametoClassHashTable(image, nameToClassHashTable, typeIndex);
+            }
+
+            for (uint32_t index = 0; index < image->exportedTypeCount; index++)
+            {
+                TypeDefinitionIndex typeIndex = MetadataCache::GetExportedTypeFromIndex(image->exportedTypeStart + index);
+                if (typeIndex != kTypeIndexInvalid)
+                    AddTypeToNametoClassHashTable(image, nameToClassHashTable, typeIndex);
+            }
+        }
+    }
+
     Il2CppClass* Image::ClassFromName(const Il2CppImage* image, const char* namespaze, const char *name)
     {
         if (!image->nameToClassHashTable)
         {
-            os::FastAutoLock lock(&s_ClassFromNameMutex);
-            if (!image->nameToClassHashTable)
-            {
-                auto nameToClassHashTable = new Il2CppNameToTypeDefinitionIndexHashTable();
-                image->nameToClassHashTable = nameToClassHashTable;
-                for (uint32_t index = 0; index < image->typeCount; index++)
-                {
-                    TypeDefinitionIndex typeIndex = image->typeStart + index;
-                    AddTypeToNametoClassHashTable(image, nameToClassHashTable, typeIndex);
-                }
-
-                for (uint32_t index = 0; index < image->exportedTypeCount; index++)
-                {
-                    TypeDefinitionIndex typeIndex = MetadataCache::GetExportedTypeFromIndex(image->exportedTypeStart + index);
-                    if (typeIndex != kTypeIndexInvalid)
-                        AddTypeToNametoClassHashTable(image, nameToClassHashTable, typeIndex);
-                }
-            }
+            InitImageNameToTypeHandleHashTable(image);
         }
 
         Il2CppNameToTypeDefinitionIndexHashTable::const_iterator iter = image->nameToClassHashTable->find(std::make_pair(namespaze, name));
         if (iter != image->nameToClassHashTable->end())
             return MetadataCache::GetTypeInfoFromTypeDefinitionIndex(iter->second);
+
+        return NULL;
+    }
+
+
+    Il2CppMetadataTypeHandle Image::TypeHandleFromName(const Il2CppImage* image, const char* namespaze, const char* name)
+    {
+        if (!image->nameToClassHashTable)
+        {
+            InitImageNameToTypeHandleHashTable(image);
+        }
+
+        Il2CppNameToTypeDefinitionIndexHashTable::const_iterator iter = image->nameToClassHashTable->find(std::make_pair(namespaze, name));
+        if (iter != image->nameToClassHashTable->end())
+            return MetadataCache::GetTypeDefinitionFromIndex(iter->second);
 
         return NULL;
     }

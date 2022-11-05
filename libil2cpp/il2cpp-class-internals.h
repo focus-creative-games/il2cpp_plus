@@ -384,13 +384,11 @@ typedef struct MethodInfo
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t is_marshaled_from_native : 1; /* a fake MethodInfo wrapping a native function pointer */
 
-    // ==={{ hybridclr
     void* interpData;
     Il2CppMethodPointer methodPointerCallByInterp;
     Il2CppMethodPointer virtualMethodPointerCallByInterp;
     bool initInterpCallMethodPointer;
     bool isInterpterImpl;
-    // ===}} hybridclr
 } MethodInfo;
 
 typedef struct Il2CppRuntimeInterfaceOffsetPair
@@ -576,6 +574,7 @@ typedef struct Il2CppAssembly
     int32_t referencedAssemblyStart;
     int32_t referencedAssemblyCount;
     Il2CppAssemblyName aname;
+    Il2CppAssembly* originAssembly;
 } Il2CppAssembly;
 
 typedef struct Il2CppCodeGenOptions

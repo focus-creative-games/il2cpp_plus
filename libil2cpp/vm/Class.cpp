@@ -41,13 +41,11 @@
 #include <algorithm>
 #include <limits>
 
-// ==={{ hybridclr
 #include <set>
 #include "hybridclr/metadata/MetadataUtil.h"
 #include "hybridclr/interpreter/Engine.h"
 #include "hybridclr/interpreter/Interpreter.h"
 #include "hybridclr/interpreter/InterpreterModule.h"
-// ===}} hybridclr
 
 namespace il2cpp
 {
@@ -914,13 +912,11 @@ namespace vm
             klass->minimumAlignment = sizeof(Il2CppObject*);
         }
 
-        // ==={{ hybridclr
         bool isInterpreterType = hybridclr::metadata::IsInterpreterType(klass);
         bool computSize = klass->instance_size == 0 && isInterpreterType;
         bool isExplictLayout = klass->flags & TYPE_ATTRIBUTE_EXPLICIT_LAYOUT;
         bool computLayout = isInterpreterType;
         bool computInstanceFieldLayout = !isExplictLayout && isInterpreterType;
-        // ===}} hybridclr
 
         if (klass->field_count)
         {
@@ -985,7 +981,6 @@ namespace vm
                 klass->actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
             }
 
-// ==={{ hybridclr
             // comput size when explicit layout
             if (computSize && isExplictLayout && !fieldTypes.empty())
             {
@@ -1070,8 +1065,6 @@ namespace vm
             klass->static_fields_size = (uint32_t)staticSize;
             klass->thread_static_fields_size = (uint32_t)threadStaticSize;
 
-// ===}} hybridclr
-
             if (klass->generic_class)
             {
                 SetupFieldOffsetsLocked(FIELD_LAYOUT_INSTANCE, klass, instanceSize, layoutData.FieldOffsets, lock);
@@ -1089,7 +1082,6 @@ namespace vm
         }
         else
         {
-// ==={{ hybridclr
             if (computSize)
             {
                 if (klass->valuetype)
@@ -1097,7 +1089,6 @@ namespace vm
                     instanceSize = actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
                 }
             }
-// ===}} hybridclr
             // need to set this in case there are no fields in a generic instance type
             instanceSize = UpdateInstanceSizeForGenericClass(klass, instanceSize);
 
@@ -1107,13 +1098,11 @@ namespace vm
             // uses that extra space (as clang does).
             klass->actualSize = static_cast<uint32_t>(actualSize);
 
-// ==={{ hybridclr
             if (computSize)
             {
                 klass->instance_size = (uint32_t)instanceSize;
                 klass->native_size = (uint32_t)instanceSize;
             }
-// ===}} hybridclr
         }
 
         if (klass->static_fields_size)
@@ -1253,7 +1242,7 @@ namespace vm
                 }
 
                 newMethod->invoker_method = MetadataCache::GetMethodInvoker(klass->image, methodDefinition->token);
-                newMethod->isInterpterImpl = hybridclr::metadata::IsInterpreterType(klass);
+                newMethod->isInterpterImpl = hybridclr::interpreter::InterpreterModule::IsImplementsByInterpreter(newMethod);
                 newMethod->initInterpCallMethodPointer = true;
 
                 newMethod->klass = klass;
@@ -2222,7 +2211,6 @@ namespace vm
             }
 
             klass = Image::FromTypeNameParseInfo(image, info, searchFlags & kTypeSearchFlagIgnoreCase);
-            // ==={{ hybridclr
             if (klass == nullptr)
             {
                 hybridclr::interpreter::MachineState& state = hybridclr::interpreter::InterpreterModule::GetCurrentThreadMachineState();
@@ -2244,7 +2232,6 @@ namespace vm
                     }
                 }
             }
-            // ===}} hybridclr
             if (klass == NULL && image != Image::GetCorlib())
             {
                 // Try mscorlib

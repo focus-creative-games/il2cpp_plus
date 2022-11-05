@@ -12,14 +12,12 @@
 #include "il2cpp-runtime-metadata.h"
 #include "il2cpp-runtime-stats.h"
 
-// ==={{ hybridclr
 #include "metadata/Il2CppGenericClassHash.h"
 #include "metadata/Il2CppGenericClassCompare.h"
 #include "utils/Il2CppHashSet.h"
 #include "utils/Il2CppHashMap.h"
 
 #include "hybridclr/CommonDef.h"
-// ===}} hybridclr
 
 namespace il2cpp
 {
@@ -161,7 +159,6 @@ namespace vm
         genericInstanceType->fields = fields;
     }
 
-// ==={{ hybridclr
     void InitCacheClass(Il2CppClass* definition, Il2CppGenericClass* gclass, bool throwOnError)
     {
         Il2CppClass* klass = gclass->cached_class = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
@@ -241,18 +238,6 @@ namespace vm
                 IL2CPP_ASSERT(cacheGclass->cached_class);
                 return gclass->cached_class = cacheGclass->cached_class;
             }
-            //// === huauto
-            //if (hybridclr::metadata::IsInterpreterType((Il2CppTypeDefinition*)gclass->type->data.typeHandle))
-            //{
-            //     Il2CppGenericClass* cacheGclass = il2cpp::metadata::GenericMetadata::GetGenericClass(gclass->type, gclass->context.class_inst);
-            //     if (cacheGclass->cached_class)
-            //     {
-            //         return cacheGclass->cached_class;
-            //     }
-            //     InitCacheClass(definition, cacheGclass, throwOnError);
-            //     return gclass->cached_class = cacheGclass->cached_class;
-            //}
-            //// === hybridclr
 
             // TODO thread safe error! hybridclr
             InitCacheClass(definition, gclass, throwOnError);
@@ -262,7 +247,6 @@ namespace vm
 
         return gclass->cached_class;
     }
-// ===}} hybridclr
 
     Il2CppGenericContext* GenericClass::GetContext(Il2CppGenericClass *gclass)
     {

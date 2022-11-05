@@ -1,5 +1,0 @@
-#pragma once
-
-#define HYBRIDCLR_UNITY_2019 1
-#define HYBRIDCLR_UNITY_2019_OR_NEW 1
-
