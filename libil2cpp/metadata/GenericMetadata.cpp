@@ -26,9 +26,7 @@
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 
-//==={{ hybridclr
 #include "hybridclr/metadata/MetadataUtil.h"
-//===}} hybridclr
 
 using namespace il2cpp::vm;
 using il2cpp::metadata::GenericMethod;
@@ -253,12 +251,10 @@ namespace metadata
 
     Il2CppRGCTXData* GenericMetadata::InflateRGCTX(const Il2CppImage* image, uint32_t token, const Il2CppGenericContext* context)
     {
-        // ==={{ hybridclr
         if (hybridclr::metadata::IsInterpreterImage(image))
         {
             return nullptr;
         }
-        // ===}} hybridclr
         RGCTXCollection collection = MetadataCache::GetRGCTXs(image, token);
         if (collection.count == 0)
             return NULL;

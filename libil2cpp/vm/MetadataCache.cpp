@@ -34,10 +34,8 @@
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 
-// ==={{ hybridclr
 #include "hybridclr/metadata/Assembly.h"
 #include "hybridclr/metadata/MetadataModule.h"
-// ===}} hybridclr
 
 typedef Il2CppReaderWriterLockedHashMap<Il2CppClass*, Il2CppClass*> PointerTypeMap;
 
@@ -112,9 +110,7 @@ struct PairToKeyConverter
 typedef il2cpp::utils::collections::ArrayValueMap<const Il2CppGuid*, std::pair<const Il2CppGuid*, Il2CppClass*>, PairToKeyConverter<const Il2CppGuid*, Il2CppClass*> > GuidToClassMap;
 static GuidToClassMap s_GuidToNonImportClassMap;
 
-// ==={{ hybridclr 
 static il2cpp::utils::dynamic_array<Il2CppAssembly*> s_cliAssemblies;
-// ===}} hybridclr
 
 void il2cpp::vm::MetadataCache::Register(const Il2CppCodeRegistration* const codeRegistration, const Il2CppMetadataRegistration* const metadataRegistration, const Il2CppCodeGenOptions* const codeGenOptions)
 {
@@ -688,12 +684,10 @@ static int CompareIl2CppTokenAdjustorThunkPair(const void* pkey, const void* pel
 
 Il2CppMethodPointer il2cpp::vm::MetadataCache::GetAdjustorThunk(const Il2CppImage* image, uint32_t token)
 {
-    // ==={{ hybridclr
     if (hybridclr::metadata::IsInterpreterIndex(image->token))
     {
         return hybridclr::metadata::MetadataModule::GetAdjustorThunk(image, token);
     }
-    // ===}} hybridclr
     if (image->codeGenModule->adjustorThunkCount == 0)
         return NULL;
 
@@ -717,12 +711,10 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetMethodPointer(const Il2CppImag
     if (rid == 0)
         return NULL;
 
-    // ==={{ hybridclr
     if (hybridclr::metadata::IsInterpreterImage(image))
     {
         return hybridclr::metadata::MetadataModule::GetMethodPointer(image, token);
     }
-    // ===}} hybridclr
 
     IL2CPP_ASSERT(rid <= image->codeGenModule->methodPointerCount);
 
@@ -735,12 +727,10 @@ InvokerMethod il2cpp::vm::MetadataCache::GetMethodInvoker(const Il2CppImage* ima
     uint32_t table = GetTokenType(token);
     if (rid == 0)
         return NULL;
-    // ==={{ hybridclr
     if (hybridclr::metadata::IsInterpreterImage(image))
     {
         return hybridclr::metadata::MetadataModule::GetMethodInvoker(image, token);
     }
-    // ===}} hybridclr
     int32_t index = image->codeGenModule->invokerIndices[rid - 1];
 
     if (index == kMethodIndexInvalid)
@@ -880,7 +870,6 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyFromIndex(AssemblyIn
     return s_AssembliesTable + index;
 }
 
-// ==={{ hybridclr
 const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyByName(const char* nameToFind)
 {
     return GetOrLoadAssemblyByName(nameToFind, false);
@@ -966,8 +955,6 @@ void il2cpp::vm::MetadataCache::FixThreadLocalStaticOffsetForFieldLocked(FieldIn
 {
     s_ThreadLocalStaticOffsetMap[field] = offset;
 }
-
-// ===}} hybridclr
 
 Il2CppImage* il2cpp::vm::MetadataCache::GetImageFromIndex(ImageIndex index)
 {

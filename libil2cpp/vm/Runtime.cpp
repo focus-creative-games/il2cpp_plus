@@ -60,9 +60,7 @@ extern "C" {
 }
 #endif
 
-// ==={{ hybridclr
-#include "hybridclr/ModuleManager.h"
-// ===}} hybridclr
+#include "hybridclr/Runtime.h"
 
 Il2CppDefaults il2cpp_defaults;
 bool g_il2cpp_is_fully_initialized = false;
@@ -381,9 +379,7 @@ namespace vm
         vm::MetadataCache::ExecuteEagerStaticClassConstructors();
         vm::MetadataCache::ExecuteModuleInitializers();
 
-        // ==={{ hybridclr
-        hybridclr::ModuleManager::Initialize();
-        // ===}} hybridclr
+        hybridclr::Runtime::Initialize();
         return true;
     }
 

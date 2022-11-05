@@ -604,7 +604,6 @@ namespace vm
         return FromNameMsg(Image::GetCorlib(), "System.IO", "FileNotFoundException", msg);
     }
 
-    // ==={{ hybridclr
     Il2CppException* Exception::GetStackOverflowException(const char* msg)
     {
         return FromNameMsg(Image::GetCorlib(), "System", "StackOverflowException", msg);
@@ -619,7 +618,6 @@ namespace vm
     {
         return FromNameMsg(Image::GetCorlib(), "System", "MissingFieldException", msg);
     }
-    // ===}} hybridclr
 
     void Exception::StoreExceptionInfo(Il2CppException* ex, Il2CppString* exceptionString)
     {

@@ -246,8 +246,10 @@ namespace utils
             }
         }
 
+#if HYBRIDCLR_UNITY_VERSION >= 20200338
         if (!debuggerIsInitialized)
             mono_debugger_agent_init_minimal();
+#endif
     }
 
     static Debugger::OnBreakPointHitCallback s_BreakCallback;

@@ -7,11 +7,9 @@
 #include "il2cpp-tabledefs.h"
 #include "il2cpp-class-internals.h"
 
-// ==={{ hybridclr
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 #include "os/Atomic.h"
-// ===}} hybridclr
 
 #include <vector>
 #include <string>
@@ -20,13 +18,11 @@ namespace il2cpp
 {
 namespace vm
 {
-    // ==={{ hybridclr
     static baselib::ReentrantLock s_assemblyLock;
     // copy on write
     static AssemblyVector s_emptyAssemblies;
     static AssemblyVector* s_Assemblies = &s_emptyAssemblies;
     static AssemblyVector* s_lastValidAssemblies = &s_emptyAssemblies;
-    // ===}} hybridclr
 
     AssemblyVector* Assembly::GetAllAssemblies()
     {
@@ -65,7 +61,8 @@ namespace vm
 
     const Il2CppAssembly* Assembly::GetLoadedAssembly(const char* name)
     {
-        AssemblyVector& assemblies = *GetAllAssemblies();
+        os::FastAutoLock lock(&s_assemblyLock);
+        AssemblyVector& assemblies = *s_Assemblies;
         for (AssemblyVector::const_iterator assembly = assemblies.begin(); assembly != assemblies.end(); ++assembly)
         {
             if (strcmp((*assembly)->aname.name, name) == 0)
@@ -105,7 +102,6 @@ namespace vm
 
     const Il2CppAssembly* Assembly::Load(const char* name)
     {
-// ==={{ hybridclr
         const Il2CppAssembly* loadedAssembly = MetadataCache::GetAssemblyByName(name);
         if (loadedAssembly)
         {
@@ -141,12 +137,10 @@ namespace vm
         {
             return MetadataCache::LoadAssemblyByName(name);
         }
-// ===}} hybridclr
     }
 
     void Assembly::Register(const Il2CppAssembly* assembly)
     {
-// ==={{ hybridclr
         os::FastAutoLock lock(&s_assemblyLock);
 
         AssemblyVector* oldAssemblies = s_Assemblies;
@@ -161,12 +155,10 @@ namespace vm
             // can't delete
             // delete oldAssemblies;
         }
-// ===}} hybridclr
     }
 
     void Assembly::ClearAllAssemblies()
     {
-// ==={{ hybridclr
         os::FastAutoLock lock(&s_assemblyLock);
         AssemblyVector* oldAssemblies = s_Assemblies;
         s_Assemblies = nullptr;
@@ -174,7 +166,6 @@ namespace vm
         {
             // TODO ???
         }
-// ===}} hybridclr
     }
 
     void Assembly::Initialize()
