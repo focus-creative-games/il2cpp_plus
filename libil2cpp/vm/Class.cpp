@@ -44,13 +44,11 @@
 #include <limits>
 #include <stdarg.h>
 
-// ==={{ hybridclr
 #include <set>
 #include "hybridclr/metadata/MetadataUtil.h"
 #include "hybridclr/interpreter/Engine.h"
 #include "hybridclr/interpreter/Interpreter.h"
 #include "hybridclr/interpreter/InterpreterModule.h"
-// ===}} hybridclr
 
 namespace il2cpp
 {
@@ -966,13 +964,11 @@ namespace vm
             klass->minimumAlignment = sizeof(Il2CppObject*);
         }
 
-        // ==={{ hybridclr
         bool isInterpreterType = hybridclr::metadata::IsInterpreterType(klass);
         bool computSize = klass->instance_size == 0 && isInterpreterType;
         bool isExplictLayout = klass->flags & TYPE_ATTRIBUTE_EXPLICIT_LAYOUT;
         bool computLayout = isInterpreterType;
         bool computInstanceFieldLayout = !isExplictLayout && isInterpreterType;
-        // ===}} hybridclr
 
         if (klass->field_count)
         {
@@ -1004,7 +1000,6 @@ namespace vm
                 klass->actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
             }
 
-// ==={{ hybridclr
             // comput size when explicit layout
             if (computSize && isExplictLayout && !layoutData.FieldOffsets.empty())
             {
@@ -1094,8 +1089,6 @@ namespace vm
             klass->static_fields_size = (uint32_t)staticSize;
             klass->thread_static_fields_size = (uint32_t)threadStaticSize;
 
-// ===}} hybridclr
-
             if (klass->generic_class)
             {
                 SetupFieldOffsetsLocked(FIELD_LAYOUT_INSTANCE, klass, instanceSize, layoutData.FieldOffsets, lock);
@@ -1113,7 +1106,6 @@ namespace vm
         }
         else
         {
-// ==={{ hybridclr
             if (computSize)
             {
                 if (IS_CLASS_VALUE_TYPE(klass))
@@ -1121,7 +1113,6 @@ namespace vm
                     instanceSize = actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
                 }
             }
-// ===}} hybridclr
             // need to set this in case there are no fields in a generic instance type
             instanceSize = UpdateInstanceSizeForGenericClass(klass, instanceSize);
 
@@ -1131,13 +1122,11 @@ namespace vm
             // uses that extra space (as clang does).
             klass->actualSize = static_cast<uint32_t>(actualSize);
 
-// ==={{ hybridclr
             if (computSize)
             {
                 klass->instance_size = (uint32_t)instanceSize;
                 klass->native_size = (uint32_t)instanceSize;
             }
-// ===}} hybridclr
         }
 
         if (klass->static_fields_size)
@@ -1269,7 +1258,6 @@ namespace vm
 
                 newMethod->methodPointerCallByInterp = newMethod->methodPointer;
                 newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
-                newMethod->isInterpterImpl = hybridclr::metadata::IsInterpreterType(klass);
                 newMethod->initInterpCallMethodPointer = true;
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
@@ -1305,6 +1293,7 @@ namespace vm
                     newMethod->virtualMethodPointer = MetadataCache::GetUnresolvedVirtualCallStub(newMethod);
                 }
 
+                newMethod->isInterpterImpl = hybridclr::interpreter::InterpreterModule::IsImplementsByInterpreter(newMethod);
 
                 klass->methods[index] = newMethod;
 
@@ -2276,7 +2265,6 @@ namespace vm
             {
                 return klass;
             }
-            // ==={{ hybridclr
             hybridclr::interpreter::MachineState& state = hybridclr::interpreter::InterpreterModule::GetCurrentThreadMachineState();
             const hybridclr::interpreter::InterpFrame* frame = state.GetTopFrame();
             if (frame)
@@ -2300,7 +2288,6 @@ namespace vm
                     return klass;
                 }
             }
-            // ===}} hybridclr
 
             // First, try mscorlib            if (klass == NULL && image != Image::GetCorlib())
             klass = Image::FromTypeNameParseInfo(Image::GetCorlib(), info, searchFlags & kTypeSearchFlagIgnoreCase);

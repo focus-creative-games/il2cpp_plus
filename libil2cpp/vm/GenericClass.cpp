@@ -13,14 +13,12 @@
 #include "il2cpp-runtime-metadata.h"
 #include "il2cpp-runtime-stats.h"
 
-// ==={{ hybridclr
 #include "metadata/Il2CppGenericClassHash.h"
 #include "metadata/Il2CppGenericClassCompare.h"
 #include "utils/Il2CppHashSet.h"
 #include "utils/Il2CppHashMap.h"
 
 #include "hybridclr/CommonDef.h"
-// ===}} hybridclr
 
 namespace il2cpp
 {
@@ -162,7 +160,6 @@ namespace vm
         genericInstanceType->fields = fields;
     }
 
-// ==={{ hybridclr
     void InitCacheClass(Il2CppClass* definition, Il2CppGenericClass* gclass, bool throwOnError)
     {
         Il2CppClass* klass = gclass->cached_class = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
@@ -253,7 +250,6 @@ namespace vm
 
         return gclass->cached_class;
     }
-// ===}} hybridclr
 
     Il2CppGenericContext* GenericClass::GetContext(Il2CppGenericClass *gclass)
     {

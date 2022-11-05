@@ -21,11 +21,9 @@
 #include "il2cpp-runtime-stats.h"
 #include <string>
 
-// ==={{ hybridclr
 #include "hybridclr/metadata/MetadataUtil.h"
 #include "hybridclr/metadata/MetadataModule.h"
 #include "hybridclr/interpreter/InterpreterModule.h"
-// ===}} hybridclr
 
 using il2cpp::metadata::GenericMetadata;
 using il2cpp::metadata::GenericSharing;

@@ -18,7 +18,6 @@ struct Il2CppGenericMethod;
 struct Il2CppType;
 struct Il2CppString;
 
-// ==={{ hybridclr
 struct Il2CppMethodDefinition;
 struct Il2CppFieldDefinition;
 struct Il2CppTypeDefinition;
@@ -34,13 +33,10 @@ typedef struct Il2CppImageGlobalMetadata
 } Il2CppImageGlobalMetadata;
 
 
-// ===}} hybridclr
-
 namespace il2cpp
 {
 namespace vm
 {
-// ==={{ hybridclr
     enum PackingSize
     {
         Zero,
@@ -64,7 +60,6 @@ namespace vm
     const int kPackingSizeIsDefault = 11;
     const int kClassSizeIsDefault = 12; // 此参数只用于反射查询，并无实际意义
     const int kSpecifiedPackingSize = 13; // This uses 4 bits from bit 13 to bit 16 。此参数目前只用于反射查询，并无直接用处
-// ===}} hybridclr
 
     class GlobalMetadata
     {
@@ -116,7 +111,7 @@ namespace vm
         static const MethodInfo* GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle);
         static const MethodInfo* GetMethodInfoFromVTableSlot(const Il2CppClass* klass, int32_t vTableSlot);
 
-        static const uint8_t* GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue);        // ==={{ hybridclr 
+        static const uint8_t* GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue);
         static Il2CppMetadataGenericContainerHandle GetGenericContainerFromIndex(GenericContainerIndex index);
         static const Il2CppMethodDefinition* GetMethodDefinitionFromIndex(MethodIndex index);
         static const Il2CppType* GetInterfaceFromOffset(const Il2CppTypeDefinition* def, TypeInterfaceIndex offset);
@@ -135,8 +130,6 @@ namespace vm
         static TypeDefinitionIndex GetIndexForTypeDefinition(const Il2CppClass* klass);
         static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppClass* klass, ParameterIndex index);
         static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il2CppMethodDefinition* methodDef, ParameterIndex index);
-
-        // ===}} hybridclr
 
         static const uint8_t* GetFieldDefaultValue(const FieldInfo* field, const Il2CppType** type);
         static uint32_t GetFieldOffset(const Il2CppClass* klass, int32_t fieldIndexInType, FieldInfo* field);

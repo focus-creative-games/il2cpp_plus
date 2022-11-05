@@ -185,20 +185,16 @@ namespace vm
         static void InitializeUnresolvedSignatureTable();
         static void InitializeGenericMethodTable();
         static void InitializeGuidToClassTable();
-        // ==={{ hybridclr begin
     public:
-        // ===}} hybridclr end
         static Il2CppImage* GetImageFromIndex(ImageIndex index);
         static const Il2CppAssembly* GetAssemblyFromIndex(AssemblyIndex index);
         static Il2CppMetadataTypeHandle GetTypeHandleFromIndex(const Il2CppImage* image, TypeDefinitionIndex typeIndex);
 
-        // ==={{ hybridclr
         static const Il2CppAssembly* LoadAssemblyByName(const char* assemblyPath);
         static const Il2CppAssembly* GetOrLoadAssemblyByName(const char* assemblyNameOrPath, bool tryLoad);
         static const Il2CppAssembly* LoadAssemblyFromBytes(const char* assemblyBytes, size_t length);
         static const Il2CppGenericMethod* FindGenericMethod(std::function<bool(const Il2CppGenericMethod*)> predic);
         static void FixThreadLocalStaticOffsetForFieldLocked(FieldInfo* field, int32_t offset, const il2cpp::os::FastAutoLock& lock);
-        // ===}} hybridclr
 
     };
 } // namespace vm
