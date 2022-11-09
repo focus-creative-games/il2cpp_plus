@@ -1166,7 +1166,7 @@ namespace System
 
         Il2CppClass* klass = vm::Class::FromIl2CppType(type->type);
 
-        if (klass->interopData != nullptr)
+        if (klass->interopData != nullptr && klass->interopData->guid != nullptr)
         {
             uint8_t* guid = il2cpp_array_addr_with_size(guid_result, 1, 0);
             memcpy(guid, klass->interopData->guid, sizeof(Il2CppGuid));

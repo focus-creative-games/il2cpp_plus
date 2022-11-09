@@ -786,6 +786,11 @@ namespace vm
         return klass->generic_class != NULL;
     }
 
+    bool Class::IsGenericTypeDefinition(const Il2CppClass* klass)
+    {
+        return IsGeneric(klass) && !IsInflated(klass);
+    }
+
     bool Class::IsSubclassOf(Il2CppClass *klass, Il2CppClass *klassc, bool check_interfaces)
     {
         Class::SetupTypeHierarchy(klass);
@@ -1658,14 +1663,18 @@ namespace vm
 #endif
         }
 
-        if (!Class::IsGeneric(klass))
+        bool canBeInstantiated = !Class::IsGeneric(klass) && !il2cpp::metadata::GenericMetadata::ContainsGenericParameters(klass);
+
+        if (canBeInstantiated)
+        {
             SetupGCDescriptor(klass, lock);
 
-        if (klass->generic_class)
-        {
-            // This should be kept last.  InflateRGCTXLocked may need intialized data from the class we are initializing
-            if (klass->genericRecursionDepth < il2cpp::metadata::GenericMetadata::GetMaximumRuntimeGenericDepth() || il2cpp::vm::Runtime::IsLazyRGCTXInflationEnabled())
-                klass->rgctx_data = il2cpp::metadata::GenericMetadata::InflateRGCTXLocked(klass->image, klass->token, &klass->generic_class->context, lock);
+            if (klass->generic_class)
+            {
+                // This should be kept last.  InflateRGCTXLocked may need initialized data from the class we are initializing
+                if (klass->genericRecursionDepth < il2cpp::metadata::GenericMetadata::GetMaximumRuntimeGenericDepth() || il2cpp::vm::Runtime::IsLazyRGCTXInflationEnabled())
+                    klass->rgctx_data = il2cpp::metadata::GenericMetadata::InflateRGCTXLocked(klass->image, klass->token, &klass->generic_class->context, lock);
+            }
         }
 
         klass->initialized = true;
@@ -2349,46 +2358,28 @@ namespace vm
         return klass->declaringType;
     }
 
-    const MethodInfo* Class::GetVirtualMethod(Il2CppClass *klass, const MethodInfo *method)
+    const MethodInfo* Class::GetVirtualMethod(Il2CppClass *klass, const MethodInfo *virtualMethod)
     {
         IL2CPP_ASSERT(klass->is_vtable_initialized);
 
-        if ((method->flags & METHOD_ATTRIBUTE_FINAL) || !(method->flags & METHOD_ATTRIBUTE_VIRTUAL))
-            return method;
+        if ((virtualMethod->flags & METHOD_ATTRIBUTE_FINAL) || !(virtualMethod->flags & METHOD_ATTRIBUTE_VIRTUAL))
+            return virtualMethod;
 
-        Il2CppClass* methodDeclaringType = method->klass;
+        Il2CppClass* methodDeclaringType = virtualMethod->klass;
+        const MethodInfo* vtableSlotMethod;
         if (Class::IsInterface(methodDeclaringType))
         {
-            const VirtualInvokeData* invokeData = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, method->slot);
-            if (invokeData == NULL)
-                return NULL;
-            const MethodInfo* itfMethod = invokeData->method;
-            if (Method::IsGenericInstance(method))
-            {
-                if (itfMethod->methodPointer)
-                    return itfMethod;
-
-                const MethodInfo* methodDefintion = klass->generic_class ? il2cpp::vm::MetadataCache::GetGenericMethodDefinition(itfMethod) : itfMethod;
-                return il2cpp::metadata::GenericMethod::GetMethod(methodDefintion, klass->generic_class ? klass->generic_class->context.class_inst : NULL, method->genericMethod->context.method_inst);
-            }
-            else
-            {
-                return itfMethod;
-            }
-        }
-
-        if (Method::IsGenericInstance(method))
-        {
-            if (method->methodPointer)
-                return method;
-
-            return il2cpp::metadata::GenericMethod::GetMethod(klass->vtable[method->slot].method, method->genericMethod->context.class_inst, method->genericMethod->context.method_inst);
+            vtableSlotMethod = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot)->method;
         }
         else
         {
-            IL2CPP_ASSERT(method->slot < klass->vtable_count);
-            return klass->vtable[method->slot].method;
+            IL2CPP_ASSERT(virtualMethod->slot < klass->vtable_count);
+            vtableSlotMethod = klass->vtable[virtualMethod->slot].method;
         }
+
+        if (Method::IsGenericInstanceMethod(virtualMethod))
+            return il2cpp::metadata::GenericMethod::GetGenericVirtualMethod(vtableSlotMethod, virtualMethod);
+        return vtableSlotMethod;
     }
 
     static bool is_generic_argument(Il2CppType* type)

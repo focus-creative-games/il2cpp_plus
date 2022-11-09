@@ -223,7 +223,7 @@ namespace Reflection
 
     Il2CppString* RuntimeAssembly::get_code_base(Il2CppReflectionAssembly* assembly, bool escaped)
     {
-        std::string executableDirectory = utils::PathUtils::DirectoryName(os::Path::GetExecutablePath());
+        std::string executableDirectory = os::Path::GetApplicationFolder();
         std::replace(executableDirectory.begin(), executableDirectory.end(), '\\', '/');
         return vm::String::New(utils::StringUtils::Printf("file://%s/%s.dll", executableDirectory.c_str(), assembly->assembly->aname.name).c_str());
     }
