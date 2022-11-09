@@ -98,6 +98,20 @@ namespace metadata
         return method == &ambiguousMethodInfo;
     }
 
+    const MethodInfo* GenericMethod::GetGenericVirtualMethod(const MethodInfo* vtableSlotMethod, const MethodInfo* genericVirtualMethod)
+    {
+        IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(GetGenericVirtualMethod, "We should only do the following slow method lookup once and then cache on type itself.");
+
+        const Il2CppGenericInst* classInst = NULL;
+        if (vtableSlotMethod->is_inflated)
+        {
+            classInst = vtableSlotMethod->genericMethod->context.class_inst;
+            vtableSlotMethod = vtableSlotMethod->genericMethod->methodDefinition;
+        }
+
+        return metadata::GenericMethod::GetMethod(vtableSlotMethod, classInst, genericVirtualMethod->genericMethod->context.method_inst);
+    }
+
     const MethodInfo* GenericMethod::GetMethod(const MethodInfo* methodDefinition, const Il2CppGenericInst* classInst, const Il2CppGenericInst* methodInst)
     {
         Il2CppGenericMethod gmethod = { 0 };
@@ -116,12 +130,6 @@ namespace metadata
     const MethodInfo* GenericMethod::GetMethod(const Il2CppGenericMethod* gmethod)
     {
         return GetMethod(gmethod, false);
-    }
-
-    void GenericMethod::GetVirtualInvokeData(const MethodInfo* methodDefinition, const Il2CppGenericInst* classInst, const Il2CppGenericInst* methodInst, VirtualInvokeData* invokeData)
-    {
-        invokeData->method = GetMethod(methodDefinition, classInst, methodInst);
-        invokeData->methodPtr = GetVirtualCallMethodPointer(invokeData->method);
     }
 
     Il2CppMethodPointer GenericMethod::GetVirtualCallMethodPointer(const MethodInfo* method)
@@ -194,7 +202,6 @@ namespace metadata
         Il2CppClass* declaringClass = methodDefinition->klass;
         if (gmethod->context.class_inst)
         {
-            IL2CPP_ASSERT(!declaringClass->generic_class);
             Il2CppGenericClass* genericClassDeclaringType = GenericMetadata::GetGenericClass(methodDefinition->klass, gmethod->context.class_inst);
             declaringClass = GenericClass::GetClass(genericClassDeclaringType);
 
@@ -238,7 +245,7 @@ namespace metadata
 
             newMethod->methodMetadataHandle = methodDefinition->methodMetadataHandle;
         }
-        else if (!il2cpp::vm::Runtime::IsLazyRGCTXInflationEnabled())
+        else if (!il2cpp::vm::Runtime::IsLazyRGCTXInflationEnabled() && !il2cpp::metadata::GenericMetadata::ContainsGenericParameters(newMethod))
         {
             // we only need RGCTX for generic instance methods
             newMethod->rgctx_data = InflateRGCTXLocked(gmethod, lock);

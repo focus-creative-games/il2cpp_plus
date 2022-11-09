@@ -38,9 +38,9 @@ namespace utils
         if (s_DataDir.size() > 0)
             return s_DataDir;
 
-        std::string executablePath = os::Path::GetExecutablePath();
-        if (!executablePath.empty())
-            return PathUtils::Combine(PathUtils::DirectoryName(executablePath), StringView<char>(IL2CPP_DEFAULT_DATA_DIR_PATH_STR));
+        std::string applicationFolder = os::Path::GetApplicationFolder();
+        if (!applicationFolder.empty())
+            return PathUtils::Combine(applicationFolder, StringView<char>(IL2CPP_DEFAULT_DATA_DIR_PATH_STR));
 
         if (s_DataDirFallback.size() == 0 && Environment::GetNumMainArgs() > 0)
         {

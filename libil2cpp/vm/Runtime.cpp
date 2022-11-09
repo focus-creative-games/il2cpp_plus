@@ -531,20 +531,11 @@ namespace vm
         return Invoke(invoke, delegate, params, exc);
     }
 
-    void Runtime::GetGenericVirtualMethod(const MethodInfo* methodDefinition, const MethodInfo* inflatedMethod, VirtualInvokeData* invokeData)
+    void Runtime::GetGenericVirtualMethod(const MethodInfo* vtableSlotMethod, const MethodInfo* genericVirtualMethod, VirtualInvokeData* invokeData)
     {
-        IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(GetGenericVirtualMethod, "We should only do the following slow method lookup once and then cache on type itself.");
-
-        const Il2CppGenericInst* classInst = NULL;
-        if (methodDefinition->is_inflated)
-        {
-            classInst = methodDefinition->genericMethod->context.class_inst;
-            methodDefinition = methodDefinition->genericMethod->methodDefinition;
-        }
-
-        metadata::GenericMethod::GetVirtualInvokeData(methodDefinition, classInst, inflatedMethod->genericMethod->context.method_inst, invokeData);
-
-        RaiseExecutionEngineExceptionIfGenericVirtualMethodIsNotFound(invokeData->method, invokeData->method->genericMethod, inflatedMethod);
+        invokeData->method = metadata::GenericMethod::GetGenericVirtualMethod(vtableSlotMethod, genericVirtualMethod);
+        invokeData->methodPtr = metadata::GenericMethod::GetVirtualCallMethodPointer(invokeData->method);
+        RaiseExecutionEngineExceptionIfGenericVirtualMethodIsNotFound(invokeData->method, invokeData->method->genericMethod, genericVirtualMethod);
     }
 
     Il2CppObject* Runtime::Invoke(const MethodInfo *method, void *obj, void **params, Il2CppException **exc)

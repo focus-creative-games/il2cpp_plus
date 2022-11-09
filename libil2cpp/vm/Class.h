@@ -80,6 +80,7 @@ namespace vm
         static bool IsAssignableFrom(Il2CppReflectionType *klass, Il2CppReflectionType *oklass);
         static bool IsGeneric(const Il2CppClass *klass);
         static bool IsInflated(const Il2CppClass *klass);
+        static bool IsGenericTypeDefinition(const Il2CppClass *klass);
         static bool IsSubclassOf(Il2CppClass *klass, Il2CppClass *klassc, bool check_interfaces);
         static bool IsValuetype(const Il2CppClass *klass);
         static bool IsBlittable(const Il2CppClass *klass);
@@ -138,7 +139,7 @@ namespace vm
         static const Il2CppType* il2cpp_type_from_type_info(const TypeNameParseInfo& info, TypeSearchFlags searchFlags);
 
         static Il2CppClass* GetDeclaringType(Il2CppClass* klass);
-        static const MethodInfo* GetVirtualMethod(Il2CppClass* klass, const MethodInfo* method);
+        static const MethodInfo* GetVirtualMethod(Il2CppClass* klass, const MethodInfo* virtualMethod);
 
         static void SetClassInitializationError(Il2CppClass* klass, Il2CppException* error);
         static void UpdateInitializedAndNoError(Il2CppClass *klass);
