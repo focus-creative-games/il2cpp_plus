@@ -10,6 +10,7 @@
 #include "vm/Exception.h"
 #include "vm/Class.h"
 #include "vm/MetadataCache.h"
+#include "vm/Method.h"
 #include "utils/StringUtils.h"
 
 struct Il2CppArray;
@@ -47,7 +48,7 @@ namespace vm
         static void ObjectInitException(Il2CppObject* object, Il2CppException **exc);
         static void SetUnhandledExceptionPolicy(Il2CppRuntimeUnhandledExceptionPolicy value);
 
-        static const MethodInfo* GetGenericVirtualMethod(const MethodInfo* methodDefinition, const MethodInfo* inflatedMethod);
+        static const MethodInfo* GetGenericVirtualMethod(const MethodInfo* vtableSlotMethod, const MethodInfo* genericVirtualMethod);
         static void RaiseExecutionEngineExceptionIfMethodIsNotFound(const MethodInfo* method);
         static void AlwaysRaiseExecutionEngineException(const MethodInfo* method);
 
@@ -72,7 +73,11 @@ namespace vm
         static inline void RaiseExecutionEngineExceptionIfMethodIsNotFound(const MethodInfo* method, const Il2CppGenericMethod* genericMethod)
         {
             if (method->methodPointer == NULL)
-                RaiseExecutionEngineException(metadata::GenericMethod::GetFullName(genericMethod).c_str());
+            {
+                if (genericMethod != NULL)
+                    RaiseExecutionEngineException(metadata::GenericMethod::GetFullName(genericMethod).c_str());
+                RaiseExecutionEngineException(vm::Method::GetFullName(method).c_str());
+            }
         }
 
         static inline void RaiseExecutionEngineException(const char* methodFullName)

@@ -7,9 +7,12 @@
 
 #include "os/Environment.h"
 #include "os/Path.h"
+#include "utils/PathUtils.h"
 #include "utils/StringUtils.h"
 #include "WindowsHelpers.h"
 #include <string>
+
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
 namespace il2cpp
 {
@@ -18,8 +21,15 @@ namespace os
     std::string Path::GetExecutablePath()
     {
         wchar_t buffer[MAX_PATH];
-        GetModuleFileNameW(NULL, buffer, MAX_PATH);
+        GetModuleFileNameW(nullptr, buffer, MAX_PATH);
         return utils::StringUtils::Utf16ToUtf8(buffer);
+    }
+
+    std::string Path::GetApplicationFolder()
+    {
+        wchar_t buffer[MAX_PATH];
+        GetModuleFileNameW(reinterpret_cast<HMODULE>(&__ImageBase), buffer, MAX_PATH);
+        return utils::PathUtils::DirectoryName(utils::StringUtils::Utf16ToUtf8(buffer));
     }
 
     std::string Path::GetTempPath()

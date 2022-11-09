@@ -49,6 +49,25 @@ namespace metadata
         vm::Exception::Raise(vm::Exception::GetMaxmimumNestedGenericsException());
     }
 
+    const MethodInfo* GenericMethod::GetGenericVirtualMethod(const MethodInfo* vtableSlotMethod, const MethodInfo* genericVirtualMethod)
+    {
+        IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(GetGenericVirtualMethod, "We should only do the following slow method lookup once and then cache on type itself.");
+
+        const Il2CppGenericInst* classInst = NULL;
+        if (vtableSlotMethod->is_inflated)
+        {
+            classInst = vtableSlotMethod->genericMethod->context.class_inst;
+            vtableSlotMethod = vtableSlotMethod->genericMethod->methodDefinition;
+        }
+
+        Il2CppGenericMethod gmethod = { 0 };
+        gmethod.methodDefinition = vtableSlotMethod;
+        gmethod.context.class_inst = classInst;
+        gmethod.context.method_inst = genericVirtualMethod->genericMethod->context.method_inst;
+
+        return metadata::GenericMethod::GetMethod(&gmethod, true);
+    }
+
     const MethodInfo* GenericMethod::GetMethod(const Il2CppGenericMethod* gmethod, bool copyMethodPtr)
     {
         // This can be NULL only when we have hit the generic recursion depth limit.
@@ -63,7 +82,6 @@ namespace metadata
         MethodInfo* existingMethod;
         if (s_GenericMethodMap.TryGet(gmethod, &existingMethod))
             return existingMethod;
-
 
         return CreateMethodLocked(gmethod, copyMethodPtr);
     }
@@ -95,7 +113,6 @@ namespace metadata
         Il2CppClass* declaringClass = methodDefinition->klass;
         if (gmethod->context.class_inst)
         {
-            IL2CPP_ASSERT(!declaringClass->generic_class);
             Il2CppGenericClass* genericClassDeclaringType = GenericMetadata::GetGenericClass(methodDefinition->klass, gmethod->context.class_inst);
             declaringClass = GenericClass::GetClass(genericClassDeclaringType);
 

@@ -736,6 +736,11 @@ namespace vm
         return klass->generic_class != NULL;
     }
 
+    bool Class::IsGenericTypeDefinition(const Il2CppClass* klass)
+    {
+        return IsGeneric(klass) && !IsInflated(klass);
+    }
+
     bool Class::IsSubclassOf(Il2CppClass *klass, Il2CppClass *klassc, bool check_interfaces)
     {
         Class::SetupTypeHierarchy(klass);

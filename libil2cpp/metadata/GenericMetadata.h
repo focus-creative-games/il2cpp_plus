@@ -23,8 +23,8 @@ namespace metadata
     {
     public:
         static ParameterInfo* InflateParameters(const ParameterInfo* parameters, uint8_t parameterCount, const Il2CppGenericContext* context, bool inflateMethodVars);
-        static Il2CppGenericClass* GetGenericClass(const Il2CppClass* elementClass, const Il2CppGenericInst* inst);
-        static Il2CppGenericClass* GetGenericClass(const Il2CppType* elementType, const Il2CppGenericInst* inst);
+        static Il2CppGenericClass* GetGenericClass(const Il2CppClass* genericTypeDefinition, const Il2CppGenericInst* inst);
+        static Il2CppGenericClass* GetGenericClass(const Il2CppType* genericTypeDefinition, const Il2CppGenericInst* inst);
 
         static const MethodInfo* Inflate(const MethodInfo* methodDefinition, const Il2CppGenericContext* context);
         static const Il2CppGenericMethod* Inflate(const Il2CppGenericMethod* genericMethod, const Il2CppGenericContext* context);

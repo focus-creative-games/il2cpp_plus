@@ -48,6 +48,8 @@ struct MonitorData : public il2cpp::utils::ThreadSafeFreeListNode
     ///    acquired by any thread *but* only through the free list.
     baselib::atomic<il2cpp::os::Thread::ThreadId> owningThreadId;
 
+    baselib::atomic<bool> threadAborted;
+
     /// Number of times the object has been locked on the owning thread. Everything above 1 indicates
     /// a recursive lock.
     /// NOTE: This field is never reset to zero.
@@ -124,6 +126,7 @@ struct MonitorData : public il2cpp::utils::ThreadSafeFreeListNode
 
     MonitorData()
         : owningThreadId(kHasBeenReturnedToFreeList)
+        , threadAborted(false)
         , recursiveLockingCount(1)
         , numThreadsWaitingForSemaphore(0)
         , threadsWaitingForPulse(NULL)
@@ -274,7 +277,7 @@ static MonitorData* GetMonitorAndThrowIfNotLockedByCurrentThread(Il2CppObject* o
     // Throw SynchronizationLockException if we're not holding a lock.
     // NOTE: Unlike .NET, Mono simply ignores this and does not throw.
     uint64_t currentThreadId = il2cpp::os::Thread::CurrentThreadId();
-    if (monitor->owningThreadId != currentThreadId)
+    if (monitor->owningThreadId != currentThreadId && !monitor->threadAborted)
     {
         il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetSynchronizationLockException
                 ("Object has not been locked by this thread."));
@@ -412,10 +415,19 @@ namespace vm
                         waitStatus = installedMonitor->semaphore.Wait(true);
                     }
                 }
+                catch (Thread::NativeThreadAbortException&)
+                {
+                    // This signals that the monitor was not entered properly by this thread. Therefore
+                    // a later call to Exit on this monitor should not actually try to exit the monitor,
+                    // because it is not owned by this thread.
+                    installedMonitor->threadAborted = true;
+                    throw;
+                }
                 catch (...)
                 {
-                    // This is paranoid but in theory a user APC could throw an exception from within Wait().
-                    // Just make sure we clean up properly.
+                    // A user APC could throw an exception from within Wait(). This can commonly happen
+                    // during shutdown, when vm::Thread::AbortAllThreads() causes an APC that throws a
+                    // NativeThreadAbortException. Just make sure we clean up properly.
                     installedMonitor->RemoveCurrentThreadFromReadyList();
                     throw;
                 }
@@ -630,7 +642,6 @@ namespace vm
             }
         }
 
-        ////TODO: deal with exception here
         // Reacquire the monitor.
         Enter(object);
 

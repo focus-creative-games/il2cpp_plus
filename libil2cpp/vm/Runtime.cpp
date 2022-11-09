@@ -516,25 +516,6 @@ namespace vm
         return Invoke(invoke, delegate, params, exc);
     }
 
-    const MethodInfo* Runtime::GetGenericVirtualMethod(const MethodInfo* methodDefinition, const MethodInfo* inflatedMethod)
-    {
-        IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(GetGenericVirtualMethod, "We should only do the following slow method lookup once and then cache on type itself.");
-
-        const Il2CppGenericInst* classInst = NULL;
-        if (methodDefinition->is_inflated)
-        {
-            classInst = methodDefinition->genericMethod->context.class_inst;
-            methodDefinition = methodDefinition->genericMethod->methodDefinition;
-        }
-
-        const Il2CppGenericMethod* gmethod = MetadataCache::GetGenericMethod(const_cast<MethodInfo*>(methodDefinition), classInst, inflatedMethod->genericMethod->context.method_inst);
-        const MethodInfo* method = metadata::GenericMethod::GetMethod(gmethod);
-
-        RaiseExecutionEngineExceptionIfMethodIsNotFound(method, gmethod);
-
-        return method;
-    }
-
     void Runtime::RaiseExecutionEngineExceptionIfMethodIsNotFound(const MethodInfo* method)
     {
         if (method->methodPointer == NULL)
@@ -552,6 +533,13 @@ namespace vm
             RaiseExecutionEngineException(Method::GetFullName(method).c_str());
         else
             RaiseExecutionEngineException(Method::GetName(method));
+    }
+
+    const MethodInfo* Runtime::GetGenericVirtualMethod(const MethodInfo* vtableSlotMethod, const MethodInfo* genericVirtualMethod)
+    {
+        const MethodInfo* method =  metadata::GenericMethod::GetGenericVirtualMethod(vtableSlotMethod, genericVirtualMethod);
+        RaiseExecutionEngineExceptionIfMethodIsNotFound(method, method->genericMethod);
+        return method;
     }
 
     Il2CppObject* Runtime::Invoke(const MethodInfo *method, void *obj, void **params, Il2CppException **exc)
