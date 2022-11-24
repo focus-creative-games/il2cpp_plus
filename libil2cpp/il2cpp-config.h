@@ -2,6 +2,15 @@
 
 #include <string.h>
 
+//!!!{{UNITY_VERSION
+#define HYBRIDCLR_UNITY_VERSION 20210301
+#define HYBRIDCLR_UNITY_2021 1
+#define HYBRIDCLR_UNITY_2019_OR_NEW 1
+#define HYBRIDCLR_UNITY_2020_OR_NEW 1
+#define HYBRIDCLR_UNITY_2021_OR_NEW 1
+
+//!!!}}UNITY_VERSION
+
 /* first setup platform defines*/
 #include "os/c-api/il2cpp-config-platforms.h"
 #include "os/c-api/il2cpp-config-api-platforms.h"

@@ -238,10 +238,17 @@ namespace Reflection
         return vm::String::New(vm::AssemblyName::AssemblyNameToString(assembly->assembly->aname).c_str());
     }
 
+#if HYBRIDCLR_UNITY_VERSION >= 20210314
     Il2CppString* RuntimeAssembly::get_location(Il2CppReflectionAssembly* assembly)
     {
         return vm::String::New(GetAssemblyPath(assembly->assembly).c_str());
     }
+#else
+    Il2CppString* RuntimeAssembly::get_location(Il2CppObject* assembly)
+    {
+        return vm::String::New(GetAssemblyPath(((Il2CppReflectionAssembly*)assembly)->assembly).c_str());
+    }
+#endif
 
     Il2CppString* RuntimeAssembly::InternalImageRuntimeVersion(Il2CppObject* a)
     {
