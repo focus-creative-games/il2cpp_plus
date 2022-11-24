@@ -1011,7 +1011,7 @@ namespace vm
             if (computSize)
             {
                 klass->instance_size = (uint32_t)instanceSize;
-                klass->native_size = (uint32_t)instanceSize;
+                klass->native_size = (uint32_t)instanceSize - sizeof(Il2CppObject);
                 klass->actualSize = (uint32_t)instanceSize;
             }
 
@@ -1108,7 +1108,7 @@ namespace vm
             if (computSize)
             {
                 klass->instance_size = (uint32_t)instanceSize;
-                klass->native_size = (uint32_t)instanceSize;
+                klass->native_size = (uint32_t)instanceSize - sizeof(Il2CppObject);
             }
         }
 
