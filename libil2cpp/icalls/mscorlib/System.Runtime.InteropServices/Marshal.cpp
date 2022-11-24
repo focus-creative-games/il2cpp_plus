@@ -374,6 +374,7 @@ namespace InteropServices
             vm::Exception::Raise(vm::Exception::GetArgumentNullException("t"));
 
         Il2CppClass* typeInfo = vm::Class::FromIl2CppType(rtype->type);
+        il2cpp::vm::Class::SetupFields(typeInfo);
 
         if (typeInfo->native_size != -1)
         {
