@@ -26,7 +26,7 @@ namespace Reflection
         static Il2CppArray* GetModulesInternal(Il2CppReflectionAssembly * thisPtr);
         static Il2CppString* get_code_base(Il2CppReflectionAssembly* reflectionAssembly, bool escaped);
         static Il2CppString* get_fullname(Il2CppReflectionAssembly* assembly);
-        static Il2CppString* get_location(Il2CppObject* thisPtr);
+        static Il2CppString* get_location(Il2CppReflectionAssembly* assembly);
         static Il2CppString* InternalImageRuntimeVersion(Il2CppObject* a);
         static Il2CppArray* GetManifestResourceNames(Il2CppReflectionAssembly* assembly);
     };

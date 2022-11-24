@@ -67,7 +67,7 @@ namespace os
         static bool Truncate(FileHandle* handle, int *error);
         static bool Cancel(FileHandle* handle);
 
-        static bool DuplicateHandle(FileHandle* source_process_handle, FileHandle* source_handle, FileHandle* target_process_handle,
+        static utils::Expected<bool> DuplicateHandle(FileHandle* source_process_handle, FileHandle* source_handle, FileHandle* target_process_handle,
             FileHandle** target_handle, int access, int inherit, int options, int* error);
 
         static bool IsHandleOpenFileHandle(intptr_t lookup);

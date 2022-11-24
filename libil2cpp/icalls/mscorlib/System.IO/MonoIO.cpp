@@ -80,7 +80,9 @@ namespace IO
         il2cpp::os::FileHandle* sHandle = (il2cpp::os::FileHandle*)source_handle;
         il2cpp::os::FileHandle* tpHandle = (il2cpp::os::FileHandle*)target_process_handle;
         il2cpp::os::FileHandle** tHandle = (il2cpp::os::FileHandle**)target_handle;
-        return il2cpp::os::File::DuplicateHandle(spHandle, sHandle, tpHandle, tHandle, access, inherit, options, error);
+        auto result = il2cpp::os::File::DuplicateHandle(spHandle, sHandle, tpHandle, tHandle, access, inherit, options, error);
+        vm::Exception::RaiseIfError(result.GetError());
+        return result.Get();
     }
 
     static utils::dynamic_array<os::Directory::FindHandle*> s_OpenFindHandles;

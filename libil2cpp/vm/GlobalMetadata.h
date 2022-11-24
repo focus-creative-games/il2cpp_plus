@@ -115,8 +115,8 @@ namespace vm
         static inline bool IsRuntimeMetadataInitialized(T item)
         {
             // Runtime metadata items are initialized to an encoded token with the low bit set
-            // on startup and when intialized are a pointer to an runtime metadata item
-            // So we can rely on pointer allignment being > 1 on our supported platforms
+            // on startup and when initialized are a pointer to an runtime metadata item
+            // So we can rely on pointer alignment being > 1 on our supported platforms
             return !((uintptr_t)item & 1);
         }
 

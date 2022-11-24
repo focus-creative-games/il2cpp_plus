@@ -412,6 +412,10 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
         case kIl2CppMetadataUsageFieldRva:
             const Il2CppType* unused;
             initialized = (void*)GetFieldDefaultValue(GetFieldInfoFromIndex(decodedIndex), &unused);
+            {
+                const size_t MappedFieldDataAlignment = 8; // Should match System.Reflection.Metadata.ManagedPEBuilder.MappedFieldDataAlignment
+                IL2CPP_ASSERT(((uintptr_t)initialized % MappedFieldDataAlignment) == 0);
+            }
             break;
         case kIl2CppMetadataUsageInvalid:
             break;
@@ -419,6 +423,8 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
             IL2CPP_NOT_IMPLEMENTED(il2cpp::vm::GlobalMetadata::InitializeMethodMetadata);
             break;
     }
+
+    IL2CPP_ASSERT(IsRuntimeMetadataInitialized(initialized) && "ERROR: The low bit of the metadata item is still set, alignment issue");
 
     if (initialized != NULL)
         *metadataPointer = (uintptr_t)initialized;
