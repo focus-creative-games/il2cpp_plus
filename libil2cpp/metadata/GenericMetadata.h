@@ -33,6 +33,10 @@ namespace metadata
 
         // temporary while we generate generics
         static void RegisterGenericClasses(Il2CppGenericClass* const* genericClasses, int32_t genericClassesCount);
+        static bool ContainsGenericParameters(const Il2CppClass* klass);
+        static bool ContainsGenericParameters(const MethodInfo* method);
+        static bool ContainsGenericParameters(const Il2CppGenericInst* inst);
+        static bool ContainsGenericParameters(const Il2CppType* type);
 
         static const Il2CppType* InflateIfNeeded(const Il2CppType* type, const Il2CppGenericContext* context, bool inflateMethodVars);
 

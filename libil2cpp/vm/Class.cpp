@@ -1615,14 +1615,18 @@ namespace vm
             IL2CPP_ASSERT(s_GetHashCodeSlot > 0);
 #endif
         }
+        bool canBeInstantiated = !Class::IsGeneric(klass) && !il2cpp::metadata::GenericMetadata::ContainsGenericParameters(klass);
 
-        if (!Class::IsGeneric(klass))
-            SetupGCDescriptor(klass);
-
-        if (klass->generic_class)
+        if (canBeInstantiated)
         {
-            if (klass->genericRecursionDepth < il2cpp::metadata::GenericMetadata::GetMaximumRuntimeGenericDepth())
-                klass->rgctx_data = il2cpp::metadata::GenericMetadata::InflateRGCTX(klass->image, klass->token, &klass->generic_class->context);
+            if (!Class::IsGeneric(klass))
+                SetupGCDescriptor(klass);
+
+            if (klass->generic_class)
+            {
+                if (klass->genericRecursionDepth < il2cpp::metadata::GenericMetadata::GetMaximumRuntimeGenericDepth())
+                    klass->rgctx_data = il2cpp::metadata::GenericMetadata::InflateRGCTX(klass->image, klass->token, &klass->generic_class->context);
+            }
         }
 
         klass->initialized = true;

@@ -155,7 +155,7 @@ namespace metadata
 
             newMethod->methodMetadataHandle = methodDefinition->methodMetadataHandle;
         }
-        else
+        else if (!il2cpp::metadata::GenericMetadata::ContainsGenericParameters(newMethod))
         {
             // we only need RGCTX for generic instance methods
             newMethod->rgctx_data = GenericMetadata::InflateRGCTX(gmethod->methodDefinition->klass->image, gmethod->methodDefinition->token, &gmethod->context);
