@@ -337,6 +337,12 @@
 #define IL2CPP_THREADS_PSP2 (!IL2CPP_THREADS_STD && IL2CPP_TARGET_PSP2)
 #define IL2CPP_THREADS_SWITCH (!IL2CPP_THREADS_STD && IL2CPP_TARGET_SWITCH)
 
+// Set to 1 to use the baselib based version of the FastReaderReaderWriterLock
+// Use if the baselib::Lock implementation on the platform is faster than the il2cpp::os based version
+#ifndef IL2CPP_USE_BASELIB_FAST_READER_RWL
+#define IL2CPP_USE_BASELIB_FAST_READER_RWL 0
+#endif
+
 #define IL2CPP_THREAD_HAS_CPU_SET IL2CPP_TARGET_POSIX && !IL2CPP_THREADS_PS4
 
 // Not supported on TINY because it doesn't support synchronization context

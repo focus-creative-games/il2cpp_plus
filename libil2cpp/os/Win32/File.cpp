@@ -584,7 +584,7 @@ namespace os
             *error = FileWin32ErrorToErrorCode(::GetLastError());
     }
 
-    bool File::DuplicateHandle(FileHandle* source_process_handle, FileHandle* source_handle, FileHandle* target_process_handle,
+    utils::Expected<bool> File::DuplicateHandle(FileHandle* source_process_handle, FileHandle* source_handle, FileHandle* target_process_handle,
         FileHandle** target_handle, int access, int inherit, int options, int* error)
     {
         /* This is only used on Windows */

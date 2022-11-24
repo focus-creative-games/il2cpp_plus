@@ -65,6 +65,12 @@ namespace System
 
     int32_t Enum::InternalCompareTo(Il2CppObject* o1, Il2CppObject* o2)
     {
+        const int retIncompatibleMethodTables = 2;  // indicates that the method tables did not match
+        const int retInvalidEnumType = 3; // indicates that the enum was of an unknown/unsupported underlying type
+
+        if (vm::Object::GetClass(o1) != vm::Object::GetClass(o2))
+            return retIncompatibleMethodTables;
+
         void* tdata = (char*)o1 + sizeof(Il2CppObject);
         void* odata = (char*)o2 + sizeof(Il2CppObject);
         const Il2CppType* basetype = vm::Class::GetEnumBaseType(vm::Object::GetClass(o1));
@@ -78,14 +84,6 @@ namespace System
         return me > other ? 1 : -1; \
     } while (0)
 
-#define COMPARE_ENUM_VALUES_RANGE(ENUM_TYPE) do { \
-        ENUM_TYPE me = *((ENUM_TYPE*)tdata); \
-        ENUM_TYPE other = *((ENUM_TYPE*)odata); \
-        if (me == other) \
-            return 0; \
-        return me - other; \
-    } while (0)
-
         switch (basetype->type)
         {
             case IL2CPP_TYPE_U1:
@@ -93,9 +91,9 @@ namespace System
             case IL2CPP_TYPE_I1:
                 COMPARE_ENUM_VALUES(int8_t);
             case IL2CPP_TYPE_CHAR:
-                COMPARE_ENUM_VALUES_RANGE(Il2CppChar);
+                COMPARE_ENUM_VALUES(Il2CppChar);
             case IL2CPP_TYPE_U2:
-                COMPARE_ENUM_VALUES_RANGE(uint16_t);
+                COMPARE_ENUM_VALUES(uint16_t);
             case IL2CPP_TYPE_I2:
                 COMPARE_ENUM_VALUES(int16_t);
             case IL2CPP_TYPE_U4:
@@ -107,12 +105,12 @@ namespace System
             case IL2CPP_TYPE_I8:
                 COMPARE_ENUM_VALUES(int64_t);
             default:
-                IL2CPP_ASSERT(false && "Implement type 0x%02x in compare_value_to");
+                IL2CPP_ASSERT(false && "Implement type 0x%02x in Enum::InternalCompareTo");
+                return retInvalidEnumType;
         }
 
-#undef COMPARE_ENUM_VALUES_RANGE
 #undef COMPARE_ENUM_VALUES
-        return 0;
+        return retInvalidEnumType;
     }
 
     Il2CppObject* Enum::get_value(Il2CppObject* thisPtr)

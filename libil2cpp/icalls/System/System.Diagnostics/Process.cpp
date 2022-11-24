@@ -44,7 +44,8 @@ namespace Diagnostics
 
     int64_t Process::GetProcessData(int32_t pid, int32_t data_type, int32_t* error)
     {
-        return os::Process::GetProcessData(pid, data_type, error);
+        NOT_SUPPORTED_IL2CPP(NativeMethods::GetProcessData, "IL2CPP does not support access to process data");
+        return 0;
     }
 
     intptr_t Process::GetProcess_internal(int32_t pid)

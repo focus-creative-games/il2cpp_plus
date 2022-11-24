@@ -3,7 +3,9 @@
 
 #if IL2CPP_SUPPORT_THREADS
 
-#if IL2CPP_THREADS_WIN32
+#if IL2CPP_USE_BASELIB_FAST_READER_RWL
+#include "os/baselib/FastReaderReaderWriterLockImpl.h"
+#elif IL2CPP_THREADS_WIN32
 #include "os/Win32/FastReaderReaderWriterLockImpl.h"
 #elif IL2CPP_THREADS_PTHREAD
 #include "os/Posix/FastReaderReaderWriterLockImpl.h"
