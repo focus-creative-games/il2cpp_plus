@@ -500,10 +500,12 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
         case kIl2CppMetadataUsageFieldRva:
             const Il2CppType* unused;
             initialized = (void*)GetFieldDefaultValue(GetFieldInfoFromIndex(decodedIndex), &unused);
+#if HYBRIDCLR_UNITY_VERSION >= 20210314
             {
                 const size_t MappedFieldDataAlignment = 8; // Should match System.Reflection.Metadata.ManagedPEBuilder.MappedFieldDataAlignment
                 IL2CPP_ASSERT(((uintptr_t)initialized % MappedFieldDataAlignment) == 0);
             }
+#endif
             break;
         case kIl2CppMetadataUsageInvalid:
             break;
