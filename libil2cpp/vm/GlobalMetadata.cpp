@@ -514,7 +514,9 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
             break;
     }
 
+#if HYBRIDCLR_UNITY_VERSION >= 20210314
     IL2CPP_ASSERT(IsRuntimeMetadataInitialized(initialized) && "ERROR: The low bit of the metadata item is still set, alignment issue");
+#endif
 
     if (initialized != NULL)
         *metadataPointer = (uintptr_t)initialized;
