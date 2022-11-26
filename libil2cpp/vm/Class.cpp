@@ -969,12 +969,6 @@ namespace vm
             klass->minimumAlignment = sizeof(Il2CppObject*);
         }
 
-        bool isInterpreterType = hybridclr::metadata::IsInterpreterType(klass);
-        bool computSize = klass->instance_size == 0 && isInterpreterType;
-        bool isExplictLayout = klass->flags & TYPE_ATTRIBUTE_EXPLICIT_LAYOUT;
-        bool computLayout = isInterpreterType;
-        bool computInstanceFieldLayout = !isExplictLayout && isInterpreterType;
-
         if (klass->field_count)
         {
             for (uint16_t i = 0; i < klass->field_count; i++)
@@ -1005,84 +999,15 @@ namespace vm
                 klass->actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
             }
 
-            // comput size when explicit layout
-            if (computSize && isExplictLayout && !layoutData.FieldOffsets.empty())
-            {
-                instanceSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
-                for (size_t i = 0; i < klass->field_count; i++)
-                {
-                    FieldInfo* field = klass->fields + i;
-                    if (Field::IsInstance(field))
-                    {
-                        const Il2CppType* ftype = Type::GetUnderlyingType(field->type);
-                        il2cpp::metadata::SizeAndAlignment sa = il2cpp::metadata::FieldLayout::GetTypeSizeAndAlignment(ftype);
-                        // offset has add ObjectHeader
-                        instanceSize = std::max(instanceSize, field->offset + sa.size);
-                    }
-                }
-            }
-
             instanceSize = UpdateInstanceSizeForGenericClass(klass, instanceSize);
 
-            // must set instance_size before comput static fields.
-            if (computSize)
-            {
-                klass->instance_size = (uint32_t)instanceSize;
-                klass->native_size = (uint32_t)instanceSize - sizeof(Il2CppObject);
-                klass->actualSize = (uint32_t)instanceSize;
-            }
-
-            IL2CPP_ASSERT(klass->instance_size > 0);
             klass->size_inited = true;
 
             il2cpp::metadata::FieldLayout::LayoutFields(klass, Field::IsNormalStatic, 0, 0, 1, 0, staticLayoutData);
             il2cpp::metadata::FieldLayout::LayoutFields(klass, Field::IsThreadStatic, 0, 0, 1, 0, threadStaticLayoutData);
 
-            if (computLayout)
-            {
-                uint32_t fieldIndex = 0;
-                uint32_t staticFieldIndex = 0;
-                uint32_t threadStaticFieldIndex = 0;
-                for (size_t i = 0; i < klass->field_count ; i++)
-                {
-                    FieldInfo* field = klass->fields + i;
-                    const Il2CppType* ftype = Type::GetUnderlyingType(field->type);
-                    if (Field::IsInstance(field))
-                    {
-                        if (computInstanceFieldLayout)
-                        {
-                            field->offset = (int32_t)layoutData.FieldOffsets[fieldIndex++];
-                        }
-                        else
-                        {
-                            fieldIndex++;
-                            IL2CPP_ASSERT(field->offset > 0);
-                        }
-                    }
-                    else if (Field::IsNormalStatic(field))
-                    {
-                        field->offset = (int32_t)staticLayoutData.FieldOffsets[staticFieldIndex++];
-                    }
-                    else if (Field::IsThreadStatic(field))
-                    {
-                        // not set field->offset;
-                        //field->offset = (int32_t)threadStaticLayoutData.FieldOffsets[threadStaticFieldIndex++];
-                        // because we not correctly init field->offset when create FieldInfo
-                        int32_t offset = (int32_t)threadStaticLayoutData.FieldOffsets[threadStaticFieldIndex++];
-                        il2cpp::vm::MetadataCache::FixThreadLocalStaticOffsetForFieldLocked(field, offset, lock);
-                    }
-                }
-            }
-
             klass->minimumAlignment = layoutData.minimumAlignment;
-            if (!isInterpreterType)
-            {
-                klass->actualSize = static_cast<uint32_t>(layoutData.actualClassSize);
-            }
-            else
-            {
-                // nothing todo
-            }
+            klass->actualSize = static_cast<uint32_t>(layoutData.actualClassSize);
 
             if (klass->image == il2cpp_defaults.corlib && !strcmp("Ephemeron", klass->name))
             {
@@ -1091,8 +1016,6 @@ namespace vm
 
             size_t staticSize = staticLayoutData.classSize;
             size_t threadStaticSize = threadStaticLayoutData.classSize;
-            klass->static_fields_size = (uint32_t)staticSize;
-            klass->thread_static_fields_size = (uint32_t)threadStaticSize;
 
             if (klass->generic_class)
             {
@@ -1111,13 +1034,6 @@ namespace vm
         }
         else
         {
-            if (computSize)
-            {
-                if (IS_CLASS_VALUE_TYPE(klass))
-                {
-                    instanceSize = actualSize = IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS + sizeof(Il2CppObject);
-                }
-            }
             // need to set this in case there are no fields in a generic instance type
             instanceSize = UpdateInstanceSizeForGenericClass(klass, instanceSize);
 
@@ -1126,12 +1042,6 @@ namespace vm
             // field of the base class doesn't go to an alignment boundary and the compiler ABI
             // uses that extra space (as clang does).
             klass->actualSize = static_cast<uint32_t>(actualSize);
-
-            if (computSize)
-            {
-                klass->instance_size = (uint32_t)instanceSize;
-                klass->native_size = (uint32_t)instanceSize - sizeof(Il2CppObject);
-            }
         }
 
         if (klass->static_fields_size)
