@@ -1725,12 +1725,16 @@ const Il2CppParameterDefinition* il2cpp::vm::MetadataCache::GetParameterDefiniti
 
 int32_t il2cpp::vm::MetadataCache::GetFieldOffsetFromIndexLocked(TypeIndex typeIndex, int32_t fieldIndexInType, FieldInfo* field, const il2cpp::os::FastAutoLock& lock)
 {
+    int32_t offset;
     if (hybridclr::metadata::IsInterpreterIndex(typeIndex))
     {
-        return hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(typeIndex)->GetFieldOffset(hybridclr::metadata::DecodeMetadataIndex(typeIndex), fieldIndexInType, field);
+        offset = hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(typeIndex)->GetFieldOffset(hybridclr::metadata::DecodeMetadataIndex(typeIndex), fieldIndexInType);
     }
-    IL2CPP_ASSERT(typeIndex <= s_Il2CppMetadataRegistration->typeDefinitionsSizesCount);
-    int32_t offset = s_Il2CppMetadataRegistration->fieldOffsets[typeIndex][fieldIndexInType];
+    else
+    {
+        IL2CPP_ASSERT(typeIndex <= s_Il2CppMetadataRegistration->typeDefinitionsSizesCount);
+        offset = s_Il2CppMetadataRegistration->fieldOffsets[typeIndex][fieldIndexInType];
+    }
     if (offset < 0)
     {
         AddThreadLocalStaticOffsetForFieldLocked(field, offset & ~THREAD_LOCAL_STATIC_MASK, lock);

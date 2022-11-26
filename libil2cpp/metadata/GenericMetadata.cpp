@@ -133,7 +133,7 @@ namespace metadata
                     types.push_back(InflateIfNeeded(inst->type_argv[i], context, inflateMethodVars));
 
                 const Il2CppGenericInst* inflatedInst = MetadataCache::GetGenericInst(types);
-                Il2CppGenericClass* genericClass = GenericMetadata::GetGenericClass(GenericClass::GetTypeDefinition(type->data.generic_class), inflatedInst);
+                Il2CppGenericClass* genericClass = GenericMetadata::GetGenericClass(type->data.generic_class->type, inflatedInst);
                 if (genericClass != type->data.generic_class)
                 {
                     Il2CppType* genericType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
