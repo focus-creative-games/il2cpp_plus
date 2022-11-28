@@ -1728,7 +1728,7 @@ int32_t il2cpp::vm::MetadataCache::GetFieldOffsetFromIndexLocked(TypeIndex typeI
     int32_t offset;
     if (hybridclr::metadata::IsInterpreterIndex(typeIndex))
     {
-        offset = hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(typeIndex)->GetFieldOffset(hybridclr::metadata::DecodeMetadataIndex(typeIndex), fieldIndexInType, field);
+        offset = hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(typeIndex)->GetFieldOffset(hybridclr::metadata::DecodeMetadataIndex(typeIndex), fieldIndexInType);
     }
     else
     {
