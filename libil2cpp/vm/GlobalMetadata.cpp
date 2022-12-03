@@ -430,32 +430,6 @@ void il2cpp::vm::GlobalMetadata::InitializeAllMethodMetadata()
     }
 }
 
-static const Il2CppType* GetRuntimeMetadataIl2CppType(TypeIndex typeIndex)
-{
-    return il2cpp::vm::GlobalMetadata::GetIl2CppTypeFromIndex(typeIndex);
-}
-
-static const Il2CppClass* GetRuntimeMetadateTypeInfo(TypeIndex typeIndex, bool throwOnError)
-{
-    const Il2CppType* type = GetRuntimeMetadataIl2CppType(typeIndex);
-    Il2CppClass* klass = il2cpp::vm::Class::FromIl2CppType(type, throwOnError);
-    if (klass)
-    {
-        il2cpp::vm::ClassInlines::InitFromCodegen(klass);
-    }
-    return klass;
-}
-
-static const MethodInfo* GetRuntimeMetadataMethodInfo(EncodedMethodIndex encodedMethodIndex)
-{
-    return GetMethodInfoFromEncodedIndex(encodedMethodIndex);
-}
-
-static const FieldInfo* GetRuntimeMetadataFieldInfo(EncodedMethodIndex fieldIndex)
-{
-    return GetFieldInfoFromIndex(fieldIndex);
-}
-
 // This method can be called from multiple threads, so it does have a data race. However, each
 // thread is reading from the same read-only metadata, so each thread will set the same values.
 // Therefore, we can safely ignore thread sanitizer issues in this method.
@@ -478,17 +452,17 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
     switch (usage)
     {
         case kIl2CppMetadataUsageTypeInfo:
-            initialized = (void*)GetRuntimeMetadateTypeInfo(decodedIndex, throwOnError);
+            initialized = (void*)il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(decodedIndex, throwOnError);
             break;
         case kIl2CppMetadataUsageIl2CppType:
-            initialized = (void*)GetRuntimeMetadataIl2CppType(decodedIndex);
+            initialized = (void*)il2cpp::vm::GlobalMetadata::GetIl2CppTypeFromIndex(decodedIndex);
             break;
         case kIl2CppMetadataUsageMethodDef:
         case kIl2CppMetadataUsageMethodRef:
-            initialized = (void*)GetRuntimeMetadataMethodInfo(encodedToken);
+            initialized = (void*)GetMethodInfoFromEncodedIndex(encodedToken);
             break;
         case kIl2CppMetadataUsageFieldInfo:
-            initialized = (void*)GetRuntimeMetadataFieldInfo(decodedIndex);
+            initialized = (void*)GetFieldInfoFromIndex(decodedIndex);
             break;
         case kIl2CppMetadataUsageStringLiteral:
             initialized = (void*)GetStringLiteralFromIndex(decodedIndex);
@@ -1576,13 +1550,8 @@ static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex ind
     for (int32_t imageIndex = 0; imageIndex < s_MetadataImagesCount; imageIndex++)
     {
         const Il2CppImageGlobalMetadata* imageMetadata = s_MetadataImagesTable + imageIndex;
-        const Il2CppImage* image = imageMetadata->image;
-        if (image->assembly->originAssembly)
-        {
-            image = image->assembly->originAssembly->image;
-        }
         IL2CPP_ASSERT(index >= 0);
-        if (index >= imageMetadata->typeStart && static_cast<uint32_t>(index) < (imageMetadata->typeStart + image->typeCount))
+        if (index >= imageMetadata->typeStart && static_cast<uint32_t>(index) < (imageMetadata->typeStart + imageMetadata->image->typeCount))
             return imageMetadata->image;
     }
 
