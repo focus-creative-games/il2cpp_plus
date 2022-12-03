@@ -1084,10 +1084,6 @@ static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex ind
     for (int32_t imageIndex = 0; imageIndex < s_ImagesCount; imageIndex++)
     {
         const Il2CppImage* image = s_ImagesTable + imageIndex;
-        if (image->assembly->originAssembly)
-        {
-            image = image->assembly->originAssembly->image;
-        }
         IL2CPP_ASSERT(index >= 0);
         if (index >= image->typeStart && static_cast<uint32_t>(index) < (image->typeStart + image->typeCount))
             return image;
