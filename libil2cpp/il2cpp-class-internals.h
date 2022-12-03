@@ -546,7 +546,6 @@ typedef struct Il2CppAssembly
     int32_t referencedAssemblyStart;
     int32_t referencedAssemblyCount;
     Il2CppAssemblyName aname;
-    Il2CppAssembly* originAssembly;
 } Il2CppAssembly;
 
 typedef struct Il2CppCodeGenOptions
