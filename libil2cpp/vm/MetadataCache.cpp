@@ -1219,12 +1219,7 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyFromIndex(const Il2C
 
 const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyByName(const char* nameToFind)
 {
-    return GetOrLoadAssemblyByName(nameToFind, false);
-}
-
-const Il2CppAssembly* il2cpp::vm::MetadataCache::GetOrLoadAssemblyByName(const char* assemblyNameOrPath, bool tryLoad)
-{
-    const char* assemblyName = hybridclr::GetAssemblyNameFromPath(assemblyNameOrPath);
+    const char* assemblyName = hybridclr::GetAssemblyNameFromPath(nameToFind);
 
     il2cpp::utils::VmStringUtils::CaseInsensitiveComparer comparer;
 
@@ -1244,18 +1239,13 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetOrLoadAssemblyByName(const c
             return assembly;
     }
 
-    if (tryLoad)
-    {
-        Il2CppAssembly* newAssembly = hybridclr::metadata::Assembly::LoadFromFile(assemblyNameOrPath);
-        if (newAssembly)
-        {
-            il2cpp::vm::Assembly::Register(newAssembly);
-            s_cliAssemblies.push_back(newAssembly);
-            return newAssembly;
-        }
-    }
-
     return nullptr;
+}
+
+void il2cpp::vm::MetadataCache::RegisterInterpreterAssembly(Il2CppAssembly* assembly)
+{
+    il2cpp::vm::Assembly::Register(assembly);
+    s_cliAssemblies.push_back(assembly);
 }
 
 const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyFromBytes(const char* assemblyBytes, size_t length)
@@ -1263,27 +1253,17 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyFromBytes(const cha
     il2cpp::os::FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
 
     Il2CppAssembly* newAssembly = hybridclr::metadata::Assembly::LoadFromBytes(assemblyBytes, length, true);
-    if (newAssembly)
+    // avoid register placeholder assembly twicely.
+    for (Il2CppAssembly* ass : s_cliAssemblies)
     {
-        // avoid register placeholder assembly twicely.
-        for (Il2CppAssembly* ass : s_cliAssemblies)
+        if (ass == newAssembly)
         {
-            if (ass == newAssembly)
-            {
-                return ass;
-            }
+            return ass;
         }
-        il2cpp::vm::Assembly::Register(newAssembly);
-        s_cliAssemblies.push_back(newAssembly);
-        return newAssembly;
     }
+    RegisterInterpreterAssembly(newAssembly);
 
-    return nullptr;
-}
-
-const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyByName(const char* nameToFind)
-{
-    return GetOrLoadAssemblyByName(nameToFind, true);
+    return newAssembly;
 }
 
 const Il2CppGenericMethod* il2cpp::vm::MetadataCache::FindGenericMethod(std::function<bool(const Il2CppGenericMethod*)> predic)
