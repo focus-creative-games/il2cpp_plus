@@ -126,16 +126,13 @@ namespace vm
                 loadedAssembly = MetadataCache::GetAssemblyByName(tmp);
             }
 
-            memcpy(tmp + len, ".dll", 4);
-            loadedAssembly = MetadataCache::LoadAssemblyByName(tmp);
-
             delete[] tmp;
 
             return loadedAssembly;
         }
         else
         {
-            return MetadataCache::LoadAssemblyByName(name);
+            return nullptr;
         }
     }
 
