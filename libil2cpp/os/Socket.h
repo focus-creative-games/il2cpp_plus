@@ -271,6 +271,11 @@ namespace os
 // cleaning up the temporarely allocated memory (if any).
     typedef bool (*ThreadStatusCallback)();
 
+/// Sockets should generally be referenced through SocketHandles for thread-safety.
+/// Handles are stored in a table and can be safely used even when the socket has already
+/// been deleted.
+    typedef intptr_t SocketHandle;
+
     class Socket : public il2cpp::utils::NonCopyable
     {
     public:
@@ -361,21 +366,20 @@ namespace os
 
     private:
         SocketImpl* m_Socket;
-    };
 
-/// Sockets should generally be referenced through SocketHandles for thread-safety.
-/// Handles are stored in a table and can be safely used even when the socket has already
-/// been deleted.
-    typedef uint32_t SocketHandle;
+        friend Socket* AcquireSocketHandle(SocketHandle handle);
+        friend void ReleaseSocketHandle(SocketHandle handle, Socket* socketToRelease, bool forceTableRemove);
+        uint32_t m_RefCount;
+    };
 
     enum
     {
-        kInvalidSocketHandle = 0
+        kInvalidSocketHandle = -1
     };
 
     SocketHandle CreateSocketHandle(Socket* socket);
     Socket* AcquireSocketHandle(SocketHandle handle);
-    void ReleaseSocketHandle(SocketHandle handle);
+    void ReleaseSocketHandle(SocketHandle handle, Socket* socketToRelease, bool forceTableRemove = false);
 
     inline SocketHandle PointerToSocketHandle(void* ptr)
     {
@@ -419,7 +423,7 @@ namespace os
         void Release()
         {
             if (m_Socket)
-                ReleaseSocketHandle(m_Handle);
+                ReleaseSocketHandle(m_Handle, m_Socket);
             m_Socket = NULL;
             m_Handle = kInvalidSocketHandle;
         }

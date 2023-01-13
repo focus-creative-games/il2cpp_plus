@@ -152,47 +152,6 @@ namespace vm
 #undef RETURN_DEFAULT_TYPE
     }
 
-/* From ECMA-335, I.8.7 Assignment compatibility:
-
-    The reduced type of a type T is the following:
-
-    1. If the underlying type of T is:
-        a. int8, or unsigned int8, then its reduced type is int8.
-        b. int16, or unsigned int16, then its reduced type is int16.
-        c. int32, or unsigned int32, then its reduced type is int32.
-        d. int64, or unsigned int64, then its reduced type is int64.
-        e. native int, or unsigned native int, then its reduced type is native int.
-    2. Otherwise, the reduced type is itself.
-*/
-    static inline const Il2CppClass* GetReducedType(const Il2CppClass* type)
-    {
-        switch (type->byval_arg.type)
-        {
-            case IL2CPP_TYPE_I1:
-            case IL2CPP_TYPE_U1:
-                return il2cpp_defaults.sbyte_class;
-
-            case IL2CPP_TYPE_I2:
-            case IL2CPP_TYPE_U2:
-                return il2cpp_defaults.int16_class;
-
-            case IL2CPP_TYPE_I4:
-            case IL2CPP_TYPE_U4:
-                return il2cpp_defaults.int32_class;
-
-            case IL2CPP_TYPE_I8:
-            case IL2CPP_TYPE_U8:
-                return il2cpp_defaults.int64_class;
-
-            case IL2CPP_TYPE_I:
-            case IL2CPP_TYPE_U:
-                return il2cpp_defaults.int_class;
-
-            default:
-                return type;
-        }
-    }
-
     Il2CppClass* Class::FromSystemType(Il2CppReflectionType *type)
     {
         Il2CppClass *klass = Class::FromIl2CppType(type->type);
@@ -676,11 +635,11 @@ namespace vm
                 if (oklass->rank != klass->rank)
                     return false;
 
-                if (oklass->castClass->byval_arg.valuetype)
+                if (Class::IsValuetype(oklass->castClass))
                 {
                     // Full array covariance is defined only for reference types.
                     // For value types, array element reduced types must match
-                    return GetReducedType(klass->castClass) == GetReducedType(oklass->castClass);
+                    return klass->castClass == oklass->castClass;
                 }
 
                 return Class::IsAssignableFrom(klass->castClass, oklass->castClass);
@@ -701,8 +660,7 @@ namespace vm
 
             if (klass->parent == il2cpp_defaults.multicastdelegate_class && klass->generic_class != NULL)
             {
-                Il2CppMetadataGenericContainerHandle containerHandle = MetadataCache::GetGenericContainerFromGenericClass(klass->image, klass->generic_class);
-                if (IsGenericClassAssignableFrom(klass, oklass, klass->image, containerHandle))
+                if (IsGenericClassAssignableFrom(klass, oklass, oklass))
                     return true;
             }
 
@@ -712,23 +670,20 @@ namespace vm
         if (klass->generic_class != NULL)
         {
             // checking for simple reference equality is not enough in this case because generic interface might have covariant and/or contravariant parameters
-
-            Il2CppMetadataGenericContainerHandle containerHandle = MetadataCache::GetGenericContainerFromGenericClass(klass->image, klass->generic_class);
-
             for (Il2CppClass* iter = oklass; iter != NULL; iter = iter->parent)
             {
-                if (IsGenericClassAssignableFrom(klass, iter, klass->image, containerHandle))
+                if (IsGenericClassAssignableFrom(klass, iter, oklass))
                     return true;
 
                 for (uint16_t i = 0; i < iter->interfaces_count; ++i)
                 {
-                    if (IsGenericClassAssignableFrom(klass, iter->implementedInterfaces[i], klass->image, containerHandle))
+                    if (IsGenericClassAssignableFrom(klass, iter->implementedInterfaces[i], oklass))
                         return true;
                 }
 
                 for (uint16_t i = 0; i < iter->interface_offsets_count; ++i)
                 {
-                    if (IsGenericClassAssignableFrom(klass, iter->interfaceOffsets[i].interfaceType, klass->image, containerHandle))
+                    if (IsGenericClassAssignableFrom(klass, iter->interfaceOffsets[i].interfaceType, oklass))
                         return true;
                 }
             }
@@ -2239,7 +2194,10 @@ namespace vm
         const MethodInfo* vtableSlotMethod;
         if (Class::IsInterface(methodDeclaringType))
         {
-            vtableSlotMethod = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot)->method;
+            const VirtualInvokeData* invokeData = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot);
+            if (invokeData == NULL)
+                return NULL;
+            vtableSlotMethod = invokeData->method;
         }
         else
         {
