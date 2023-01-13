@@ -19,6 +19,13 @@ namespace os
 
         size_t frames = CaptureStackBackTrace(0, kMaxFrames, stack, NULL);
 
+        // If didn't get any frames on the first try, try again
+        // Sometimes on Windows 10 on a newly created thread CaptureStackBackTrace doesn't work the first time we call it.
+        if (frames == 0)
+            frames = CaptureStackBackTrace(0, kMaxFrames, stack, NULL);
+
+        IL2CPP_ASSERT(frames > 0 && "CaptureStackBackTrace returned no frames");
+
         if (walkOrder == kFirstCalledToLastCalled)
         {
             for (size_t i = frames; i--;)

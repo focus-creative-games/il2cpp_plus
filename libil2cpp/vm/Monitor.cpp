@@ -623,7 +623,7 @@ namespace vm
 
         // Wait for pulse (if we either have a timeout or are supposed to
         // wait infinitely).
-        il2cpp::os::WaitStatus pulseWaitStatus = kWaitStatusSuccess;
+        il2cpp::os::WaitStatus pulseWaitStatus = kWaitStatusTimeout;
         Il2CppException* exceptionThrownDuringWait = NULL;
         if (timeoutMilliseconds != 0)
         {

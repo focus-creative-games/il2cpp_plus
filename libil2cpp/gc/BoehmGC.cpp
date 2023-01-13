@@ -6,10 +6,14 @@
 #include "gc_wrapper.h"
 #include "GarbageCollector.h"
 #include "WriteBarrierValidation.h"
+#include "os/Mutex.h"
 #include "vm/Profiler.h"
 #include "utils/Il2CppHashMap.h"
 #include "utils/HashUtils.h"
 #include "il2cpp-object-internals.h"
+
+#include "Baselib.h"
+#include "Cpp/ReentrantLock.h"
 
 static bool s_GCInitialized = false;
 
@@ -237,9 +241,12 @@ il2cpp::gc::GarbageCollector::IsDisabled()
     return GC_is_disabled();
 }
 
+static baselib::ReentrantLock s_GCSetModeLock;
+
 void
 il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
 {
+    os::FastAutoLock lock(&s_GCSetModeLock);
     switch (mode)
     {
         case IL2CPP_GC_MODE_ENABLED:
