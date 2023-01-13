@@ -28,6 +28,14 @@ namespace vm
         static void SetupMethods(Il2CppClass* genericInstanceType);
         static void SetupProperties(Il2CppClass* genericInstanceType);
 
+        static bool HasSameGenericTypeDefinition(const Il2CppGenericClass* gclass1, const Il2CppGenericClass* gclass2)
+        {
+            IL2CPP_ASSERT(gclass1->type->type == IL2CPP_TYPE_VALUETYPE || gclass1->type->type == IL2CPP_TYPE_CLASS);
+            IL2CPP_ASSERT(gclass2->type->type == IL2CPP_TYPE_VALUETYPE || gclass2->type->type == IL2CPP_TYPE_CLASS);
+
+            return gclass1->type->data.typeHandle == gclass2->type->data.typeHandle;
+        }
+
     private:
         static Il2CppClass* CreateClass(Il2CppGenericClass *gclass, bool throwOnError = true);
     };

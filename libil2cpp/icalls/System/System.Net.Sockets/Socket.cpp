@@ -335,9 +335,9 @@ namespace Sockets
 
         intptr_t ret;
         if (new_sock)
-            ret = static_cast<uintptr_t>(os::CreateSocketHandle(new_sock));
+            ret = static_cast<intptr_t>(os::CreateSocketHandle(new_sock));
         else
-            ret = 0;
+            ret = static_cast<intptr_t>(os::kInvalidSocketHandle);
 
         return ret;
     }
@@ -487,13 +487,11 @@ namespace Sockets
         AUTO_ACQUIRE_SOCKET;
         RETURN_IF_SOCKET_IS_INVALID();
 
-        socket = static_cast<intptr_t>(os::kInvalidSocketHandle);
-
-        socketHandle->Close();
-
         // There is an implicit acquisition happening when we create the socket which we undo
         // now that we have closed the socket.
-        os::ReleaseSocketHandle(socketHandle.GetHandle());
+        os::ReleaseSocketHandle(socketHandle.GetHandle(), socketHandle.GetSocket(), true);
+
+        socketHandle->Close();
     }
 
     void Socket::Connect_icall(intptr_t socket, Il2CppSocketAddress* socket_address, int32_t* error, bool blocking)
@@ -1341,7 +1339,7 @@ namespace Sockets
 
     intptr_t Socket::Socket_icall(AddressFamily family, SocketType type, ProtocolType protocol, int32_t* error)
     {
-        intptr_t socket = 0;
+        intptr_t socket = static_cast<intptr_t>(os::kInvalidSocketHandle);
 
         *error = 0;
 

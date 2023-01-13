@@ -27,32 +27,28 @@ namespace il2cpp
 {
 namespace os
 {
-    struct SocketHandleEntry
-    {
-        Socket* m_Socket;
-        uint32_t m_RefCount;
-    };
+    typedef std::map<SocketHandle, Socket&> SocketHandleTable;
 
-    typedef std::map<SocketHandle, SocketHandleEntry> SocketHandleTable;
-
-    SocketHandle g_LastSocketHandle;
     baselib::ReentrantLock g_SocketHandleTableMutex;
     SocketHandleTable g_SocketHandleTable;
 
     SocketHandle CreateSocketHandle(Socket* socket)
     {
-        // Allocate handle.
-        SocketHandle newHandle = Atomic::Increment(&g_LastSocketHandle);
+        // Get the handle from the socket file descripter.
+        SocketHandle newHandle = (SocketHandle)socket->GetDescriptor();
 
-        // Populate entry.
-        SocketHandleEntry handleEntry;
-        handleEntry.m_Socket = socket;
-        handleEntry.m_RefCount = 1;
+        // If the descripter is invalid we revert to the old method
+        if (newHandle == kInvalidSocketHandle)
+        {
+            IL2CPP_ASSERT(0 && "Attempted to get an invalid socket handle. Should not be in this method.");
+            return kInvalidSocketHandle;
+        }
 
         // Add to table.
         {
             FastAutoLock lock(&g_SocketHandleTableMutex);
-            g_SocketHandleTable.insert(SocketHandleTable::value_type(newHandle, handleEntry));
+            auto insertRes = g_SocketHandleTable.insert(SocketHandleTable::value_type(newHandle, *socket));
+            IL2CPP_ASSERT(insertRes.second && "Attempted to add a handle to the map that was already there.");
         }
 
         return newHandle;
@@ -71,35 +67,40 @@ namespace os
             return NULL;
 
         // Increase reference count.
-        SocketHandleEntry& entry = iter->second;
-        ++entry.m_RefCount;
+        Socket& socket = iter->second;
+        ++socket.m_RefCount;
 
-        return entry.m_Socket;
+        return &socket;
     }
 
-    void ReleaseSocketHandle(SocketHandle handle)
+    void ReleaseSocketHandle(SocketHandle handle, Socket* socketToRelease, bool forceTableRemove)
     {
-        if (handle == kInvalidSocketHandle)
+        if (handle == kInvalidSocketHandle || !socketToRelease)
+        {
+            IL2CPP_ASSERT(0 && "Invalid argument in ReleaseSocketHandle");
             return;
+        }
 
         Socket* socketToDelete = NULL;
         {
             FastAutoLock lock(&g_SocketHandleTableMutex);
 
+            IL2CPP_ASSERT(socketToRelease->m_RefCount && "Invalid ref count for Socket");
+            --socketToRelease->m_RefCount;
+
             // Look up in table.
             SocketHandleTable::iterator iter = g_SocketHandleTable.find(handle);
-            if (iter == g_SocketHandleTable.end())
-                return;
+            if (iter != g_SocketHandleTable.end() &&
+                ((socketToRelease == &iter->second && !socketToRelease->m_RefCount) || forceTableRemove))
+            {
+                g_SocketHandleTable.erase(iter);
+            }
 
-            // Decrease reference count.
-            SocketHandleEntry& entry = iter->second;
-            --entry.m_RefCount;
-            if (!entry.m_RefCount)
+            if (!socketToRelease->m_RefCount)
             {
                 // Kill socket. Should be the only place where we directly delete sockets that
                 // have made it past the creation step.
-                socketToDelete = entry.m_Socket;
-                g_SocketHandleTable.erase(iter);
+                socketToDelete = socketToRelease;
             }
         }
 
@@ -140,7 +141,7 @@ namespace os
     }
 
     Socket::Socket(ThreadStatusCallback thread_status_callback)
-        : m_Socket(new SocketImpl(thread_status_callback))
+        : m_Socket(new SocketImpl(thread_status_callback)), m_RefCount(1)
     {
     }
 

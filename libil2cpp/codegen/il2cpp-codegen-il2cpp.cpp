@@ -404,6 +404,11 @@ NORETURN void il2cpp_codegen_raise_index_out_of_range_exception()
     il2cpp::vm::Exception::RaiseIndexOutOfRangeException();
 }
 
+NORETURN void il2cpp_codegen_raise_overflow_exception(const RuntimeMethod* method)
+{
+    IL2CPP_RAISE_MANAGED_EXCEPTION(il2cpp_codegen_get_overflow_exception(), method);
+}
+
 Exception_t* il2cpp_codegen_get_argument_exception(const char* param, const char* msg)
 {
     return (Exception_t*)il2cpp::vm::Exception::GetArgumentException(param, msg);
@@ -452,6 +457,11 @@ Exception_t* il2cpp_codegen_get_missing_method_exception(const char* msg)
 Exception_t* il2cpp_codegen_get_maximum_nested_generics_exception()
 {
     return (Exception_t*)il2cpp::vm::Exception::GetMaximumNestedGenericsException();
+}
+
+Exception_t* il2cpp_codegen_get_engine_execution_exception(const char* msg)
+{
+    return (Exception_t*)il2cpp::vm::Exception::GetExecutionEngineException(msg);
 }
 
 Exception_t* il2cpp_codegen_get_index_out_of_range_exception()

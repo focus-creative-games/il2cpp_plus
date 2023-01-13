@@ -35,4 +35,9 @@ NORETURN void il2cpp_codegen_raise_generic_virtual_method_exception(const char* 
     IL2CPP_UNREACHABLE;
 }
 
+NORETURN void il2cpp_codegen_raise_overflow_exception(const RuntimeMethod* method)
+{
+    IL2CPP_RAISE_MANAGED_EXCEPTION(il2cpp_codegen_get_overflow_exception(), method);
+}
+
 #endif

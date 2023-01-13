@@ -484,16 +484,14 @@ namespace vm
 
         if (targetInterface->generic_class != NULL)
         {
-            Il2CppMetadataGenericContainerHandle containerHandle = MetadataCache::GetGenericContainerFromGenericClass(targetInterface->image, targetInterface->generic_class);
-
-            if (Class::IsGenericClassAssignableFrom(targetInterface, queriedInterface, targetInterface->image, containerHandle))
+            if (Class::IsGenericClassAssignableFrom(targetInterface, queriedInterface))
                 return NULL;
 
             const Il2CppRuntimeInterfaceOffsetPair* interfaceOffsets = queriedInterface->interfaceOffsets;
             uint16_t interfaceOffsetsCount = queriedInterface->interface_offsets_count;
             for (uint16_t i = 0; i < interfaceOffsetsCount; i++)
             {
-                if (Class::IsGenericClassAssignableFrom(targetInterface, interfaceOffsets[i].interfaceType, targetInterface->image, containerHandle))
+                if (Class::IsGenericClassAssignableFrom(targetInterface, interfaceOffsets[i].interfaceType))
                 {
                     Il2CppMethodSlot slotWithOffset = interfaceOffsets[i].offset + slot;
                     if (slotWithOffset < vtableCount)
