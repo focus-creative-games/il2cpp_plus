@@ -960,6 +960,7 @@ static int CompareTokens(const void* pkey, const void* pelem)
     return (int)(((Il2CppCustomAttributeDataRange*)pkey)->token - ((Il2CppCustomAttributeDataRange*)pelem)->token);
 }
 
+/*
 static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2CppImageGlobalMetadata* imageMetadata, CustomAttributeIndex index)
 {
     if (index == kCustomAttributeIndexInvalid || imageMetadata == NULL)
@@ -1027,6 +1028,7 @@ static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2Cpp
 
     return cache;
 }
+*/
 
 static const Il2CppImageGlobalMetadata* GetImageForCustomAttributeIndex(CustomAttributeIndex index)
 {
@@ -1103,14 +1105,13 @@ Il2CppMetadataCustomAttributeHandle il2cpp::vm::GlobalMetadata::GetCustomAttribu
 
 static il2cpp::metadata::CustomAttributeDataReader CreateCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle, const Il2CppImage* image)
 {
-    if (hybridclr::metadata::IsInterpreterImage(image))
-    {
-        return hybridclr::metadata::MetadataModule::GetCustomAttributeDataRange(image, token);
-    }
+    //if (hybridclr::metadata::IsInterpreterImage(image))
+    //{
+    //    return hybridclr::metadata::MetadataModule::GetCustomAttributeDataRange(image, token);
+    //}
     const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, 0);
     if (handle == NULL)
         return il2cpp::metadata::CustomAttributeDataReader::Empty();
-    Il2CppCustomAttributeDataRange key = {token, 0};
 
     Il2CppCustomAttributeDataRange* range = (Il2CppCustomAttributeDataRange*)handle;
     const Il2CppCustomAttributeDataRange* next = range + 1;
@@ -1128,45 +1129,43 @@ il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCusto
 
 il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle)
 {
-    if (hybridclr::metadata::IsInterpreterIndex(dataRange->startOffset))
-    {
-        return hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(dataRange->startOffset)->HasAttribute(dataRange, attribute);
-    }
-
-
+    //if (hybridclr::metadata::IsInterpreterIndex(dataRange->startOffset))
+    //{
+    //    return hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(dataRange->startOffset)->HasAttribute(dataRange, attribute);
+    //}
     return CreateCustomAttributeDataReader(handle, GetCustomAttributeImageFromHandle(handle));
 }
 
-bool il2cpp::vm::GlobalMetadata::HasAttribute(Il2CppMetadataCustomAttributeHandle token, Il2CppClass* attribute)
-{
-    if (token == NULL)
-        return false;
-
-    const Il2CppCustomAttributeDataRange* dataRange = reinterpret_cast<const Il2CppCustomAttributeDataRange*>(token);
-
-    CustomAttributeIndex index = GetCustomAttributeIndex(dataRange);
-    const Il2CppImageGlobalMetadata* imageMetadata = GetImageForCustomAttributeIndex(index);
-    if (imageMetadata == NULL)
-        return false;
-
-    return HasAttributeFromTypeRange(imageMetadata->image, dataRange, attribute);
-}
-
-bool il2cpp::vm::GlobalMetadata::HasAttribute(const Il2CppImage* image, uint32_t token, Il2CppClass* attribute)
-{
-    if (hybridclr::metadata::IsInterpreterImage(image))
-    {
-        return hybridclr::metadata::MetadataModule::HasAttribute(image, token, attribute);
-    }
-    CustomAttributeIndex index = GetCustomAttributeIndex(image, token);
-    if (index == kCustomAttributeIndexInvalid)
-        return false;
-
-    IL2CPP_ASSERT(attribute);
-
-    const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, index);
-    return HasAttributeFromTypeRange(image, attributeTypeRange, attribute);
-}
+//bool il2cpp::vm::GlobalMetadata::HasAttribute(Il2CppMetadataCustomAttributeHandle token, Il2CppClass* attribute)
+//{
+//    if (token == NULL)
+//        return false;
+//
+//    const Il2CppCustomAttributeDataRange* dataRange = reinterpret_cast<const Il2CppCustomAttributeDataRange*>(token);
+//
+//    CustomAttributeIndex index = GetCustomAttributeIndex(dataRange);
+//    const Il2CppImageGlobalMetadata* imageMetadata = GetImageForCustomAttributeIndex(index);
+//    if (imageMetadata == NULL)
+//        return false;
+//
+//    return HasAttributeFromTypeRange(imageMetadata->image, dataRange, attribute);
+//}
+//
+//bool il2cpp::vm::GlobalMetadata::HasAttribute(const Il2CppImage* image, uint32_t token, Il2CppClass* attribute)
+//{
+//    if (hybridclr::metadata::IsInterpreterImage(image))
+//    {
+//        return hybridclr::metadata::MetadataModule::HasAttribute(image, token, attribute);
+//    }
+//    CustomAttributeIndex index = GetCustomAttributeIndex(image, token);
+//    if (index == kCustomAttributeIndexInvalid)
+//        return false;
+//
+//    IL2CPP_ASSERT(attribute);
+//
+//    const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, index);
+//    return HasAttributeFromTypeRange(image, attributeTypeRange, attribute);
+//}
 
 const Il2CppMethodDefinition* il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromVTableSlot(const Il2CppTypeDefinition* typeDefinition, int32_t vTableSlot)
 {

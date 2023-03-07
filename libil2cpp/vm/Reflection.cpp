@@ -613,7 +613,6 @@ namespace vm
         }
     }
 
-    bool Reflection::HasAttribute(Il2CppObject *obj, Il2CppClass* attribute)
     bool Reflection::HasAttribute(Il2CppObject *obj, Il2CppClass* attributeClass)
     {
         il2cpp::metadata::CustomAttributeDataReader reader = GetCustomAttrsDataReader(obj);

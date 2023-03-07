@@ -352,7 +352,6 @@ typedef struct MethodInfo
     uint8_t is_inflated : 1; /* true if declaring_type is a generic instance or if method is a generic instance*/
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t has_full_generic_sharing_signature : 1;
-    uint8_t indirect_call_via_invokers : 1;
 
     // ==={{ hybridclr
     void* interpData;
@@ -612,7 +611,6 @@ typedef struct Il2CppCodeRegistration
     const Il2CppMethodPointer* genericAdjustorThunks;
     uint32_t invokerPointersCount;
     const InvokerMethod* invokerPointers;
-    uint32_t unresolvedVirtualCallCount;
     uint32_t unresolvedIndirectCallCount;
     const Il2CppMethodPointer* unresolvedVirtualCallPointers;
     const Il2CppMethodPointer* unresolvedInstanceCallPointers;

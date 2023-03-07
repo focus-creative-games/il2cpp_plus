@@ -296,7 +296,6 @@ namespace metadata
             newMethod->rgctx_data = InflateRGCTXLocked(gmethod, lock);
         }
 
-        il2cpp::vm::Il2CppGenericMethodPointers methodPointers = MetadataCache::GetGenericMethodPointers(methodDefinition, &gmethod->context);
         newMethod->virtualMethodPointer = methodPointers.virtualMethodPointer;
         newMethod->methodPointer = methodPointers.methodPointer;
         if (methodPointers.methodPointer)
@@ -306,27 +305,21 @@ namespace metadata
         else
         {
             newMethod->invoker_method = Runtime::GetMissingMethodInvoker();
-            if (Method::IsInstance(newMethod))
-                newMethod->virtualMethodPointer = MetadataCache::GetUnresolvedVirtualCallStub(newMethod);
             il2cpp::vm::Il2CppUnresolvedCallStubs stubs = MetadataCache::GetUnresovledCallStubs(newMethod);
             newMethod->methodPointer = stubs.methodPointer;
             newMethod->virtualMethodPointer = stubs.virtualMethodPointer;
         }
 
-        newMethod->has_full_generic_sharing_signature = hasFullGenericSharingSignature;
         bool isInterpMethod = hybridclr::metadata::IsInterpreterMethod(newMethod);
         if (!isInterpMethod)
         {
-            newMethod->has_full_generic_sharing_signature = methodPointers.isFullGenericShared && HasFullGenericSharedParametersOrReturn(gmethod->methodDefinition);
-
-            // Full generic sharing methods should be called via invoker
-            // And invalid static methods can't use the unresolved virtual call stubs
-            newMethod->indirect_call_via_invokers = newMethod->has_full_generic_sharing_signature || (!Method::IsInstance(newMethod) && newMethod->methodPointer == NULL);
+            newMethod->has_full_generic_sharing_signature = hasFullGenericSharingSignature;
         }
 
         ++il2cpp_runtime_stats.inflated_method_count;
 
-        if (il2cpp::vm::Method::HasFullGenericSharingSignature(newMethod))
+        bool indirectCallViaInvokers = il2cpp::vm::Method::HasFullGenericSharingSignature(newMethod);
+        if (indirectCallViaInvokers)
         {
             // The method has a full generic sharing signature - that is it a fully shared method an has any fully shared parameter types or return type,
             // then its signature doesn't match the expected signature
@@ -375,8 +368,7 @@ namespace metadata
                 }
             }
         }
-
-        if (!newMethod->indirect_call_via_invokers)
+        else
         {
             newMethod->methodPointerCallByInterp = newMethod->methodPointer;
             newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
@@ -398,7 +390,7 @@ namespace metadata
         }
         else
         {
-            if (newMethod->indirect_call_via_invokers && isAotImplByInterp)
+            if (indirectCallViaInvokers && isAotImplByInterp)
             {
                 newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
                 bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
