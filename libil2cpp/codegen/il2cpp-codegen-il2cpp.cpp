@@ -236,14 +236,9 @@ NORETURN void il2cpp_codegen_raise_profile_exception(const RuntimeMethod* method
     il2cpp_codegen_raise_exception(il2cpp_codegen_get_not_supported_exception(methodName.c_str()));
 }
 
-Il2CppMethodPointer il2cpp_codegen_get_virtual_call_method_pointer(const RuntimeMethod* method)
+const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method_internal(const RuntimeMethod* vtableSlotMethod, const RuntimeMethod* genericVirtualMethod)
 {
-    return il2cpp::vm::Method::GetVirtualCallMethodPointer(method);
-}
-
-void il2cpp_codegen_get_generic_virtual_method_internal(const RuntimeMethod* methodDefinition, const RuntimeMethod* inflatedMethod, VirtualInvokeData* invokeData)
-{
-    il2cpp::vm::Runtime::GetGenericVirtualMethod(methodDefinition, inflatedMethod, invokeData);
+    return il2cpp::metadata::GenericMethod::GetGenericVirtualMethod(vtableSlotMethod, genericVirtualMethod);
 }
 
 void il2cpp_codegen_runtime_class_init(RuntimeClass* klass)

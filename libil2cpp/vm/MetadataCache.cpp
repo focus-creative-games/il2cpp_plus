@@ -904,9 +904,9 @@ static const Il2CppType* GetReducedType(const Il2CppType* type)
     switch (type->type)
     {
         case IL2CPP_TYPE_BOOLEAN:
-            return &il2cpp_defaults.sbyte_class->byval_arg;
+            return &il2cpp_defaults.byte_class->byval_arg;
         case IL2CPP_TYPE_CHAR:
-            return &il2cpp_defaults.int16_class->byval_arg;
+            return &il2cpp_defaults.uint16_class->byval_arg;
         case IL2CPP_TYPE_BYREF:
         case IL2CPP_TYPE_CLASS:
         case IL2CPP_TYPE_OBJECT:
@@ -916,16 +916,28 @@ static const Il2CppType* GetReducedType(const Il2CppType* type)
             return &il2cpp_defaults.object_class->byval_arg;
         case IL2CPP_TYPE_GENERICINST:
             if (il2cpp::vm::Type::GenericInstIsValuetype(type))
-                return type;
-            else
-                return &il2cpp_defaults.object_class->byval_arg;
+            {
+                // We can't inflate a generic instance that contains generic arguments
+                if (il2cpp::metadata::GenericMetadata::ContainsGenericParameters(type))
+                    return type;
+
+                const Il2CppGenericInst* sharedInst = GetSharedInst(type->data.generic_class->context.class_inst);
+                Il2CppGenericClass* gklass = il2cpp::metadata::GenericMetadata::GetGenericClass(type->data.generic_class->type, sharedInst);
+                Il2CppClass* klass = il2cpp::vm::GenericClass::GetClass(gklass);
+                return &klass->byval_arg;
+            }
+
+            return &il2cpp_defaults.object_class->byval_arg;
         default:
             return type;
     }
 }
 
-Il2CppMethodPointer il2cpp::vm::MetadataCache::GetUnresolvedVirtualCallStub(const MethodInfo* method)
+il2cpp::vm::Il2CppUnresolvedCallStubs il2cpp::vm::MetadataCache::GetUnresovledCallStubs(const MethodInfo* method)
 {
+    il2cpp::vm::Il2CppUnresolvedCallStubs stubs;
+    stubs.stubsFound = false;
+
     il2cpp::metadata::Il2CppSignature signature;
     signature.Count = method->parameters_count + 1;
     signature.Types = (const Il2CppType**)alloca(signature.Count * sizeof(Il2CppType*));
@@ -936,9 +948,28 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetUnresolvedVirtualCallStub(cons
 
     Il2CppUnresolvedSignatureMapIter it = s_pUnresolvedSignatureMap->find(signature);
     if (it != s_pUnresolvedSignatureMap->end())
-        return it->second;
+    {
+        if (il2cpp::vm::Method::IsInstance(method))
+        {
+            stubs.methodPointer = s_Il2CppCodeRegistration->unresolvedInstanceCallPointers[it->second];
+            stubs.virtualMethodPointer = s_Il2CppCodeRegistration->unresolvedVirtualCallPointers[it->second];
+            stubs.stubsFound = true;
+        }
+        else
+        {
+            stubs.methodPointer = s_Il2CppCodeRegistration->unresolvedStaticCallPointers[it->second];
+            stubs.virtualMethodPointer = stubs.methodPointer;
+            stubs.stubsFound = true;
+        }
+    }
+    else
+    {
+        const MethodInfo* entryPointNotFoundMethod = il2cpp::vm::Method::GetEntryPointNotFoundMethodInfo();
+        stubs.methodPointer = entryPointNotFoundMethod->methodPointer;
+        stubs.virtualMethodPointer = entryPointNotFoundMethod->methodPointer;
+    }
 
-    return NULL;
+    return stubs;
 }
 
 const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyFromIndex(AssemblyIndex index)
@@ -1159,34 +1190,19 @@ Il2CppMetadataCustomAttributeHandle il2cpp::vm::MetadataCache::GetCustomAttribut
     return il2cpp::vm::GlobalMetadata::GetCustomAttributeTypeToken(image, token);
 }
 
-std::tuple<void*, void*> il2cpp::vm::MetadataCache::GetCustomAttributeDataRange(const Il2CppImage* image, uint32_t token)
+il2cpp::metadata::CustomAttributeDataReader  il2cpp::vm::MetadataCache::GetCustomAttributeDataReader(const Il2CppImage* image, uint32_t token)
 {
-    return il2cpp::vm::GlobalMetadata::GetCustomAttributeDataRange(image, token);
+    return il2cpp::vm::GlobalMetadata::GetCustomAttributeDataReader(image, token);
+}
+
+il2cpp::metadata::CustomAttributeDataReader  il2cpp::vm::MetadataCache::GetCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle)
+{
+    return il2cpp::vm::GlobalMetadata::GetCustomAttributeDataReader(handle);
 }
 
 const Il2CppAssembly* il2cpp::vm::MetadataCache::GetReferencedAssembly(const Il2CppAssembly* assembly, int32_t referencedAssemblyTableIndex)
 {
     return il2cpp::vm::GlobalMetadata::GetReferencedAssembly(assembly, referencedAssemblyTableIndex, s_AssembliesTable, s_AssembliesCount);
-}
-
-CustomAttributesCache* il2cpp::vm::MetadataCache::GenerateCustomAttributesCache(Il2CppMetadataCustomAttributeHandle handle)
-{
-    return il2cpp::vm::GlobalMetadata::GenerateCustomAttributesCache(handle);
-}
-
-CustomAttributesCache* il2cpp::vm::MetadataCache::GenerateCustomAttributesCache(const Il2CppImage* image, uint32_t token)
-{
-    return il2cpp::vm::GlobalMetadata::GenerateCustomAttributesCache(image, token);
-}
-
-bool il2cpp::vm::MetadataCache::HasAttribute(Il2CppMetadataCustomAttributeHandle token, Il2CppClass* attribute)
-{
-    return il2cpp::vm::GlobalMetadata::HasAttribute(token, attribute);
-}
-
-bool il2cpp::vm::MetadataCache::HasAttribute(const Il2CppImage* image, uint32_t token, Il2CppClass* attribute)
-{
-    return il2cpp::vm::GlobalMetadata::HasAttribute(image, token, attribute);
 }
 
 void il2cpp::vm::MetadataCache::InitializeAllMethodMetadata()

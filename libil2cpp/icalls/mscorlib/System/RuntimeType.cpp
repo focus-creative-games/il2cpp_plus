@@ -1,29 +1,29 @@
 #include "il2cpp-config.h"
-
 #include "il2cpp-runtime-metadata.h"
-#include "RuntimeType.h"
-#include "Type.h"
-#include "metadata/GenericMetadata.h"
-#include "vm/Array.h"
-#include "vm/Type.h"
-#include "vm/Class.h"
-#include "vm/Field.h"
-#include "vm/MetadataCache.h"
-#include "vm/Method.h"
-#include "vm/String.h"
-#include "vm/GenericClass.h"
-#include "vm/Reflection.h"
-#include "vm/ClassInlines.h"
-#include "utils/Functional.h"
-#include "utils/dynamic_array.h"
-#include "utils/Il2CppHashSet.h"
-#include "utils/StringUtils.h"
 #include "il2cpp-api.h"
 #include "il2cpp-tabledefs.h"
 #include "mono-structs.h"
+
+#include "RuntimeType.h"
 #include "RuntimeTypeHandle.h"
+#include "Type.h"
+#include "metadata/GenericMetadata.h"
+#include "utils/Functional.h"
+#include "utils/Il2CppHashSet.h"
+#include "utils/StringUtils.h"
+#include "utils/dynamic_array.h"
 #include "vm-utils/VmStringUtils.h"
-#include <vm/Reflection.h>
+#include "vm/Array.h"
+#include "vm/Class.h"
+#include "vm/ClassInlines.h"
+#include "vm/Field.h"
+#include "vm/GenericClass.h"
+#include "vm/MetadataCache.h"
+#include "vm/Method.h"
+#include "vm/Reflection.h"
+#include "vm/Runtime.h"
+#include "vm/String.h"
+#include "vm/Type.h"
 
 #include <vector>
 #include <set>
@@ -1119,8 +1119,7 @@ namespace System
                 else if (vm::Class::IsInterface(targetMethod->klass))
                 {
                     // We found a default interface method
-
-                    if (targetMethod->methodPointer == NULL)
+                    if (targetMethod->flags & METHOD_ATTRIBUTE_ABSTRACT)
                     {
                         // The method was re-abstracted
                         member = NULL;

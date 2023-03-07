@@ -465,14 +465,15 @@ namespace vm
             assemblyNameStr += assemblyName.name;
             assemblyNameStr += ", Version=";
 
-            char buffer[16];
-            sprintf(buffer, "%d.", assemblyName.major);
+            const size_t bufferSize = 16;
+            char buffer[bufferSize];
+            snprintf(buffer, bufferSize, "%d.", assemblyName.major);
             assemblyNameStr += buffer;
-            sprintf(buffer, "%d.", assemblyName.minor);
+            snprintf(buffer, bufferSize, "%d.", assemblyName.minor);
             assemblyNameStr += buffer;
-            sprintf(buffer, "%d.", assemblyName.build);
+            snprintf(buffer, bufferSize, "%d.", assemblyName.build);
             assemblyNameStr += buffer;
-            sprintf(buffer, "%d", assemblyName.revision);
+            snprintf(buffer, bufferSize, "%d", assemblyName.revision);
             assemblyNameStr += buffer;
 
             if (!assemblyName.culture.empty())

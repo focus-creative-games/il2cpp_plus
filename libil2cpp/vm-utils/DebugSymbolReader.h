@@ -17,6 +17,7 @@ namespace utils
     public:
         static bool LoadDebugSymbols();
         static bool GetSourceLocation(void* nativeInsturctionPointer, SourceLocation& sourceLocation);
+        static bool AddStackFrames(void* nativeInsturctionPointer, std::vector<Il2CppStackFrameInfo>* stackFrames);
         static bool DebugSymbolsAvailable();
     };
 } /* namespace utils */

@@ -7,16 +7,6 @@
 
 extern "C"
 {
-    UnityPalErrorCode UnityPalGetLastError()
-    {
-        return il2cpp::os::Error::GetLastError();
-    }
-
-    void UnityPalSetLastError(UnityPalErrorCode code)
-    {
-        return il2cpp::os::Error::SetLastError(code);
-    }
-
     int32_t UnityPalSuccess(UnityPalErrorCode code)
     {
         return (int32_t)(code == il2cpp::os::kErrorCodeSuccess);

@@ -177,6 +177,11 @@ namespace utils
         return utf16name;
     }
 
+    void StringUtils::StringDelete(const char* str)
+    {
+        IL2CPP_FREE((void*)str);
+    }
+
     bool StringUtils::EndsWith(const std::string& string, const std::string& suffix)
     {
         const size_t stringLength = string.length();

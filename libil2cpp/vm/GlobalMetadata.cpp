@@ -62,8 +62,6 @@
 static int32_t s_MetadataImagesCount = 0;
 static Il2CppImageGlobalMetadata* s_MetadataImagesTable = NULL;
 
-static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2CppCustomAttributeDataRange* attrDataRange);
-static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2CppImageGlobalMetadata* image, CustomAttributeIndex index);
 static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppTypeDefinition* typeDefinition);
 static GenericParameterIndex GetIndexForGenericParameter(Il2CppMetadataGenericParameterHandle handle);
 static const MethodInfo* GetMethodInfoFromEncodedIndex(EncodedMethodIndex methodIndex);
@@ -78,7 +76,6 @@ static Il2CppString** s_StringLiteralTable = NULL;
 
 static il2cpp::utils::OnceFlag s_CustomAttributesOnceFlag;
 static int s_CustomAttributesCount;
-static CustomAttributesCache** s_CustomAttributesCaches;
 
 static const Il2CppCodeRegistration * s_GlobalMetadata_CodeRegistration;
 static const Il2CppMetadataRegistration * s_Il2CppMetadataRegistration;
@@ -468,7 +465,7 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
     // This must be the only read of *metadataPointer
     // This code has no locks and we need to ensure that we only read metadataPointer once
     // so we don't read it once as an encoded token and once as an initialized pointer
-    uintptr_t metadataValue = (uintptr_t)UnityPalReadPtrVal((intptr_t*)metadataPointer);
+    uintptr_t metadataValue = (uintptr_t)os::Atomic::ReadPtrVal((intptr_t*)metadataPointer);
 
     if (IsRuntimeMetadataInitialized(metadataValue))
         return (void*)metadataValue;
@@ -557,23 +554,23 @@ void il2cpp::vm::GlobalMetadata::InitializeWindowsRuntimeTypeNamesTables(Windows
 
 void il2cpp::vm::GlobalMetadata::InitializeUnresolvedSignatureTable(Il2CppUnresolvedSignatureMap& unresolvedSignatureMap)
 {
-    unresolvedSignatureMap.resize(s_GlobalMetadata_CodeRegistration->unresolvedVirtualCallCount);
+    unresolvedSignatureMap.resize(s_GlobalMetadata_CodeRegistration->unresolvedIndirectCallCount);
 
-    for (uint32_t i = 0; i < s_GlobalMetadata_CodeRegistration->unresolvedVirtualCallCount; ++i)
+    for (uint32_t i = 0; i < s_GlobalMetadata_CodeRegistration->unresolvedIndirectCallCount; ++i)
     {
-        const Il2CppMetadataRange* range = MetadataOffset<Il2CppMetadataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->unresolvedVirtualCallParameterRangesOffset, i);
+        const Il2CppMetadataRange* range = MetadataOffset<Il2CppMetadataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->unresolvedIndirectCallParameterRangesOffset, i);
         il2cpp::metadata::Il2CppSignature signature;
         signature.Count = range->length;
         signature.Types = (const Il2CppType**)MetadataMalloc(range->length * sizeof(Il2CppType*));
 
         for (int j = 0; j < range->length; ++j)
         {
-            TypeIndex typeIndex = *MetadataOffset<TypeIndex*>(s_GlobalMetadata, s_GlobalMetadataHeader->unresolvedVirtualCallParameterTypesOffset, range->start + j);
+            TypeIndex typeIndex = *MetadataOffset<TypeIndex*>(s_GlobalMetadata, s_GlobalMetadataHeader->unresolvedIndirectCallParameterTypesOffset, range->start + j);
             const Il2CppType* type = GetIl2CppTypeFromIndex(typeIndex);
             signature.Types[j] = type;
         }
 
-        unresolvedSignatureMap.insert(std::make_pair(signature, s_GlobalMetadata_CodeRegistration->unresolvedVirtualCallPointers[i]));
+        unresolvedSignatureMap.insert(std::make_pair(signature, i));
     }
 }
 
@@ -956,8 +953,6 @@ static void InitializeCustomAttributesCaches(void* param)
     {
         s_CustomAttributesCount += s_MetadataImagesTable[i].image->customAttributeCount;
     }
-
-    s_CustomAttributesCaches = (CustomAttributesCache**)IL2CPP_CALLOC(s_CustomAttributesCount, sizeof(CustomAttributesCache*));
 }
 
 static int CompareTokens(const void* pkey, const void* pelem)
@@ -1070,24 +1065,25 @@ static CustomAttributeIndex GetCustomAttributeIndex(const Il2CppCustomAttributeD
     return index;
 }
 
+static const Il2CppImage* GetCustomAttributeImageFromHandle(Il2CppMetadataCustomAttributeHandle handle)
+{
+    if (handle == NULL)
+        return NULL;
+
+    const Il2CppCustomAttributeDataRange *dataRange = reinterpret_cast<const Il2CppCustomAttributeDataRange*>(handle);
+
+    CustomAttributeIndex index = GetCustomAttributeIndex(dataRange);
+    const Il2CppImageGlobalMetadata* imageMetadata = GetImageForCustomAttributeIndex(index);
+    if (imageMetadata == NULL)
+        return NULL;
+
+    return imageMetadata->image;
+}
+
 static CustomAttributeIndex GetCustomAttributeIndex(const Il2CppImage* image, uint32_t token)
 {
     const Il2CppCustomAttributeDataRange* attrDataRange = reinterpret_cast<const Il2CppCustomAttributeDataRange*>(il2cpp::vm::GlobalMetadata::GetCustomAttributeTypeToken(image, token));
     return GetCustomAttributeIndex(attrDataRange);
-}
-
-static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2CppCustomAttributeDataRange* attrDataRange)
-{
-    if (attrDataRange == NULL)
-        return NULL;
-
-    CustomAttributeIndex index = GetCustomAttributeIndex(attrDataRange);
-    return GenerateCustomAttributesCacheInternal(GetImageForCustomAttributeIndex(index), index);
-}
-
-CustomAttributesCache* il2cpp::vm::GlobalMetadata::GenerateCustomAttributesCache(Il2CppMetadataCustomAttributeHandle handle)
-{
-    return GenerateCustomAttributesCacheInternal(reinterpret_cast<const Il2CppCustomAttributeDataRange*>(handle));
 }
 
 Il2CppMetadataCustomAttributeHandle il2cpp::vm::GlobalMetadata::GetCustomAttributeTypeToken(const Il2CppImage* image, uint32_t token)
@@ -1102,59 +1098,43 @@ Il2CppMetadataCustomAttributeHandle il2cpp::vm::GlobalMetadata::GetCustomAttribu
 
     const Il2CppImageGlobalMetadata* imageMetadata = GetImageMetadata(image);
     const Il2CppCustomAttributeDataRange* res = (const Il2CppCustomAttributeDataRange*)bsearch(&key, attributeTypeRange + imageMetadata->customAttributeStart, image->customAttributeCount, sizeof(Il2CppCustomAttributeDataRange), CompareTokens);
-
     return reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(res);
 }
 
-std::tuple<void*, void*> il2cpp::vm::GlobalMetadata::GetCustomAttributeDataRange(const Il2CppImage* image, uint32_t token)
+static il2cpp::metadata::CustomAttributeDataReader CreateCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle, const Il2CppImage* image)
 {
     if (hybridclr::metadata::IsInterpreterImage(image))
     {
         return hybridclr::metadata::MetadataModule::GetCustomAttributeDataRange(image, token);
     }
     const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, 0);
+    if (handle == NULL)
+        return il2cpp::metadata::CustomAttributeDataReader::Empty();
     Il2CppCustomAttributeDataRange key = {token, 0};
 
-    const Il2CppImageGlobalMetadata* imageMetadata = GetImageMetadata(image);
-    const Il2CppCustomAttributeDataRange* res = (const Il2CppCustomAttributeDataRange*)bsearch(&key, attributeTypeRange + imageMetadata->customAttributeStart, image->customAttributeCount, sizeof(Il2CppCustomAttributeDataRange), CompareTokens);
-    if (res == NULL)
-        return std::make_tuple<void*, void*>(NULL, NULL);
+    Il2CppCustomAttributeDataRange* range = (Il2CppCustomAttributeDataRange*)handle;
+    const Il2CppCustomAttributeDataRange* next = range + 1;
 
-    const Il2CppCustomAttributeDataRange* next = res + 1;
+    void* start = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, range->startOffset);
+    void* end = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, next->startOffset);
 
-    return std::make_tuple<void*, void*>(
-        MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, res->startOffset),
-        MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, next->startOffset)
-    );
+    return il2cpp::metadata::CustomAttributeDataReader(image, start, end);
 }
 
-CustomAttributesCache* il2cpp::vm::GlobalMetadata::GenerateCustomAttributesCache(const Il2CppImage* image, uint32_t token)
+il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCustomAttributeDataReader(const Il2CppImage* image, uint32_t token)
 {
-    return GenerateCustomAttributesCacheInternal(GetImageMetadata(image), GetCustomAttributeIndex(image, token));
+    return CreateCustomAttributeDataReader(GetCustomAttributeTypeToken(image, token), image);
 }
 
-static bool HasAttributeFromTypeRange(const Il2CppImage* image, const Il2CppCustomAttributeDataRange* dataRange, Il2CppClass* attribute)
+il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle)
 {
     if (hybridclr::metadata::IsInterpreterIndex(dataRange->startOffset))
     {
         return hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(dataRange->startOffset)->HasAttribute(dataRange, attribute);
     }
 
-    void* start = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, dataRange->startOffset);
-    void* end = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, (dataRange + 1)->startOffset);
 
-    il2cpp::metadata::CustomAttributeDataReader reader(start, end);
-
-    const MethodInfo* ctor;
-    il2cpp::metadata::CustomAttributeCtorIterator iter = reader.GetCtorIterator();
-    while (reader.IterateAttributeCtors(image, &ctor, &iter))
-    {
-        Il2CppClass* klass = ctor->klass;
-        if (il2cpp::vm::Class::HasParent(klass, attribute) || (il2cpp::vm::Class::IsInterface(attribute) && il2cpp::vm::Class::IsAssignableFrom(attribute, klass)))
-            return true;
-    }
-
-    return false;
+    return CreateCustomAttributeDataReader(handle, GetCustomAttributeImageFromHandle(handle));
 }
 
 bool il2cpp::vm::GlobalMetadata::HasAttribute(Il2CppMetadataCustomAttributeHandle token, Il2CppClass* attribute)

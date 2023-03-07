@@ -516,9 +516,9 @@ namespace InteropServices
         if (utils::MarshalingUtils::MarshalFreeStruct(reinterpret_cast<void*>(ptr), type->interopData))
             return;
 
-        if (type->is_generic)
+        if (type->is_generic || type->generic_class != NULL)
         {
-            vm::Exception::Raise(vm::Exception::GetArgumentException("structureType", "The specified type must not be an instance of a generic type."));
+            vm::Exception::Raise(vm::Exception::GetArgumentException("structureType", "The specified type must not be a generic type definition."));
         }
 
         // Enums are blittable, but they don't have layout information, therefore Marshal.DestroyStructure is supposed to throw
@@ -610,6 +610,14 @@ namespace InteropServices
                         offset = RoundUpToMultiple(offset, type->packingSize == 0 ? marshaledFieldAlignment : std::min((int)type->packingSize, marshaledFieldAlignment));
                     }
                 }
+                else
+                {
+                    // If this is the first field, it might have a non-zero offset, as it could be in a type
+                    // with an explicit layout. So calculate it offset based on the distance it is from the
+                    // end of the object header.
+                    offset = field->offset - sizeof(Il2CppObject);
+                }
+
                 previousField = field;
 
                 if (fieldNameToFind == vm::Field::GetName(field))

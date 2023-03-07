@@ -8,7 +8,11 @@
 #include "utils/MemoryMappedFile.h"
 #include "utils/PathUtils.h"
 #include "utils/StringView.h"
+#include "utils/Runtime.h"
 #include "vm-utils/DebugSymbolReader.h"
+#include "vm/GlobalMetadata.h"
+#include "vm/Method.h"
+#include "vm/Reflection.h"
 #include <string>
 
 #if IL2CPP_TARGET_ARM64E
@@ -33,8 +37,10 @@ namespace utils
     struct usymliteLine
     {
         uint64_t address;
+        uint32_t methodIndex;
         uint32_t fileName; // Reference to the managed source file name in the string table
         uint32_t line; // Managed line number
+        uint32_t parent;
     };
 
     struct Reader
@@ -54,7 +60,7 @@ namespace utils
     static Reader s_usym = { 0 };
 
     const int headerSize = 24;
-    const int lineSize = 16;
+    const int lineSize = 24;
     const uint32_t magicUsymlite = 0x2D6D7973; // "sym-"
     const uint32_t noLine = 0xFFFFFFFF;
 
@@ -80,6 +86,14 @@ namespace utils
             }
         }
 
+        uint64_t foundAddr = s_usym.lines[head].address;
+
+        // Find the last entry with this address
+        while (head + 1 < s_usym.header.lineCount && s_usym.lines[head + 1].address == foundAddr)
+        {
+            head += 1;
+        }
+
         return s_usym.lines[head];
     }
 
@@ -89,32 +103,65 @@ namespace utils
         return s_usym.strings + index;
     }
 
+#define IL2CPP_DEBUG_DUMP_USYM_DATA 0
+
+#if IL2CPP_DEBUG_DUMP_USYM_DATA
+    static void DumpUsymData()
+    {
+        // You may want to change this to be a full path so it is easy to locate.
+        FILE* dumpFile = fopen("usymData.txt", "w");
+        uint64_t imageBase = (uint64_t)os::Image::GetImageBase();
+        for (uint32_t i = 0; i < s_usym.header.lineCount; i++)
+        {
+            if (s_usym.lines[i].methodIndex != noLine)
+            {
+                uint64_t address = s_usym.lines[i].address;
+                void* actualAddress = (void*)(s_usym.lines[i].address + imageBase);
+                const MethodInfo* methodInfo = vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(s_usym.lines[i].methodIndex);
+                uint32_t methodIndex = s_usym.lines[i].methodIndex;
+                const char* filePath = GetString(s_usym.lines[i].fileName);
+                uint32_t sourceCodeLineNumber = s_usym.lines[i].line;
+                uint32_t parent = s_usym.lines[i].parent;
+
+                if (methodInfo != NULL)
+                    fprintf(dumpFile, "%d [%p, %llu] Method Index: %d %s %s(%d) parent: %d\n", i, actualAddress, address, methodIndex, vm::Method::GetFullName(methodInfo).c_str(), filePath, sourceCodeLineNumber, parent);
+            }
+        }
+        fclose(dumpFile);
+    }
+
+#endif
+
     bool DebugSymbolReader::LoadDebugSymbols()
     {
         int error = 0;
         std::string symbolsPath;
+        const StringView<char> symbolFileName = "il2cpp.usym";
+
+        // First, look for the symbol file next to the executable.
         std::string applicationFolder = os::Path::GetApplicationFolder();
         if (!applicationFolder.empty())
+            symbolsPath = PathUtils::Combine(applicationFolder, symbolFileName);
+
+        os::FileHandle* symbolsFileHandle = NULL;
+        if (!symbolsPath.empty())
+            symbolsFileHandle = os::File::Open(symbolsPath.c_str(), kFileModeOpen, kFileAccessRead, kFileShareRead, kFileOptionsNone, &error);
+
+        // If we don't have a symbol path yet or there was some error opening the file next to the executable, try to
+        // look in the data directory. For some platforms, the packaging won't allow the file to live next to the
+        // executable.
+        if (symbolsPath.empty() || error != 0)
         {
-            symbolsPath = PathUtils::Combine(applicationFolder, StringView<char>("il2cpp.usym"));
-        }
-        else
-        {
-            return false;
-        }
-
-        os::FileHandle *handle =
-            os::File::Open(symbolsPath.c_str(), kFileModeOpen, kFileAccessRead, kFileShareRead, kFileOptionsNone, &error);
-
-        if (error != 0)
-        {
-            return false;
+            symbolsPath = PathUtils::Combine(utils::Runtime::GetDataDir(), symbolFileName);
+            symbolsFileHandle = os::File::Open(symbolsPath.c_str(), kFileModeOpen, kFileAccessRead, kFileShareRead, kFileOptionsNone, &error);
+            if (error != 0)
+                return false;
         }
 
-        s_usym.debugSymbolData = utils::MemoryMappedFile::Map(handle);
-        int64_t length = os::File::GetLength(handle, &error);
+        s_usym.debugSymbolData = utils::MemoryMappedFile::Map(symbolsFileHandle);
+        int64_t length = os::File::GetLength(symbolsFileHandle, &error);
 
-        os::File::Close(handle, &error);
+        os::File::Close(symbolsFileHandle, &error);
         if (error != 0)
         {
             utils::MemoryMappedFile::Unmap(s_usym.debugSymbolData);
@@ -124,7 +171,7 @@ namespace utils
 
         s_usym.header = *(usymliteHeader *)((char *)s_usym.debugSymbolData);
 
-        if (s_usym.header.magic != magicUsymlite)
+        if (s_usym.header.magic != magicUsymlite || s_usym.header.lineCount == 0)
         {
             utils::MemoryMappedFile::Unmap(s_usym.debugSymbolData);
             s_usym.debugSymbolData = NULL;
@@ -139,10 +186,10 @@ namespace utils
         s_usym.strings = ((const char *)s_usym.debugSymbolData + stringOffset);
 
 #if IL2CPP_ENABLE_NATIVE_INSTRUCTION_POINTER_EMISSION
-        const char* our_uuid = os::Image::GetImageUUID();
+        char* our_uuid = os::Image::GetImageUUID();
         s_usym.uuid = std::string(GetString(s_usym.header.id));
 
-        if (s_usym.uuid != std::string(our_uuid))
+        if (our_uuid == NULL || s_usym.uuid != our_uuid)
         {
             // UUID mismatch means this usymfile is not for this program
             il2cpp::utils::Logging::Write("Ignoring symbol file due to UUID mismatch. File contains %s but expected %s.", s_usym.uuid.c_str(), our_uuid);
@@ -153,7 +200,7 @@ namespace utils
             return false;
         }
 
-        IL2CPP_FREE((void*)our_uuid);
+        IL2CPP_FREE(our_uuid);
 #endif
 
         s_usym.os = std::string(GetString(s_usym.header.os));
@@ -162,10 +209,30 @@ namespace utils
         s_usym.firstLineAddress = s_usym.lines[0].address;
         s_usym.lastLineAddress = s_usym.lines[s_usym.header.lineCount - 1].address;
 
+#if IL2CPP_DEBUG_DUMP_USYM_DATA
+        DumpUsymData();
+#endif
         return true;
     }
 
-    bool DebugSymbolReader::GetSourceLocation(void *nativeInstructionPointer, SourceLocation &sourceLocation)
+    void InsertStackFrame(usymliteLine line, std::vector<Il2CppStackFrameInfo>* stackFrames)
+    {
+        if (line.parent != noLine)
+        {
+            InsertStackFrame(s_usym.lines[line.parent], stackFrames);
+        }
+
+        const MethodInfo* methodInfo = vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(line.methodIndex);
+
+        Il2CppStackFrameInfo frameInfo = { 0 };
+        frameInfo.method = methodInfo;
+        frameInfo.raw_ip = (uintptr_t)line.address;
+        frameInfo.filePath = GetString(line.fileName);
+        frameInfo.sourceCodeLineNumber = line.line;
+        stackFrames->push_back(frameInfo);
+    }
+
+    bool DebugSymbolReader::AddStackFrames(void* nativeInstructionPointer, std::vector<Il2CppStackFrameInfo>* stackFrames)
     {
         if (s_usym.debugSymbolData == NULL || nativeInstructionPointer == NULL)
         {
@@ -201,8 +268,7 @@ namespace utils
             return false;
         }
 
-        sourceLocation.lineNumber = line.line;
-        sourceLocation.filePath = GetString(line.fileName);
+        InsertStackFrame(line, stackFrames);
 
         return true;
     }

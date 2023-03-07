@@ -9,7 +9,7 @@ namespace il2cpp
 namespace utils
 {
     const size_t kPageSize = IL2CPP_PAGE_SIZE;
-    const size_t kDefaultRegionSize = 16 * 1024;
+    const size_t kDefaultRegionSize = 64 * 1024;
 // by making all allocations a multiple of this value, we ensure the next
 // allocation will always be aligned to this value
     const size_t kMemoryAlignment = 8;
@@ -73,13 +73,28 @@ namespace utils
 
     MemoryPool::Region* MemoryPool::AddRegion(size_t size)
     {
-        Region* region = (Region*)IL2CPP_MALLOC(sizeof(Region));
-        size_t allocationSize = std::max(kDefaultRegionSize, MakeMultipleOf(size, kPageSize));
-        region->start = region->current = (char*)IL2CPP_MALLOC(allocationSize);
-        region->size = region->free = allocationSize;
-        m_Regions.push_back(region);
+        Region* newRegion = (Region*)IL2CPP_MALLOC(sizeof(Region));
+        Region* lastFreeRegion = m_Regions.size() > 0 ? m_Regions.back() : NULL;
+        size_t allocationSize;
 
-        return region;
+        if (lastFreeRegion != NULL && lastFreeRegion->free >= kPageSize)
+        {
+            allocationSize = MakeMultipleOf(size, kPageSize);
+
+            m_Regions.pop_back();
+            m_Regions.push_back(newRegion);
+            m_Regions.push_back(lastFreeRegion);
+        }
+        else
+        {
+            allocationSize = std::max(kDefaultRegionSize, MakeMultipleOf(size, kPageSize));
+            m_Regions.push_back(newRegion);
+        }
+
+        newRegion->start = newRegion->current = (char*)IL2CPP_MALLOC(allocationSize);
+        newRegion->size = newRegion->free = allocationSize;
+
+        return newRegion;
     }
 }
 }

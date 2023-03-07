@@ -1,6 +1,6 @@
 #pragma once
 
-#include "il2cpp-codegen-common-small.h"
+#include "il2cpp-codegen-common.h"
 #include "il2cpp-object-internals.h"
 #include "il2cpp-debug-metadata.h"
 #include "gc/GarbageCollector.h"
@@ -23,6 +23,7 @@
 #include "utils/MemoryUtils.h"
 #include "utils/StringView.h"
 #include <string>
+#include <cstdlib>
 
 struct Exception_t;
 struct Delegate_t;

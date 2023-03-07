@@ -13,11 +13,6 @@ extern "C"
         return Allocator::CopyToAllocatedStringBuffer(il2cpp::os::Environment::GetOsUserName());
     }
 
-    char* UnityPalGetMachineName()
-    {
-        return Allocator::CopyToAllocatedStringBuffer(il2cpp::os::Environment::GetMachineName());
-    }
-
     char* UnityPalGetEnvironmentVariable(const char* name)
     {
         std::string name_string = name;

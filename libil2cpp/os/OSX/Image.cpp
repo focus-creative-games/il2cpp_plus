@@ -49,7 +49,7 @@ namespace Image
                 gameAssemblyImageIndex = i;
                 break;
             }
-            else if (strcmp(imageName, &path[0]) == 0)
+            else if (strstr(imageName, &path[0]) != NULL)
             {
                 executableImageIndex = i;
             }
@@ -141,7 +141,11 @@ namespace Image
 #if IL2CPP_ENABLE_NATIVE_INSTRUCTION_POINTER_EMISSION
     char* GetImageUUID()
     {
-        const struct mach_header_64* header = (mach_header_64*)_dyld_get_image_header(GetImageIndex());
+        int imageIndex = GetImageIndex();
+        if (imageIndex == -1)
+            return NULL;
+
+        const struct mach_header_64* header = (mach_header_64*)_dyld_get_image_header(imageIndex);
         const uint8_t *command = (const uint8_t *)(header + 1);
 
         for (uint32_t idx = 0; idx < header->ncmds; ++idx)

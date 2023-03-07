@@ -10,6 +10,7 @@ extern "C"
     // Items needed by mscorlib
     IL2CPP_EXPORT int32_t SystemNative_ConvertErrorPlatformToPal(int32_t platformErrno);
     IL2CPP_EXPORT const char* SystemNative_StrErrorR(int32_t platformErrno, char* buffer, int32_t bufferSize);
+    IL2CPP_EXPORT int32_t SystemNative_ConvertErrorPalToPlatform(int32_t error);
 }
 
 /**

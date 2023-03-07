@@ -188,12 +188,6 @@ struct FieldInfo;
 struct Il2CppObject;
 struct MemberInfo;
 
-typedef struct CustomAttributesCache
-{
-    int count;
-    Il2CppObject** attributes;
-} CustomAttributesCache;
-
 #ifndef THREAD_STATIC_FIELD_OFFSET
 #define THREAD_STATIC_FIELD_OFFSET -1
 #endif
@@ -427,6 +421,7 @@ typedef struct Il2CppClass
     // Remaining fields are always valid except where noted
     Il2CppMetadataGenericContainerHandle genericContainerHandle;
     uint32_t instance_size; // valid when size_inited is true
+    uint32_t stack_slot_size; // valid when size_inited is true
     uint32_t actualSize;
     uint32_t element_size;
     int32_t native_size;
@@ -618,7 +613,10 @@ typedef struct Il2CppCodeRegistration
     uint32_t invokerPointersCount;
     const InvokerMethod* invokerPointers;
     uint32_t unresolvedVirtualCallCount;
+    uint32_t unresolvedIndirectCallCount;
     const Il2CppMethodPointer* unresolvedVirtualCallPointers;
+    const Il2CppMethodPointer* unresolvedInstanceCallPointers;
+    const Il2CppMethodPointer* unresolvedStaticCallPointers;
     uint32_t interopDataCount;
     Il2CppInteropData* interopData;
     uint32_t windowsRuntimeFactoryCount;
