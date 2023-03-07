@@ -213,19 +213,15 @@ namespace vm
 
             if (method != NULL)
             {
-                Il2CppStackFrameInfo frameInfo = { 0 };
-                frameInfo.method = method;
-                frameInfo.raw_ip = reinterpret_cast<uintptr_t>(frame) - reinterpret_cast<uintptr_t>(os::Image::GetImageBase());
+                bool frames_added = il2cpp::utils::DebugSymbolReader::AddStackFrames(reinterpret_cast<void*>(frame), stackFrames);
 
-                il2cpp::utils::SourceLocation s;
-                bool symbol_res = il2cpp::utils::DebugSymbolReader::GetSourceLocation(reinterpret_cast<void*>(frame), s);
-                if (symbol_res)
+                if (!frames_added)
                 {
-                    frameInfo.filePath = s.filePath;
-                    frameInfo.sourceCodeLineNumber = s.lineNumber;
+                    Il2CppStackFrameInfo frameInfo = { 0 };
+                    frameInfo.method = method;
+                    frameInfo.raw_ip = reinterpret_cast<uintptr_t>(frame) - reinterpret_cast<uintptr_t>(os::Image::GetImageBase());
+                    stackFrames->push_back(frameInfo);
                 }
-
-                stackFrames->push_back(frameInfo);
             }
 
             return true;

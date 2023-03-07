@@ -15,11 +15,6 @@ extern "C"
         il2cpp::os::Locale::Initialize();
     }
 
-    void UnityPalLocaleUnInitialize()
-    {
-        il2cpp::os::Locale::UnInitialize();
-    }
-
     char* UnityPalGetLocale()
     {
         return Allocator::CopyToAllocatedStringBuffer(il2cpp::os::Locale::GetLocale());

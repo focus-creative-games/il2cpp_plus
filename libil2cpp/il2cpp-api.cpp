@@ -1302,6 +1302,15 @@ char* il2cpp_type_get_assembly_qualified_name(const Il2CppType * type)
     return buffer;
 }
 
+char* il2cpp_type_get_reflection_name(const Il2CppType *type)
+{
+    std::string name = Type::GetName(type, IL2CPP_TYPE_NAME_FORMAT_REFLECTION);
+    char* buffer = static_cast<char*>(il2cpp_alloc(name.length() + 1));
+    memcpy(buffer, name.c_str(), name.length() + 1);
+
+    return buffer;
+}
+
 bool il2cpp_type_is_byref(const Il2CppType *type)
 {
     return type->byref;
@@ -1426,9 +1435,14 @@ Il2CppCustomAttrInfo* il2cpp_custom_attrs_from_method(const MethodInfo * method)
     return (Il2CppCustomAttrInfo*)(MetadataCache::GetCustomAttributeTypeToken(method->klass->image, method->token));
 }
 
+Il2CppCustomAttrInfo* il2cpp_custom_attrs_from_field(const FieldInfo * field)
+{
+    return (Il2CppCustomAttrInfo*)(MetadataCache::GetCustomAttributeTypeToken(field->parent->image, field->token));
+}
+
 bool il2cpp_custom_attrs_has_attr(Il2CppCustomAttrInfo *ainfo, Il2CppClass *attr_klass)
 {
-    return MetadataCache::HasAttribute(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo), attr_klass);
+    return Reflection::HasAttribute(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo), attr_klass);
 }
 
 Il2CppObject* il2cpp_custom_attrs_get_attr(Il2CppCustomAttrInfo *ainfo, Il2CppClass *attr_klass)

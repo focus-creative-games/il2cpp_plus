@@ -6,6 +6,7 @@
 #include "StackTrace.h"
 #include "il2cpp-class-internals.h"
 #include "il2cpp-config.h"
+#include "metadata/CustomAttributeCreator.h"
 #include "os/Mutex.h"
 #include "utils/dynamic_array.h"
 #include "vm-utils/MethodDefinitionKey.h"
@@ -62,12 +63,9 @@ namespace vm
         static Il2CppClass* GetNestedTypeFromOffset(const Il2CppClass* klass, TypeNestedTypeIndex offset);
         static Il2CppMetadataTypeHandle GetNestedTypes(Il2CppMetadataTypeHandle handle, void** iter);
 
-        static CustomAttributesCache* GenerateCustomAttributesCache(const Il2CppImage* image, uint32_t token);
-        static CustomAttributesCache* GenerateCustomAttributesCache(Il2CppMetadataCustomAttributeHandle handle);
         static Il2CppMetadataCustomAttributeHandle GetCustomAttributeTypeToken(const Il2CppImage* image, uint32_t token);
-        static std::tuple<void*, void*> GetCustomAttributeDataRange(const Il2CppImage* image, uint32_t token);
-        static bool HasAttribute(Il2CppMetadataCustomAttributeHandle token, Il2CppClass* attribute);
-        static bool HasAttribute(const Il2CppImage* image, uint32_t token, Il2CppClass* attribute);
+        static il2cpp::metadata::CustomAttributeDataReader GetCustomAttributeDataReader(const Il2CppImage* image, uint32_t token);
+        static il2cpp::metadata::CustomAttributeDataReader GetCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle);
 
         static const MethodInfo* GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle);
         static const MethodInfo* GetMethodInfoFromVTableSlot(const Il2CppClass* klass, int32_t vTableSlot);

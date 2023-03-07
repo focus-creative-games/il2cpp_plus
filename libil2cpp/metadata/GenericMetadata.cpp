@@ -267,6 +267,7 @@ namespace metadata
                     break;
                 case IL2CPP_RGCTX_DATA_CLASS:
                     dataValues[rgctxIndex].klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true));
+                    Class::InitSizeAndFieldLayoutLocked(dataValues[rgctxIndex].klass, lock);
                     break;
                 case IL2CPP_RGCTX_DATA_METHOD:
                     dataValues[rgctxIndex].method = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromRgctxDefinition(definitionData), context));

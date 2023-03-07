@@ -30,7 +30,7 @@
 #include <sys/poll.h>
 #include <sys/stat.h>
 
-#if IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_LUMIN || IL2CPP_TARGET_JAVASCRIPT
+#if IL2CPP_SUPPORT_SEND_FILE && (IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID)
 #include <sys/sendfile.h>
 #endif
 
@@ -516,7 +516,12 @@ namespace os
         // This seems to be unnecessary though, as we can use PF_UNSPEC in all cases, and getaddrinfo works.
         hints.ai_family = PF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
+#if IL2CPP_TARGET_QNX
+        // there is no AI_ADDRCONFIG flag on QNX:
+        hints.ai_flags = AI_CANONNAME;
+#else
         hints.ai_flags = AI_CANONNAME | AI_ADDRCONFIG;
+#endif
 
         if (*hostname && getaddrinfo(hostname, NULL, &hints, &info) == -1)
             return kWaitStatusFailure;

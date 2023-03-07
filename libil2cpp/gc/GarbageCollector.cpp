@@ -114,9 +114,19 @@ namespace gc
         return s_FinalizerThreadObject == thread;
     }
 
+    bool GarbageCollector::IsFinalizerInternalThread(Il2CppInternalThread *thread)
+    {
+        return s_FinalizerThreadObject->GetInternalThread() == thread;
+    }
+
 #else
 
     bool GarbageCollector::IsFinalizerThread(Il2CppThread *thread)
+    {
+        return false;
+    }
+
+    bool GarbageCollector::IsFinalizerInternalThread(Il2CppInternalThread *thread)
     {
         return false;
     }

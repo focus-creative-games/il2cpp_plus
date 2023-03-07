@@ -17,6 +17,7 @@ namespace vm
         static void Wait(Il2CppObject* object);
         static bool TryWait(Il2CppObject* object, uint32_t timeout);
         static bool IsAcquired(Il2CppObject* object);
+        static bool IsOwnedByCurrentThread(Il2CppObject* object);
     };
 
 #if !IL2CPP_SUPPORT_THREADS
@@ -52,6 +53,11 @@ namespace vm
     }
 
     inline bool Monitor::IsAcquired(Il2CppObject* object)
+    {
+        return true;
+    }
+
+    inline bool Monitor::IsOwnedByCurrentThread(Il2CppObject* object)
     {
         return true;
     }

@@ -14,4 +14,8 @@ extern "C"
     IL2CPP_EXPORT int32_t Flush(intptr_t zstream);
     IL2CPP_EXPORT int32_t ReadZStream(intptr_t zstream, intptr_t buffer, int32_t length);
     IL2CPP_EXPORT int32_t WriteZStream(intptr_t zstream, intptr_t buffer, int32_t length);
+
+    IL2CPP_EXPORT extern intptr_t CreateNLSocket();
+    IL2CPP_EXPORT extern int32_t ReadEvents(intptr_t sock, intptr_t buffer, int32_t count, int32_t size);
+    IL2CPP_EXPORT extern intptr_t CloseNLSocket(intptr_t sock);
 }

@@ -16,7 +16,6 @@
 
 #include "ThreadImpl.h"
 #include "PosixHelpers.h"
-#include "os/Mutex.h"
 
 namespace il2cpp
 {
@@ -38,13 +37,12 @@ namespace os
         , m_StartArg(NULL)
         , m_CurrentWaitObject(NULL)
         , m_StackSize(IL2CPP_DEFAULT_STACK_SIZE)
+        , m_ConditionSemaphore(1)
     {
-        pthread_mutex_init(&m_PendingAPCsMutex, NULL);
     }
 
     ThreadImpl::~ThreadImpl()
     {
-        pthread_mutex_destroy(&m_PendingAPCsMutex);
     }
 
     ErrorCode ThreadImpl::Run(Thread::StartFunc func, void* arg, int64_t affinityMask)
@@ -140,7 +138,7 @@ namespace os
 
 #if IL2CPP_TARGET_DARWIN
         pthread_setname_np(name);
-#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_LUMIN || IL2CPP_TARGET_ANDROID || IL2CPP_ENABLE_PLATFORM_THREAD_RENAME
+#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_ENABLE_PLATFORM_THREAD_RENAME
         if (pthread_setname_np(m_Handle, name) == ERANGE)
         {
             char buf[16]; // TASK_COMM_LEN=16
@@ -196,22 +194,22 @@ namespace os
 
         // Put on queue.
         {
-            pthread_mutex_lock(&m_PendingAPCsMutex);
+            m_PendingAPCsMutex.Acquire();
             m_PendingAPCs.push_back(APCRequest(function, context));
-            pthread_mutex_unlock(&m_PendingAPCsMutex);
+            m_PendingAPCsMutex.Release();
         }
 
-        // Interrupt an ongoing wait.
-        posix::AutoLockWaitObjectDeletion lock;
-        posix::PosixWaitObject* waitObject = m_CurrentWaitObject;
-        if (waitObject)
-            waitObject->InterruptWait();
+        // Interrupt an ongoing wait, only interrupt if we have an object waiting
+        if (m_CurrentWaitObject.load())
+        {
+            m_ConditionSemaphore.Release(1);
+        }
     }
 
     void ThreadImpl::CheckForUserAPCAndHandle()
     {
         ASSERT_CALLED_ON_CURRENT_THREAD;
-        pthread_mutex_lock(&m_PendingAPCsMutex);
+        m_PendingAPCsMutex.Acquire();
 
         while (!m_PendingAPCs.empty())
         {
@@ -224,19 +222,19 @@ namespace os
             // Release mutex while we call the function so that we don't deadlock
             // if the function starts waiting on a thread that tries queuing an APC
             // on us.
-            pthread_mutex_unlock(&m_PendingAPCsMutex);
+            m_PendingAPCsMutex.Release();
 
             // Call function.
             apcRequest.callback(apcRequest.context);
 
             // Re-acquire mutex.
-            pthread_mutex_lock(&m_PendingAPCsMutex);
+            m_PendingAPCsMutex.Acquire();
         }
 
-        pthread_mutex_unlock(&m_PendingAPCsMutex);
+        m_PendingAPCsMutex.Release();
     }
 
-    void ThreadImpl::SetWaitObject(posix::PosixWaitObject* waitObject)
+    void ThreadImpl::SetWaitObject(WaitObject* waitObject)
     {
         // Cannot set wait objects on threads other than the current thread.
         ASSERT_CALLED_ON_CURRENT_THREAD;

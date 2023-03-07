@@ -315,7 +315,7 @@ namespace metadata
 
                 size_t vtableIndex = klass->interfaceOffsets[i].offset + iter->interfaceMethodDefinition->slot;
                 klass->vtable[vtableIndex].method = arrayMethod;
-                klass->vtable[vtableIndex].methodPtr = il2cpp::vm::Method::GetVirtualCallMethodPointer(arrayMethod);
+                klass->vtable[vtableIndex].methodPtr = arrayMethod->virtualMethodPointer;
             }
         }
     }
@@ -527,6 +527,7 @@ namespace metadata
         klass->rank = rank;
 
         klass->instance_size = Class::GetInstanceSize(arrayClass);
+        klass->stack_slot_size = sizeof(void*);
         klass->vtable_count = static_cast<uint16_t>(slots);
 
         // need this before we access the size or has_references

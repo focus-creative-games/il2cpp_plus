@@ -96,19 +96,23 @@ static ComPtr<winrt_interfaces::IDispatcherQueueStatics> GetDispatcherQueueStati
 
 #endif
 
+#if !IL2CPP_TARGET_WINDOWS_DESKTOP
+ComPtr<ABI::Windows::UI::Core::ICoreWindowStatic> s_CoreWindowStatics;
+#endif
+
+#if !IL2CPP_TARGET_XBOXONE
+ComPtr<winrt_interfaces::IDispatcherQueueStatics> s_DispatcherQueueStatics;
+#endif
+
 Il2CppObject* SynchronizationContext::GetForCurrentThread()
 {
     HRESULT hr;
 
 #if !IL2CPP_TARGET_WINDOWS_DESKTOP
-    ComPtr<ABI::Windows::UI::Core::ICoreWindowStatic> coreWindowStatics;
-
-    static_assert(LINK_TO_WINDOWSRUNTIME_LIBS, "RoGetActivationFactory and HStringReference can only be used directly if we link to WindowsRuntime libraries");
-    hr = RoGetActivationFactory(HStringReference(L"Windows.UI.Core.CoreWindow").Get(), __uuidof(coreWindowStatics), &coreWindowStatics);
-    if (SUCCEEDED(hr))
+    if (s_CoreWindowStatics != nullptr)
     {
         ComPtr<ABI::Windows::UI::Core::ICoreWindow> currentThreadWindow;
-        hr = coreWindowStatics->GetForCurrentThread(&currentThreadWindow);
+        hr = s_CoreWindowStatics->GetForCurrentThread(&currentThreadWindow);
         if (SUCCEEDED(hr) && currentThreadWindow != nullptr)
         {
             ComPtr<ABI::Windows::UI::Core::ICoreDispatcher> dispatcher;
@@ -120,11 +124,10 @@ Il2CppObject* SynchronizationContext::GetForCurrentThread()
 #endif
 
 #if !IL2CPP_TARGET_XBOXONE
-    ComPtr<winrt_interfaces::IDispatcherQueueStatics> dispatcherQueueStatics = GetDispatcherQueueStatics();
-    if (dispatcherQueueStatics != nullptr)
+    if (s_DispatcherQueueStatics != nullptr)
     {
         ComPtr<winrt_interfaces::IDispatcherQueue> dispatcherQueue;
-        hr = dispatcherQueueStatics->GetForCurrentThread(&dispatcherQueue);
+        hr = s_DispatcherQueueStatics->GetForCurrentThread(&dispatcherQueue);
         if (SUCCEEDED(hr) && dispatcherQueue != nullptr)
             return vm::RCW::GetOrCreateFromIInspectable(reinterpret_cast<Il2CppIInspectable*>(dispatcherQueue.Get()), il2cpp_defaults.il2cpp_com_object_class);
     }
@@ -168,6 +171,29 @@ void SynchronizationContext::Post(Il2CppObject* context, SynchronizationContextC
         }).Get(), &ignoredResult);
         vm::Exception::RaiseIfFailed(hr, false);
     }
+#endif
+}
+
+void SynchronizationContext::Initialize()
+{
+#if !IL2CPP_TARGET_WINDOWS_DESKTOP
+    static_assert(LINK_TO_WINDOWSRUNTIME_LIBS, "RoGetActivationFactory and HStringReference can only be used directly if we link to WindowsRuntime libraries");
+    RoGetActivationFactory(HStringReference(L"Windows.UI.Core.CoreWindow").Get(), __uuidof(s_CoreWindowStatics), &s_CoreWindowStatics);
+#endif
+
+#if !IL2CPP_TARGET_XBOXONE
+    s_DispatcherQueueStatics = GetDispatcherQueueStatics();
+#endif
+}
+
+void SynchronizationContext::Shutdown()
+{
+#if !IL2CPP_TARGET_WINDOWS_DESKTOP
+    s_CoreWindowStatics = nullptr;
+#endif
+
+#if !IL2CPP_TARGET_XBOXONE
+    s_DispatcherQueueStatics = nullptr;
 #endif
 }
 

@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_WIN32
+#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_WIN32 && !RUNTIME_TINY
 
 #include "ThreadImpl.h"
 #include "os/ThreadLocalValue.h"
@@ -11,6 +11,7 @@ namespace il2cpp
 {
 namespace os
 {
+    static Event s_ThreadSleepObject;
     struct ThreadImplStartData
     {
         Thread::StartFunc m_StartFunc;
@@ -29,6 +30,7 @@ namespace os
 
     ThreadImpl::ThreadImpl()
         : m_ThreadHandle(0), m_ThreadId(0), m_StackSize(IL2CPP_DEFAULT_STACK_SIZE), m_ApartmentState(kApartmentStateUnknown), m_Priority(kThreadPriorityNormal)
+        , m_ConditionSemaphore(1)
     {
     }
 
@@ -126,34 +128,69 @@ namespace os
 
     void ThreadImpl::Sleep(uint32_t ms, bool interruptible)
     {
-        uint32_t remainingWaitTime = ms;
-        while (true)
+        s_ThreadSleepObject.Wait(ms, interruptible);
+    }
+
+    void ThreadImpl::CheckForUserAPCAndHandle()
+    {
+        m_PendingAPCsMutex.Acquire();
+
+        while (!m_PendingAPCs.empty())
         {
-            uint32_t startWaitTime = os::Time::GetTicksMillisecondsMonotonic();
-            DWORD sleepResult = ::SleepEx(remainingWaitTime, interruptible);
+            APCRequest apcRequest = m_PendingAPCs.front();
 
-            if (sleepResult == WAIT_IO_COMPLETION)
-            {
-                uint32_t waitedTime = os::Time::GetTicksMillisecondsMonotonic() - startWaitTime;
-                if (waitedTime >= remainingWaitTime)
-                    return;
+            // Remove from list. Do before calling the function to make sure the list
+            // is up to date in case the function throws.
+            m_PendingAPCs.erase(m_PendingAPCs.begin());
 
-                remainingWaitTime -= waitedTime;
-                continue;
-            }
+            // Release mutex while we call the function so that we don't deadlock
+            // if the function starts waiting on a thread that tries queuing an APC
+            // on us.
+            m_PendingAPCsMutex.Release();
 
-            break;
+            // Call function.
+            apcRequest.callback(apcRequest.context);
+
+            // Re-acquire mutex.
+            m_PendingAPCsMutex.Acquire();
         }
+
+        m_PendingAPCsMutex.Release();
+    }
+
+    void ThreadImpl::SetWaitObject(WaitObject* waitObject)
+    {
+        // This is an unprotected write as write acccess is restricted to the
+        // current thread.
+        m_CurrentWaitObject = waitObject;
     }
 
     void ThreadImpl::QueueUserAPC(Thread::APCFunc func, void* context)
     {
-        ::QueueUserAPC(reinterpret_cast<PAPCFUNC>(func), m_ThreadHandle, reinterpret_cast<ULONG_PTR>(context));
+        IL2CPP_ASSERT(func != NULL);
+
+        // Put on queue.
+        {
+            m_PendingAPCsMutex.Acquire();
+            m_PendingAPCs.push_back(APCRequest(func, context));
+            m_PendingAPCsMutex.Release();
+        }
+
+        // Interrupt an ongoing wait, only interrupt if we have an object waiting
+        if (m_CurrentWaitObject.load())
+        {
+            m_ConditionSemaphore.Release(1);
+        }
     }
 
     int ThreadImpl::GetMaxStackSize()
     {
         return INT_MAX;
+    }
+
+    ThreadImpl* ThreadImpl::GetCurrentThread()
+    {
+        return Thread::GetCurrentThread()->m_Thread;
     }
 
 namespace

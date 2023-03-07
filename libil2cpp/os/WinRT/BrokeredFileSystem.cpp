@@ -1,8 +1,8 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_TARGET_WINRT
+#if IL2CPP_SUPPORTS_BROKERED_FILESYSTEM
 
-#include "BrokeredFileSystem.h"
+#include "os/BrokeredFileSystem.h"
 #include "os/Atomic.h"
 #include "os/Win32/WindowsHelpers.h"
 #include "SynchronousOperation.h"

@@ -51,6 +51,7 @@ namespace utils
         static bool EndsWith(const std::string& string, const std::string& suffix);
         static Il2CppChar* GetChars(Il2CppString* str);
         static int32_t GetLength(Il2CppString* str);
+        static void StringDelete(const char* str);
 
 #if IL2CPP_TARGET_WINDOWS
         static inline std::string NativeStringToUtf8(const Il2CppNativeString& nativeStr)

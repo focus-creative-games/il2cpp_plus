@@ -16,6 +16,7 @@ typedef struct Il2CppSequencePointExecutionContext
     void** params;
     void** locals;
     Il2CppSequencePoint* currentSequencePoint;
+    struct Il2CppThreadUnwindState* unwindState;
     int32_t tryId;
 
 #ifdef __cplusplus
@@ -95,7 +96,7 @@ namespace utils
         static void Start();
         static void StartDebuggerThread();
 
-        static inline void PushExecutionContext(Il2CppSequencePointExecutionContext* executionContext)
+        static inline Il2CppThreadUnwindState* PushExecutionContext(Il2CppSequencePointExecutionContext* executionContext)
         {
             Il2CppThreadUnwindState* unwindState;
             s_ExecutionContexts.GetValue(reinterpret_cast<void**>(&unwindState));
@@ -105,13 +106,12 @@ namespace utils
 
             unwindState->executionContexts[unwindState->frameCount] = executionContext;
             unwindState->frameCount++;
+
+            return unwindState;
         }
 
-        static inline void PopExecutionContext()
+        static inline void PopExecutionContext(Il2CppThreadUnwindState* unwindState)
         {
-            Il2CppThreadUnwindState* unwindState;
-            s_ExecutionContexts.GetValue(reinterpret_cast<void**>(&unwindState));
-
             IL2CPP_ASSERT(unwindState->frameCount > 0);
             unwindState->frameCount--;
         }
@@ -204,6 +204,10 @@ namespace utils
 
         static Il2CppMonoInterpCallbacks* GetInterpCallbacks();
 
+        static void RuntimeShutdownEnd();
+        static void ThreadStarted(uintptr_t tid);
+        static void ThreadStopped(uintptr_t tid);
+
     private:
         static os::ThreadLocalValue s_IsGlobalBreakpointActive;
         static void InitializeMethodToSequencePointMap();
@@ -222,12 +226,12 @@ inline Il2CppSequencePointExecutionContext::Il2CppSequencePointExecutionContext(
     currentSequencePoint(NULL),
     tryId(-1)
 {
-    il2cpp::utils::Debugger::PushExecutionContext(this);
+    unwindState = il2cpp::utils::Debugger::PushExecutionContext(this);
 }
 
 inline Il2CppSequencePointExecutionContext::~Il2CppSequencePointExecutionContext()
 {
-    il2cpp::utils::Debugger::PopExecutionContext();
+    il2cpp::utils::Debugger::PopExecutionContext(unwindState);
     // il2cpp_save_current_thread_context_func_exit();
 }
 

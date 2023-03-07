@@ -34,6 +34,12 @@
 #define IL2CPP_CXX_ABI_MSVC 0
 #endif
 
+#if defined(__GNUC__)
+#define IL2CPP_GCC_VERSION (__GNUC__ * 10000 \
+                      + __GNUC_MINOR__ * 100 \
+                      + __GNU_PATCHLEVEL__)
+#endif
+
 typedef void (STDCALL *SynchronizationContextCallback)(intptr_t arg);
 typedef void (STDCALL *CultureInfoChangedCallback)(const Il2CppChar* arg);
 
@@ -76,7 +82,12 @@ typedef void (STDCALL *CultureInfoChangedCallback)(const Il2CppChar* arg);
     #define ALIGN_OF(T) __alignof__(T)
     #define ALIGN_TYPE(val) __attribute__((aligned(val)))
     #define ALIGN_FIELD(val) ALIGN_TYPE(val)
-    #define IL2CPP_FORCE_INLINE inline __attribute__ ((always_inline))
+// GCC earlier than 10.1 are unable to compile properly with the always_inline attribute
+    #if defined(__GNUC__) && IL2CPP_GCC_VERSION < 100100
+        #define IL2CPP_FORCE_INLINE inline
+    #else
+        #define IL2CPP_FORCE_INLINE inline __attribute__ ((always_inline))
+    #endif
     #define IL2CPP_MANAGED_FORCE_INLINE IL2CPP_FORCE_INLINE
 #elif defined(_MSC_VER)
     #define ALIGN_OF(T) __alignof(T)
@@ -132,7 +143,7 @@ typedef void (STDCALL *CultureInfoChangedCallback)(const Il2CppChar* arg);
         #define IL2CPP_ENABLE_STACKTRACES 0
     #endif // IL2CPP_TINY_DEBUG_METADATA
 #else
-    #define IL2CPP_ENABLE_STACKTRACES 1
+    #define IL2CPP_ENABLE_STACKTRACES !IL2CPP_TARGET_QNX
 #endif // IL2CPP_TINY
 
 #ifndef IL2CPP_DISABLE_GC
@@ -155,7 +166,7 @@ typedef void (STDCALL *CultureInfoChangedCallback)(const Il2CppChar* arg);
 
 /* Platforms which use OS specific implementation to extract stracktrace */
 #if !defined(IL2CPP_ENABLE_NATIVE_STACKTRACES)
-#define IL2CPP_ENABLE_NATIVE_STACKTRACES (IL2CPP_TARGET_WINDOWS || IL2CPP_TARGET_LINUX || IL2CPP_TARGET_DARWIN || IL2CPP_TARGET_IOS || IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_LUMIN)
+#define IL2CPP_ENABLE_NATIVE_STACKTRACES (IL2CPP_TARGET_WINDOWS || IL2CPP_TARGET_LINUX || IL2CPP_TARGET_DARWIN || IL2CPP_TARGET_IOS || IL2CPP_TARGET_ANDROID)
 #endif
 
 /* Platforms which support native IP emission to crash reporting to enable server-side reconstruction of C# exception stack trace line numbers */
@@ -216,7 +227,7 @@ typedef void (STDCALL *CultureInfoChangedCallback)(const Il2CppChar* arg);
 
 #if _MSC_VER
 #define IL2CPP_UNREACHABLE __assume(0)
-#elif __has_builtin(__builtin_unreachable)
+#elif __has_builtin(__builtin_unreachable) || IL2CPP_TARGET_QNX
 #define IL2CPP_UNREACHABLE __builtin_unreachable()
 #else
 #define IL2CPP_UNREACHABLE
@@ -288,6 +299,8 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 
 #endif
 
+#if !RUNTIME_TINY
+
 #define NOT_SUPPORTED_IL2CPP(func, reason) \
     il2cpp::vm::Exception::Raise (il2cpp::vm::Exception::GetNotSupportedException ( NOTSUPPORTEDICALLMESSAGE ("IL2CPP", #func, #reason) ))
 
@@ -303,6 +316,13 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #else
 #define NOT_SUPPORTED_WEBGL(func, reason)
 #endif
+
+#else
+#define NOT_SUPPORTED_IL2CPP(func, reason)
+#define NOT_SUPPORTED_SRE(func)
+#define NOT_SUPPORTED_REMOTING(func)
+#define NOT_SUPPORTED_WEBGL(func, reason)
+#endif // #if !RUNTIME_TINY
 
 #if IL2CPP_COMPILER_MSVC
     #define IL2CPP_DIR_SEPARATOR '\\'   /* backslash */
@@ -358,7 +378,7 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #endif
 
 #ifndef IL2CPP_USE_GENERIC_PROCESS
-#define IL2CPP_USE_GENERIC_PROCESS !IL2CPP_TARGET_LUMIN
+#define IL2CPP_USE_GENERIC_PROCESS 1
 #endif
 
 #ifndef IL2CPP_USE_GENERIC_THREAD
@@ -367,10 +387,6 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 
 #define IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS 1
 #define IL2CPP_VALIDATE_FIELD_LAYOUT 0
-
-#ifndef IL2CPP_USE_POSIX_COND_TIMEDWAIT_REL
-#define IL2CPP_USE_POSIX_COND_TIMEDWAIT_REL ( IL2CPP_TARGET_DARWIN || IL2CPP_TARGET_PSP2 || ( IL2CPP_TARGET_ANDROID && __ANDROID_API__ < 21 ) )
-#endif
 
 #if IL2CPP_MONO_DEBUGGER
 #define STORE_SEQ_POINT(storage, seqPoint) (storage).currentSequencePoint = seqPoint;
@@ -435,7 +451,7 @@ static const int ipv6AddressSize = 16;
 #define IL2CPP_SUPPORT_IPV6_SUPPORT_QUERY (IL2CPP_SUPPORT_IPV6 && IL2CPP_TARGET_LINUX)
 
 #if !defined(IL2CPP_SUPPORT_SEND_FILE)
-#define IL2CPP_SUPPORT_SEND_FILE (!IL2CPP_TARGET_SWITCH)
+#define IL2CPP_SUPPORT_SEND_FILE (!IL2CPP_TARGET_SWITCH && !IL2CPP_TARGET_QNX && !IL2CPP_TARGET_JAVASCRIPT)
 #endif
 
 #if !defined(IL2CPP_SUPPORT_RECV_MSG)
@@ -453,7 +469,7 @@ static const int ipv6AddressSize = 16;
 // Android: "There is no support for locales in the C library" https://code.google.com/p/android/issues/detail?id=57313
 // PS4/PS2: strtol_d doesn't exist
 #if !defined(IL2CPP_SUPPORT_LOCALE_INDEPENDENT_PARSING)
-#define IL2CPP_SUPPORT_LOCALE_INDEPENDENT_PARSING (!IL2CPP_TARGET_ANDROID && !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PSP2 && !IL2CPP_TARGET_LUMIN)
+#define IL2CPP_SUPPORT_LOCALE_INDEPENDENT_PARSING (!IL2CPP_TARGET_QNX && !IL2CPP_TARGET_ANDROID && !IL2CPP_TARGET_PS4 && !IL2CPP_TARGET_PSP2)
 #endif
 
 #define NO_UNUSED_WARNING(expr) (void)(expr)
@@ -570,4 +586,8 @@ char(*il2cpp_array_size_helper(Type(&array)[Size]))[Size];
 #define IL2CPP_ASSERT(expr) (expr) ? void(0) : il2cpp_assert(#expr, __FILE__, __LINE__))
 #endif
 extern void il2cpp_assert(const char* assertion, const char* file, unsigned int line);
+#endif
+
+#if !defined(IL2CPP_SUPPORTS_BROKERED_FILESYSTEM)
+#define IL2CPP_SUPPORTS_BROKERED_FILESYSTEM IL2CPP_TARGET_WINRT
 #endif

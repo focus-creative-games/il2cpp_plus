@@ -234,6 +234,7 @@ namespace vm
         klass->this_arg.byref = true;
 
         klass->instance_size = sizeof(void*);
+        klass->stack_slot_size = sizeof(void*);
         klass->thread_static_fields_size = -1;
         klass->native_size = -1;
         klass->size_inited = true;
@@ -788,23 +789,12 @@ namespace vm
         return false;
     }
 
-    bool Class::IsValuetype(const Il2CppClass *klass)
-    {
-        return klass->byval_arg.valuetype;
-    }
-
-    bool Class::IsBlittable(const Il2CppClass *klass)
-    {
-        return klass->is_blittable;
-    }
-
     enum FieldLayoutKind
     {
         FIELD_LAYOUT_INSTANCE,
         FIELD_LAYOUT_STATIC,
         FIELD_LAYOUT_THREADSTATIC,
     };
-
 
     static void SetupFieldOffsetsLocked(FieldLayoutKind fieldLayoutKind, Il2CppClass* klass, size_t size, const std::vector<size_t>& fieldOffsets, const il2cpp::os::FastAutoLock& lock)
     {
@@ -935,9 +925,14 @@ namespace vm
             il2cpp::metadata::FieldLayout::FieldLayoutData staticLayoutData;
             il2cpp::metadata::FieldLayout::FieldLayoutData threadStaticLayoutData;
 
-            il2cpp::metadata::FieldLayout::LayoutFields(klass, Field::IsInstance, instanceSize, actualSize, klass->minimumAlignment, klass->packingSize, layoutData);
+            // If a type has references, ignore any packing
+            // All reference types must be aligned on a pointer sized boundary
+            // And if it has references, it not blittable, and we can layout the type anyway we want
+            uint8_t packingSize = klass->packingSize;
+            if (klass->has_references)
+                packingSize = 0;
 
-            klass->naturalAligment = layoutData.naturalAlignment;
+            il2cpp::metadata::FieldLayout::LayoutInstanceFields(klass, instanceSize, actualSize, klass->minimumAlignment, packingSize, layoutData);
 
             instanceSize = layoutData.classSize;
 
@@ -952,11 +947,14 @@ namespace vm
 
             klass->size_inited = true;
 
-            il2cpp::metadata::FieldLayout::LayoutFields(klass, Field::IsNormalStatic, 0, 0, 1, 0, staticLayoutData);
-            il2cpp::metadata::FieldLayout::LayoutFields(klass, Field::IsThreadStatic, 0, 0, 1, 0, threadStaticLayoutData);
+            il2cpp::metadata::FieldLayout::LayoutStaticFields(klass, staticLayoutData);
+            il2cpp::metadata::FieldLayout::LayoutThreadStaticFields(klass, threadStaticLayoutData);
 
             klass->minimumAlignment = layoutData.minimumAlignment;
-            klass->actualSize = static_cast<uint32_t>(layoutData.actualClassSize);
+            if (klass->generic_class != NULL || MetadataCache::StructLayoutSizeIsDefault(klass->typeMetadataHandle))
+                klass->actualSize = static_cast<uint32_t>(layoutData.actualClassSize);
+            else
+                klass->actualSize = klass->instance_size;
 
             if (klass->image == il2cpp_defaults.corlib && !strcmp("Ephemeron", klass->name))
             {
@@ -1002,6 +1000,11 @@ namespace vm
         }
         if (klass->thread_static_fields_size)
             klass->thread_static_fields_offset = il2cpp::vm::Thread::AllocThreadStaticData(klass->thread_static_fields_size);
+
+        if (Class::IsValuetype(klass))
+            klass->stack_slot_size = klass->instance_size - sizeof(Il2CppObject);
+        else
+            klass->stack_slot_size = sizeof(void*);
     }
 
     static void SetupFieldsFromDefinitionLocked(Il2CppClass* klass, const il2cpp::os::FastAutoLock& lock)
@@ -1151,7 +1154,9 @@ namespace vm
                 else
                 {
                     newMethod->invoker_method = Runtime::GetMissingMethodInvoker();
-                    newMethod->virtualMethodPointer = MetadataCache::GetUnresolvedVirtualCallStub(newMethod);
+                    il2cpp::vm::Il2CppUnresolvedCallStubs stubs = MetadataCache::GetUnresovledCallStubs(newMethod);
+                    newMethod->methodPointer = stubs.methodPointer;
+                    newMethod->virtualMethodPointer = stubs.virtualMethodPointer;
                 }
 
 
@@ -1245,9 +1250,9 @@ namespace vm
                             Class::InitLocked(method->klass, lock);
 
                         if (method->virtualMethodPointer)
-                            klass->vtable[i].methodPtr = il2cpp::vm::Method::GetVirtualCallMethodPointer(method);
+                            klass->vtable[i].methodPtr = method->virtualMethodPointer;
                         else if (method->is_inflated && !method->is_generic && !method->genericMethod->context.method_inst)
-                            klass->vtable[i].methodPtr = MetadataCache::GetUnresolvedVirtualCallStub(method);
+                            klass->vtable[i].methodPtr = MetadataCache::GetUnresovledCallStubs(method).virtualMethodPointer;
                         else
                             klass->vtable[i].methodPtr = il2cpp::vm::Method::GetEntryPointNotFoundMethodInfo()->methodPointer;
                     }
@@ -1287,7 +1292,7 @@ namespace vm
                     if (method != NULL)
                     {
                         if (method->virtualMethodPointer)
-                            klass->vtable[i].methodPtr = il2cpp::vm::Method::GetVirtualCallMethodPointer(method);
+                            klass->vtable[i].methodPtr = method->virtualMethodPointer;
                         else
                             klass->vtable[i].methodPtr = il2cpp::vm::Method::GetEntryPointNotFoundMethodInfo()->methodPointer;
                     }
@@ -1440,6 +1445,15 @@ namespace vm
         }
     }
 
+    static void SetupBlittableForGenericInstanceType(Il2CppClass *klass)
+    {
+        for (int i = 0; i < klass->field_count; i++)
+            if (Field::IsInstance(&klass->fields[i]) && !Class::FromIl2CppType(klass->fields[i].type)->is_blittable)
+                return;
+
+        klass->is_blittable = true;
+    }
+
     bool Class::InitLocked(Il2CppClass *klass, const il2cpp::os::FastAutoLock& lock)
     {
         if (klass->initialized)
@@ -1492,6 +1506,11 @@ namespace vm
         if (!klass->size_inited)
             SetupFieldsLocked(klass, lock);
 
+        // If this is generic instance class and it's generic type definition is not blittable,
+        // check each field to see if all fields are blittable, in which case the generic instance is blittable
+        if (!klass->is_blittable && klass->generic_class)
+            SetupBlittableForGenericInstanceType(klass);
+
         if (klass->initializationExceptionGCHandle)
         {
             klass->init_pending = false;
@@ -1537,6 +1556,21 @@ namespace vm
         klass->init_pending = false;
 
         ++il2cpp_runtime_stats.initialized_class_count;
+
+        return true;
+    }
+
+    bool Class::InitSizeAndFieldLayoutLocked(Il2CppClass* klass, const il2cpp::os::FastAutoLock& lock)
+    {
+        if (klass->size_inited)
+            return true;
+        if (klass->size_init_pending)
+            return true;
+        if (klass->initializationExceptionGCHandle)
+            return false;
+
+        if (!Class::IsGeneric(klass))
+            SetupFieldsLocked(klass, lock);
 
         return true;
     }
@@ -1617,34 +1651,6 @@ namespace vm
         return false;
     }
 
-    int Class::GetFlags(const Il2CppClass *klass)
-    {
-        return klass->flags;
-    }
-
-    bool Class::IsAbstract(const Il2CppClass *klass)
-    {
-        return (klass->flags & TYPE_ATTRIBUTE_ABSTRACT) != 0;
-    }
-
-    bool Class::IsInterface(const Il2CppClass *klass)
-    {
-        return (klass->flags & TYPE_ATTRIBUTE_INTERFACE) || (klass->byval_arg.type == IL2CPP_TYPE_VAR) || (klass->byval_arg.type == IL2CPP_TYPE_MVAR);
-    }
-
-    bool Class::IsNullable(const Il2CppClass *klass)
-    {
-        // Based on benchmarking doing the check on `klass->generic_class != NULL` makes this check faster
-        // Likely since nullabletype is a bitfield and requires some manipulation to check
-        return klass->generic_class != NULL && klass->nullabletype;
-    }
-
-    Il2CppClass* Class::GetNullableArgument(const Il2CppClass* klass)
-    {
-        IL2CPP_ASSERT(Class::IsNullable(klass));
-        return klass->element_class;
-    }
-
     int Class::GetArrayElementSize(const Il2CppClass *klass)
     {
         const Il2CppType *type = &klass->byval_arg;
@@ -1708,16 +1714,6 @@ namespace vm
         return -1;
     }
 
-    const Il2CppType* Class::GetByrefType(Il2CppClass *klass)
-    {
-        return &klass->this_arg;
-    }
-
-    const Il2CppType* Class::GetType(Il2CppClass *klass)
-    {
-        return &klass->byval_arg;
-    }
-
     const Il2CppType* Class::GetType(Il2CppClass *klass, const TypeNameParseInfo &info)
     {
         // Attempt to resolve a generic type definition.
@@ -1766,11 +1762,6 @@ namespace vm
     bool Class::HasAttribute(Il2CppClass *klass, Il2CppClass *attr_class)
     {
         return Reflection::HasAttribute(klass, attr_class);
-    }
-
-    bool Class::IsEnum(const Il2CppClass *klass)
-    {
-        return klass->enumtype;
     }
 
     const Il2CppImage* Class::GetImage(Il2CppClass *klass)
@@ -1858,6 +1849,8 @@ namespace vm
         pointerClass->initialized = true;
         pointerClass->flags = TYPE_ATTRIBUTE_CLASS | (elementClass->flags & TYPE_ATTRIBUTE_VISIBILITY_MASK);
         pointerClass->instance_size = sizeof(void*);
+        pointerClass->stack_slot_size = sizeof(void*);
+        pointerClass->size_inited = true;
 
         pointerClass->this_arg.type = pointerClass->byval_arg.type = IL2CPP_TYPE_PTR;
         pointerClass->this_arg.data.type = pointerClass->byval_arg.data.type = &elementClass->byval_arg;
@@ -1874,18 +1867,19 @@ namespace vm
 
     bool Class::HasReferences(Il2CppClass *klass)
     {
-        if (klass->size_init_pending)
-        {
-            abort();
-            /* Be conservative */
-            return true;
-        }
-        else
+        if (!klass->size_inited)
         {
             SetupFields(klass);
 
-            return klass->has_references;
+            if (!klass->size_inited)
+            {
+                abort();
+                /* Be conservative */
+                return true;
+            }
         }
+
+        return klass->has_references;
     }
 
     const il2cpp::utils::dynamic_array<Il2CppClass*>& Class::GetStaticFieldData()
@@ -2194,10 +2188,7 @@ namespace vm
         const MethodInfo* vtableSlotMethod;
         if (Class::IsInterface(methodDeclaringType))
         {
-            const VirtualInvokeData* invokeData = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot);
-            if (invokeData == NULL)
-                return NULL;
-            vtableSlotMethod = invokeData->method;
+            vtableSlotMethod = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot)->method;
         }
         else
         {

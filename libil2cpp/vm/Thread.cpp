@@ -27,13 +27,6 @@
 #include "Cpp/Atomic.h"
 #include "Cpp/ReentrantLock.h"
 
-#if IL2CPP_MONO_DEBUGGER
-
-extern "C" {
-#include <mono/metadata/profiler-private.h>
-}
-#endif
-
 namespace il2cpp
 {
 namespace vm
@@ -165,7 +158,7 @@ namespace vm
         AdjustStaticData();
 
 #if IL2CPP_MONO_DEBUGGER
-        MONO_PROFILER_RAISE(thread_started, ((uintptr_t)thread->GetInternalThread()->tid));
+        utils::Debugger::ThreadStarted((uintptr_t)thread->GetInternalThread()->tid);
 #endif
 
 #if IL2CPP_ENABLE_PROFILER
@@ -213,7 +206,7 @@ namespace vm
         // thread is being detached by a call from thread_cleanup_on_cancel, then there might
         // not be a current thread, as pthreads does not privide TLS entries in thread destructors.
         if (os::Thread::HasCurrentThread())
-            MONO_PROFILER_RAISE(thread_stopped, ((uintptr_t)thread->GetInternalThread()->tid));
+            utils::Debugger::ThreadStopped((uintptr_t)thread->GetInternalThread()->tid);
 #endif
 
         FreeThreadStaticData(thread);

@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if !IL2CPP_USE_GENERIC_ENVIRONMENT && IL2CPP_TARGET_POSIX && !IL2CPP_TARGET_PS4
+#if !IL2CPP_USE_GENERIC_ENVIRONMENT && IL2CPP_TARGET_POSIX && !IL2CPP_USE_PLATFORM_SPECIFIC_ENVIRON
 #include "il2cpp-class-internals.h"
 #include "os/Environment.h"
 #include "il2cpp-api.h"
@@ -45,7 +45,6 @@ namespace os
     }
 
 #if !RUNTIME_TINY
-#if !IL2CPP_TARGET_LUMIN
     std::string Environment::GetMachineName()
     {
         const int n = 512;
@@ -69,8 +68,6 @@ namespace os
 
         return NULL;
     }
-
-#endif //!IL2CPP_TARGET_LUMIN
 
     std::string Environment::GetOsVersionString()
     {
