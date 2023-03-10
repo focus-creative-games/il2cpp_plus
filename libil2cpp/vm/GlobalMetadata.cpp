@@ -124,7 +124,18 @@ const Il2CppMethodDefinition* il2cpp::vm::GlobalMetadata::GetMethodDefinitionFro
         return hybridclr::metadata::MetadataModule::GetMethodDefinitionFromIndex(index);
     }
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->methodsSize / sizeof(Il2CppMethodDefinition));
-    return MetadataOffset<const Il2CppMethodDefinition*>(s_GlobalMetadata, s_GlobalMetadataHeader->methodsOffset, index);}
+    return MetadataOffset<const Il2CppMethodDefinition*>(s_GlobalMetadata, s_GlobalMetadataHeader->methodsOffset, index);
+}
+
+
+MethodIndex il2cpp::vm::GlobalMetadata::GetMethodIndexFromDefinition(const Il2CppMethodDefinition* methodDef)
+{
+    if (hybridclr::metadata::IsInterpreterMethod(methodDef))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(methodDef)->GetMethodIndexFromDefinition(methodDef);
+    }
+    return methodDef - MetadataOffset<const Il2CppMethodDefinition*>(s_GlobalMetadata, s_GlobalMetadataHeader->methodsOffset, 0);
+}
 
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(MethodIndex index)
 {
@@ -155,6 +166,10 @@ static const Il2CppEventDefinition* GetEventDefinitionFromIndex(const Il2CppImag
 
 static const Il2CppPropertyDefinition* GetPropertyDefinitionFromIndex(const Il2CppImage* image, PropertyIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterImage(image))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(image)->GetPropertyDefinitionFromIndex(hybridclr::metadata::DecodeMetadataIndex(index));
+    }
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->propertiesSize / sizeof(Il2CppPropertyDefinition));
     const Il2CppPropertyDefinition* properties = (const Il2CppPropertyDefinition*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->propertiesOffset);
     return properties + index;
@@ -1032,7 +1047,8 @@ static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2Cpp
 
 static const Il2CppImageGlobalMetadata* GetImageForCustomAttributeIndex(CustomAttributeIndex index)
 {
-    if (hybridclr::metadata::IsInterpreterIndex(index)) {
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
         return reinterpret_cast<const Il2CppImageGlobalMetadata*>(hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(index)->GetIl2CppImage()->metadataHandle);
     }
 
@@ -1105,14 +1121,13 @@ Il2CppMetadataCustomAttributeHandle il2cpp::vm::GlobalMetadata::GetCustomAttribu
 
 static il2cpp::metadata::CustomAttributeDataReader CreateCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle, const Il2CppImage* image)
 {
-    //if (hybridclr::metadata::IsInterpreterImage(image))
-    //{
-    //    return hybridclr::metadata::MetadataModule::GetCustomAttributeDataRange(image, token);
-    //}
-    const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, 0);
     if (handle == NULL)
         return il2cpp::metadata::CustomAttributeDataReader::Empty();
 
+    if (hybridclr::metadata::IsInterpreterImage(image))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(image)->CreateCustomAttributeDataReader(handle);
+    }
     Il2CppCustomAttributeDataRange* range = (Il2CppCustomAttributeDataRange*)handle;
     const Il2CppCustomAttributeDataRange* next = range + 1;
 
@@ -1129,10 +1144,6 @@ il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCusto
 
 il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCustomAttributeDataReader(Il2CppMetadataCustomAttributeHandle handle)
 {
-    //if (hybridclr::metadata::IsInterpreterIndex(dataRange->startOffset))
-    //{
-    //    return hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(dataRange->startOffset)->HasAttribute(dataRange, attribute);
-    //}
     return CreateCustomAttributeDataReader(handle, GetCustomAttributeImageFromHandle(handle));
 }
 
@@ -1173,8 +1184,6 @@ const Il2CppMethodDefinition* il2cpp::vm::GlobalMetadata::GetMethodDefinitionFro
     {
         return hybridclr::metadata::MetadataModule::GetMethodDefinitionFromVTableSlot(typeDefinition, vTableSlot);
     }
-
-    //const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
 
     uint32_t index = typeDefinition->vtableStart + vTableSlot;
     IL2CPP_ASSERT(index >= 0 && index <= s_GlobalMetadataHeader->vtableMethodsSize / sizeof(EncodedMethodIndex));

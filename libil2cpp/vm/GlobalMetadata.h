@@ -112,6 +112,7 @@ namespace vm
         static const uint8_t* GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue);
         static Il2CppMetadataGenericContainerHandle GetGenericContainerFromIndex(GenericContainerIndex index);
         static const Il2CppMethodDefinition* GetMethodDefinitionFromIndex(MethodIndex index);
+        static MethodIndex GetMethodIndexFromDefinition(const Il2CppMethodDefinition* methodDefine);
         static const Il2CppType* GetInterfaceFromOffset(const Il2CppTypeDefinition* def, TypeInterfaceIndex offset);
         static Il2CppInterfaceOffsetInfo GetInterfaceOffsetInfo(const Il2CppTypeDefinition* typeDefine, TypeInterfaceOffsetIndex index);
         static const Il2CppMethodDefinition* GetMethodDefinitionFromVTableSlot(const Il2CppTypeDefinition* typeDefine, int32_t vTableSlot);
@@ -137,6 +138,7 @@ namespace vm
         static Il2CppMetadataMethodInfo GetMethodInfo(const Il2CppClass* klass, TypeMethodIndex index);
         static Il2CppMetadataParameterInfo GetParameterInfo(const Il2CppClass* klass, Il2CppMetadataMethodDefinitionHandle handle, MethodParameterIndex index);
         static Il2CppMetadataPropertyInfo GetPropertyInfo(const Il2CppClass* klass, TypePropertyIndex index);
+        //static const Il2CppPropertyDefinition* GetPropertyDefinitionFromIndex(const Il2CppImage* image, PropertyIndex index);
         static Il2CppMetadataEventInfo GetEventInfo(const Il2CppClass* klass, TypeEventIndex index);
 
         static Il2CppMetadataGenericContainerHandle GetGenericContainerFromGenericClass(const Il2CppGenericClass* genericClass);

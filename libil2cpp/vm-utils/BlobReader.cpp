@@ -69,9 +69,29 @@ namespace utils
                     if (useInterpFormat)
                     {
                         // origin IL metadata use compress encode length
-                        hybridclr::metadata::BlobReader br = hybridclr::metadata::RawImage::DecodeBlob((const hybridclr::byte*)*blob);
-                        *(Il2CppString**)value = il2cpp::vm::String::NewUtf16((const Il2CppChar*)br.GetData(), br.GetLength() / 2);
-                        *blob = (const char*)(br.GetData() + br.GetLength());
+                        uint8_t b = (uint8_t)**blob;
+                        if (b == 0xFF)
+                        {
+                            ++*blob;
+                            *(Il2CppString**)value = nullptr;
+                        }
+                        else if (b == 0)
+                        {
+                            ++*blob;
+                            if (deserializeManagedObjects)
+                            {
+                                *(Il2CppString**)value = il2cpp::vm::String::Empty();
+                            }
+                        }
+                        else
+                        {
+                            hybridclr::metadata::BlobReader br = hybridclr::metadata::RawImage::DecodeBlob((const hybridclr::byte*)*blob);
+                            if (deserializeManagedObjects)
+                            {
+                                *(Il2CppString**)value = il2cpp::vm::String::NewUtf16((const Il2CppChar*)br.GetData(), br.GetLength() / 2);
+                            }
+                            *blob = (const char*)(br.GetData() + br.GetLength());
+                        }
                     }
                     else
                     {

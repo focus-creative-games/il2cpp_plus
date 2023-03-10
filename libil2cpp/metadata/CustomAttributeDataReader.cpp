@@ -42,10 +42,10 @@
 // 0x0010023f   - Method definition index for ctor1
 // 0x02001fc1   - Method definition index for ctor2
 // 0x02         - Constructor argument count for ctor1 (compressed uint32_t)
-// 0x04 (2)     - argument 1 type code (compressed int32_t)
-// 0x00         - Field for ctor1 (compressed uint32_t)
 // 0x01         - Property count for ctor1 (compressed uint32_t)
+// 0x04 (2)     - argument 1 type code (compressed int32_t)
 // ....         - argument 1 data
+// 0x00         - Field for ctor1 (compressed uint32_t)
 // 0x55         - property type code (enum) (compressed uint32_t)
 // 0x023F       - type index for enum type (compressed uint32_t))
 // ....         - property 1 data
