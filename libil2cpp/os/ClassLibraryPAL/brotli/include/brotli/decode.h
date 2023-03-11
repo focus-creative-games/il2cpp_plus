@@ -14,8 +14,8 @@
 
 #include "il2cpp-config.h"
 
-#include <brotli/port.h>
-#include <brotli/types.h>
+#include "../include/brotli/port.h"
+#include "../include/brotli/types.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {

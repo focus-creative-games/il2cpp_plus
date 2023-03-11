@@ -8,7 +8,7 @@
 
 #include <stdlib.h>  /* free, malloc */
 
-#include <brotli/types.h>
+#include "../include/brotli/types.h"
 #include "./huffman.h"
 
 #if defined(__cplusplus) || defined(c_plusplus)
