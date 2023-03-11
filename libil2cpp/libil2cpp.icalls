@@ -195,6 +195,20 @@ System.IO.MonoIO::DumpHandles() mscorlib::System::IO::MonoIO::DumpHandles
 System.IO.MonoIO::Lock(System.IntPtr,System.Int64,System.Int64,System.IO.MonoIOError&) mscorlib::System::IO::MonoIO::Lock
 System.IO.MonoIO::Unlock(System.IntPtr,System.Int64,System.Int64,System.IO.MonoIOError&) mscorlib::System::IO::MonoIO::Unlock
 
+// System.IO.BrokeredFileSystem
+>icalls/mscorlib/System.IO/BrokeredFileSystem.h
+System.IO.FileSystem::BrokeredCreateDirectory(System.String) mscorlib::System::IO::BrokeredFileSystem::CreateDirectory
+System.IO.FileSystem::BrokeredRemoveDirectory(System.String) mscorlib::System::IO::BrokeredFileSystem::RemoveDirectory
+System.IO.FileSystem::BrokeredGetFileAttributes(System.String,Interop/Kernel32/WIN32_FILE_ATTRIBUTE_DATA&) mscorlib::System::IO::BrokeredFileSystem::GetFileAttributes
+System.IO.FileSystem::BrokeredSetAttributes(System.String,System.IO.FileAttributes) mscorlib::System::IO::BrokeredFileSystem::SetAttributes
+System.IO.FileSystem::BrokeredOpenFile(System.String,System.Int32,System.Int32,System.Int32,System.Int32) mscorlib::System::IO::BrokeredFileSystem::OpenFile
+System.IO.FileSystem::BrokeredCopyFile(System.String,System.String,System.Boolean,System.Int32&) mscorlib::System::IO::BrokeredFileSystem::CopyFile
+System.IO.FileSystem::BrokeredMoveFile(System.String,System.String) mscorlib::System::IO::BrokeredFileSystem::MoveFile
+System.IO.FileSystem::BrokeredDeleteFile(System.String) mscorlib::System::IO::BrokeredFileSystem::DeleteFile
+System.IO.FileSystem::BrokeredFindFirstFile(System.String,System.String&,System.UInt32&) mscorlib::System::IO::BrokeredFileSystem::FindFirstFile
+System.IO.FileSystem::BrokeredFindNextFile(System.IntPtr,System.String&,System.UInt32&) mscorlib::System::IO::BrokeredFileSystem::FindNextFile
+System.IO.FileSystem::BrokeredSafeFindHandleDispose(System.IntPtr) mscorlib::System::IO::BrokeredFileSystem::FindHandleClose
+
 // System.Reflection.RuntimeAssembly
 >icalls/mscorlib/System.Reflection/RuntimeAssembly.h
 System.Reflection.RuntimeAssembly::get_global_assembly_cache() mscorlib::System::Reflection::RuntimeAssembly::get_global_assembly_cache
@@ -874,6 +888,10 @@ System.Diagnostics.Process::MainWindowHandle_icall(System.Int32) System::System:
 System.Net.Dns::GetHostByAddr_icall(System.String,System.String&,System.String[]&,System.String[]&,System.Int32) System::System::Net::Dns::GetHostByAddr_icall
 System.Net.Dns::GetHostByName_icall(System.String,System.String&,System.String[]&,System.String[]&,System.Int32) System::System::Net::Dns::GetHostByName_icall
 System.Net.Dns::GetHostName_icall(System.String&) System::System::Net::Dns::GetHostName_icall
+
+// System.Net.NetworkInformation.LinuxNetworkInterface
+>icalls/System/System.Net.NetworkInformation/LinuxNetworkInterface.h
+System.Net.NetworkInformation.LinuxNetworkInterface::unitydroid_get_network_interface_up_state(System.String,System.Boolean&) System::System::Net::NetworkInformation::LinuxNetworkInterface::unitydroid_get_network_interface_up_state
 
 // System.Net.NetworkInformation.MacOsIPInterfaceProperties
 >icalls/System/System.Net.NetworkInformation/MacOsIPInterfaceProperties.h

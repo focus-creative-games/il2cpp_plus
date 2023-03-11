@@ -5,6 +5,7 @@
 #include "gc/WriteBarrier.h"
 #include "os/StackTrace.h"
 #include "os/Image.h"
+#include "vm/AndroidRuntime.h"
 #include "vm/Array.h"
 #include "vm/Assembly.h"
 #include "vm/Class.h"
@@ -1464,4 +1465,10 @@ int il2cpp_class_get_userdata_offset()
 void il2cpp_class_for_each(void(*klassReportFunc)(Il2CppClass* klass, void* userData), void* userData)
 {
     MemoryInformation::ReportIL2CppClasses(klassReportFunc, userData);
+}
+
+// Android
+void il2cpp_unity_set_android_network_up_state_func(Il2CppAndroidUpStateFunc func)
+{
+    AndroidRuntime::SetNetworkUpStateFunc(func);
 }

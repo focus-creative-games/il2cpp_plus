@@ -228,6 +228,7 @@ namespace vm
         static bool GenericInstIsValuetype(const Il2CppType* type);
         static bool HasVariableRuntimeSizeWhenFullyShared(const Il2CppType* type);
 
+        static bool IsArray(const Il2CppType *type);
         static bool IsEnum(const Il2CppType *type);
         static bool IsValueType(const Il2CppType *type);
         static bool IsPointerType(const Il2CppType *type);

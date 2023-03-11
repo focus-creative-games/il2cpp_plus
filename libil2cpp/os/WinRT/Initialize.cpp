@@ -6,7 +6,7 @@
 #include "os/Win32/WindowsHelpers.h"
 
 #if IL2CPP_TARGET_WINRT
-#include "BrokeredFileSystem.h"
+#include "os/BrokeredFileSystem.h"
 #include "os/Locale.h"
 #endif
 

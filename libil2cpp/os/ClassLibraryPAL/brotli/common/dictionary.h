@@ -9,8 +9,8 @@
 #ifndef BROTLI_COMMON_DICTIONARY_H_
 #define BROTLI_COMMON_DICTIONARY_H_
 
-#include <os/ClassLibraryPAL/brotli/include/brotli/port.h>
-#include <os/ClassLibraryPAL/brotli/include/brotli/types.h>
+#include <brotli/port.h>
+#include <brotli/types.h>
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -41,7 +41,7 @@ typedef struct BrotliDictionary {
   const uint8_t* data;
 } BrotliDictionary;
 
-BROTLI_COMMON_API extern const BrotliDictionary* BrotliGetDictionary(void);
+BROTLI_COMMON_API const BrotliDictionary* BrotliGetDictionary(void);
 
 /**
  * Sets dictionary data.

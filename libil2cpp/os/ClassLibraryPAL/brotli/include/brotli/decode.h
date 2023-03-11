@@ -14,8 +14,8 @@
 
 #include "il2cpp-config.h"
 
-#include <os/ClassLibraryPAL/brotli/include/brotli/port.h>
-#include <os/ClassLibraryPAL/brotli/include/brotli/types.h>
+#include <brotli/port.h>
+#include <brotli/types.h>
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -36,11 +36,11 @@ typedef struct BrotliDecoderStateStruct BrotliDecoderState;
 typedef enum {
   /** Decoding error, e.g. corrupted input or memory allocation problem. */
   BROTLI_DECODER_RESULT_ERROR = 0,
-  /** Decoding successfully completed */
+  /** Decoding successfully completed. */
   BROTLI_DECODER_RESULT_SUCCESS = 1,
-  /** Partially done; should be called again with more input */
+  /** Partially done; should be called again with more input. */
   BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT = 2,
-  /** Partially done; should be called again with more output */
+  /** Partially done; should be called again with more output. */
   BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT = 3
 } BrotliDecoderResult;
 
@@ -85,10 +85,10 @@ typedef enum {
   BROTLI_ERROR_CODE(_ERROR_FORMAT_, WINDOW_BITS, -13) SEPARATOR            \
   BROTLI_ERROR_CODE(_ERROR_FORMAT_, PADDING_1, -14) SEPARATOR              \
   BROTLI_ERROR_CODE(_ERROR_FORMAT_, PADDING_2, -15) SEPARATOR              \
+  BROTLI_ERROR_CODE(_ERROR_FORMAT_, DISTANCE, -16) SEPARATOR               \
                                                                            \
-  /* -16..-17 codes are reserved */                                        \
+  /* -17..-18 codes are reserved */                                        \
                                                                            \
-  BROTLI_ERROR_CODE(_ERROR_, COMPOUND_DICTIONARY, -18) SEPARATOR           \
   BROTLI_ERROR_CODE(_ERROR_, DICTIONARY_NOT_SET, -19) SEPARATOR            \
   BROTLI_ERROR_CODE(_ERROR_, INVALID_ARGUMENTS, -20) SEPARATOR             \
                                                                            \
@@ -137,7 +137,11 @@ typedef enum BrotliDecoderParameter {
    * Ring buffer is allocated according to window size, despite the real size of
    * the content.
    */
-  BROTLI_DECODER_PARAM_DISABLE_RING_BUFFER_REALLOCATION = 0
+  BROTLI_DECODER_PARAM_DISABLE_RING_BUFFER_REALLOCATION = 0,
+  /**
+   * Flag that determines if "Large Window Brotli" is used.
+   */
+  BROTLI_DECODER_PARAM_LARGE_WINDOW = 1
 } BrotliDecoderParameter;
 
 /**
@@ -149,7 +153,7 @@ typedef enum BrotliDecoderParameter {
  * @returns ::BROTLI_FALSE if parameter is unrecognized, or value is invalid
  * @returns ::BROTLI_TRUE if value is accepted
  */
-IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderSetParameter(
+BROTLI_DEC_API BROTLI_BOOL BrotliDecoderSetParameter(
     BrotliDecoderState* state, BrotliDecoderParameter param, uint32_t value);
 
 /**
@@ -161,15 +165,16 @@ IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderSetParameter(
  *
  * @p alloc_func and @p free_func @b MUST be both zero or both non-zero. In the
  * case they are both zero, default memory allocators are used. @p opaque is
- * passed to @p alloc_func and @p free_func when they are called.
+ * passed to @p alloc_func and @p free_func when they are called. @p free_func
+ * has to return without doing anything when asked to free a NULL pointer.
  *
  * @param alloc_func custom memory allocation function
- * @param free_func custom memory fee function
+ * @param free_func custom memory free function
  * @param opaque custom memory manager handle
  * @returns @c 0 if instance can not be allocated or initialized
  * @returns pointer to initialized ::BrotliDecoderState otherwise
  */
-IL2CPP_EXPORT BrotliDecoderState* STDCALL BrotliDecoderCreateInstance(
+IL2CPP_EXPORT BROTLI_DEC_API BrotliDecoderState* STDCALL BrotliDecoderCreateInstance(
     brotli_alloc_func alloc_func, brotli_free_func free_func, void* opaque);
 
 /**
@@ -177,7 +182,7 @@ IL2CPP_EXPORT BrotliDecoderState* STDCALL BrotliDecoderCreateInstance(
  *
  * @param state decoder instance to be cleaned up and deallocated
  */
-IL2CPP_EXPORT void STDCALL BrotliDecoderDestroyInstance(BrotliDecoderState* state);
+IL2CPP_EXPORT BROTLI_DEC_API void STDCALL BrotliDecoderDestroyInstance(BrotliDecoderState* state);
 
 /**
  * Performs one-shot memory-to-memory decompression.
@@ -196,7 +201,7 @@ IL2CPP_EXPORT void STDCALL BrotliDecoderDestroyInstance(BrotliDecoderState* stat
  *          allocation failed, or @p decoded_buffer is not large enough;
  * @returns ::BROTLI_DECODER_RESULT_SUCCESS otherwise
  */
-IL2CPP_EXPORT BrotliDecoderResult STDCALL BrotliDecoderDecompress(
+IL2CPP_EXPORT BROTLI_DEC_API BrotliDecoderResult STDCALL BrotliDecoderDecompress(
     size_t encoded_size,
     const uint8_t encoded_buffer[BROTLI_ARRAY_PARAM(encoded_size)],
     size_t* decoded_size,
@@ -240,7 +245,7 @@ IL2CPP_EXPORT BrotliDecoderResult STDCALL BrotliDecoderDecompress(
  * @returns ::BROTLI_DECODER_RESULT_SUCCESS decoding is finished, no more
  *          input might be consumed and no more output will be produced
  */
-IL2CPP_EXPORT BrotliDecoderResult STDCALL BrotliDecoderDecompressStream(
+IL2CPP_EXPORT BROTLI_DEC_API BrotliDecoderResult STDCALL BrotliDecoderDecompressStream(
   BrotliDecoderState* state, size_t* available_in, const uint8_t** next_in,
   size_t* available_out, uint8_t** next_out, size_t* total_out);
 
@@ -251,7 +256,7 @@ IL2CPP_EXPORT BrotliDecoderResult STDCALL BrotliDecoderDecompressStream(
  * @returns ::BROTLI_TRUE, if decoder has some unconsumed output
  * @returns ::BROTLI_FALSE otherwise
  */
-IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderHasMoreOutput(
+BROTLI_DEC_API BROTLI_BOOL BrotliDecoderHasMoreOutput(
     const BrotliDecoderState* state);
 
 /**
@@ -282,7 +287,7 @@ IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderHasMoreOutput(
  *                 out value is never greater than in value, unless it is @c 0
  * @returns pointer to output data
  */
-IL2CPP_EXPORT const uint8_t* STDCALL BrotliDecoderTakeOutput(
+BROTLI_DEC_API const uint8_t* BrotliDecoderTakeOutput(
     BrotliDecoderState* state, size_t* size);
 
 /**
@@ -295,7 +300,7 @@ IL2CPP_EXPORT const uint8_t* STDCALL BrotliDecoderTakeOutput(
  * @returns ::BROTLI_TRUE if decoder has already used some input bytes
  * @returns ::BROTLI_FALSE otherwise
  */
-IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderIsUsed(const BrotliDecoderState* state);
+BROTLI_DEC_API BROTLI_BOOL BrotliDecoderIsUsed(const BrotliDecoderState* state);
 
 /**
  * Checks if decoder instance reached the final state.
@@ -305,7 +310,7 @@ IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderIsUsed(const BrotliDecoderState* 
  *          the input and produced all of the output
  * @returns ::BROTLI_FALSE otherwise
  */
-IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderIsFinished(
+IL2CPP_EXPORT BROTLI_DEC_API BROTLI_BOOL STDCALL BrotliDecoderIsFinished(
     const BrotliDecoderState* state);
 
 /**
@@ -319,20 +324,20 @@ IL2CPP_EXPORT BROTLI_BOOL STDCALL BrotliDecoderIsFinished(
  * @param state decoder instance
  * @returns last saved error code
  */
-IL2CPP_EXPORT BrotliDecoderErrorCode STDCALL BrotliDecoderGetErrorCode(
+BROTLI_DEC_API BrotliDecoderErrorCode BrotliDecoderGetErrorCode(
     const BrotliDecoderState* state);
 
 /**
  * Converts error code to a c-string.
  */
-IL2CPP_EXPORT const char* BrotliDecoderErrorString(BrotliDecoderErrorCode c);
+BROTLI_DEC_API const char* BrotliDecoderErrorString(BrotliDecoderErrorCode c);
 
 /**
  * Gets a decoder library version.
  *
  * Look at BROTLI_VERSION for more information.
  */
-IL2CPP_EXPORT uint32_t STDCALL BrotliDecoderVersion(void);
+BROTLI_DEC_API uint32_t BrotliDecoderVersion(void);
 
 #if defined(__cplusplus) || defined(c_plusplus)
 } /* extern "C" */

@@ -1884,18 +1884,19 @@ namespace vm
 
     bool Class::HasReferences(Il2CppClass *klass)
     {
-        if (klass->size_init_pending)
-        {
-            abort();
-            /* Be conservative */
-            return true;
-        }
-        else
+        if (!klass->size_inited)
         {
             SetupFields(klass);
 
-            return klass->has_references;
+            if (!klass->size_inited)
+            {
+                abort();
+                /* Be conservative */
+                return true;
+            }
         }
+
+        return klass->has_references;
     }
 
     const il2cpp::utils::dynamic_array<Il2CppClass*>& Class::GetStaticFieldData()

@@ -1197,6 +1197,11 @@ namespace vm
         return false;
     }
 
+    bool Type::IsArray(const Il2CppType *type)
+    {
+        return type->type == IL2CPP_TYPE_SZARRAY || type->type == IL2CPP_TYPE_ARRAY;
+    }
+
     bool Type::IsEnum(const Il2CppType *type)
     {
         if (type->type != IL2CPP_TYPE_VALUETYPE)
