@@ -4,12 +4,14 @@
 #include "il2cpp-config.h"
 #include "il2cpp-blob.h"
 #include "il2cpp-class-internals.h"
+#include "metadata/ArrayMetadata.h"
 #include "metadata/Il2CppTypeVector.h"
 #include "metadata/Il2CppTypeCompare.h"
 #include "utils/dynamic_array.h"
 #include "il2cpp-class-internals.h"
 #include "il2cpp-object-internals.h"
 #include "Exception.h"
+#include "GenericClass.h"
 #include "Type.h"
 
 #include "vm/MetadataCache.h"
@@ -136,23 +138,28 @@ namespace vm
 
         static void UpdateInitializedAndNoError(Il2CppClass *klass);
 
-        static IL2CPP_FORCE_INLINE bool IsGenericClassAssignableFrom(const Il2CppClass* klass, const Il2CppClass* oklass, const Il2CppImage* genericContainerImage, Il2CppMetadataGenericContainerHandle genericContainer)
+        static IL2CPP_FORCE_INLINE bool IsGenericClassAssignableFrom(const Il2CppClass* klass, const Il2CppClass* oklass, const Il2CppClass* implementingClass = il2cpp_defaults.missing_class)
         {
+            return klass == oklass || IsGenericClassAssignableFromVariance(klass, oklass, implementingClass);
+        }
+
+        static IL2CPP_FORCE_INLINE bool IsGenericClassAssignableFromVariance(const Il2CppClass* klass, const Il2CppClass* oklass, const Il2CppClass* implementingClass = il2cpp_defaults.missing_class)
+        {
+            IL2CPP_ASSERT(klass != oklass && "IsGenericClassAssignableFromVariance is for generic variance checks - you should call IsGenericClassAssignableFrom instead");
+
             const Il2CppGenericClass* genericClass = klass->generic_class;
             const Il2CppGenericClass* oGenericClass = oklass->generic_class;
 
-            if (oGenericClass == NULL || !metadata::Il2CppTypeEqualityComparer::AreEqual(oGenericClass->type, genericClass->type))
+            if (oGenericClass == NULL || !GenericClass::HasSameGenericTypeDefinition(oGenericClass, genericClass))
                 return false;
 
-            const int32_t genericParameterCount = MetadataCache::GetGenericContainerCount(genericContainer);
-
             const Il2CppGenericInst* genericInst = genericClass->context.class_inst;
-            IL2CPP_ASSERT(genericInst->type_argc == genericParameterCount);
-
             const Il2CppGenericInst* oGenericInst = oGenericClass->context.class_inst;
-            IL2CPP_ASSERT(oGenericInst->type_argc == genericParameterCount);
+            Il2CppMetadataGenericContainerHandle genericContainer = MetadataCache::GetGenericContainerFromGenericClass(klass->image, klass->generic_class);
 
-            for (int32_t i = 0; i < genericParameterCount; ++i)
+            IL2CPP_ASSERT(oGenericInst->type_argc == genericInst->type_argc);
+
+            for (uint32_t i = 0; i < genericInst->type_argc; ++i)
             {
                 uint16_t flags = MetadataCache::GetGenericParameterFlags(genericContainer, i);
                 const int32_t parameterVariance = flags & IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_VARIANCE_MASK;
@@ -162,7 +169,21 @@ namespace vm
                 if (parameterVariance == IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_NON_VARIANT || Class::IsValuetype(genericParameterType) || Class::IsValuetype(oGenericParameterType))
                 {
                     if (genericParameterType != oGenericParameterType)
-                        return false;
+                    {
+                        if (implementingClass->rank || implementingClass->declaringType == il2cpp_defaults.array_class)
+                        {
+                            // For arrays or System.Array/InternalEnumerator<T> we need to follow the array variance rules when looking for an
+                            // generic interface i.e. Int32[] should be assignable to IEnumerable<UInt32>
+                            IL2CPP_ASSERT(implementingClass->rank || strcmp(implementingClass->name, "InternalEnumerator`1") == 0);
+
+                            if (metadata::ArrayMetadata::GetArrayVarianceReducedType(genericParameterType) != metadata::ArrayMetadata::GetArrayVarianceReducedType(oGenericParameterType))
+                                return false;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
                 }
                 else if (parameterVariance == IL2CPP_GENERIC_PARAMETER_ATTRIBUTE_COVARIANT)
                 {

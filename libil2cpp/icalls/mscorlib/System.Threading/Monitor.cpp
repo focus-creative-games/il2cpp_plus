@@ -59,7 +59,7 @@ namespace Threading
     bool Monitor::Monitor_test_owner(Il2CppObject* obj)
     {
         IL2CPP_CHECK_ARG_NULL(obj);
-        return il2cpp::vm::Monitor::IsAcquired(obj);
+        return il2cpp::vm::Monitor::IsOwnedByCurrentThread(obj);
     }
 
     void Monitor::enter_with_atomic_var(Il2CppObject* obj, bool* lockTaken)
