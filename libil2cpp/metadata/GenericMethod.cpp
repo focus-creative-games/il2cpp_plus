@@ -375,42 +375,27 @@ namespace metadata
         }
 
         bool isAotImplByInterp = hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod);
-        if (methodPointers.methodPointer == nullptr)
+        bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
+        if (isInterpMethod || (isAotImplByInterp && (methodPointers.methodPointer == nullptr || indirectCallViaInvokers)))
         {
-            if (isInterpMethod || isAotImplByInterp)
+            newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+            newMethod->methodPointer = newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+            newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
+                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : newMethod->methodPointerCallByInterp;
+            if (indirectCallViaInvokers)
             {
-                newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-                newMethod->methodPointer = newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-                bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
-                newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
-                    hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : newMethod->methodPointerCallByInterp;
-                newMethod->initInterpCallMethodPointer = true;
-                newMethod->isInterpterImpl = true;
+                FullySharedGenericMethodInfo* sharedMethodInfo = reinterpret_cast<FullySharedGenericMethodInfo*>(newMethod);
+                if (!hybridclr::interpreter::InterpreterModule::HasImplementCallNative2Managed(newMethod))
+                {
+                    newMethod->methodPointer = newMethod->methodPointerCallByInterp = sharedMethodInfo->rawDirectMethodPointer;
+                }
+                if (!hybridclr::interpreter::InterpreterModule::HasImplementCallVirtualNative2Managed(newMethod))
+                {
+                    newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = sharedMethodInfo->rawVirtualMethodPointer;
+                }
             }
-        }
-        else
-        {
-            if (indirectCallViaInvokers && isAotImplByInterp)
-            {
-                newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-                bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
-                newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
-                    hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : newMethod->methodPointerCallByInterp;
-                if (newMethod->invoker_method == nullptr)
-                {
-                    newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-                }
-                if (newMethod->methodPointer == nullptr)
-                {
-                    newMethod->methodPointer = newMethod->methodPointerCallByInterp;
-                }
-                if (newMethod->virtualMethodPointer == nullptr)
-                {
-                    newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp;
-                }
-                newMethod->initInterpCallMethodPointer = true;
-                newMethod->isInterpterImpl = true;
-            }
+            newMethod->initInterpCallMethodPointer = true;
+            newMethod->isInterpterImpl = true;
         }
 
         // If we are a default interface method on a generic instance interface we need to ensure that the interfaces rgctx is inflated
