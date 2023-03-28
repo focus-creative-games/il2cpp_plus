@@ -1,14 +1,8 @@
 #pragma once
 
 #include <string.h>
+#include "hybridclr/generated/UnityVersion.h"
 
-//!!!{{UNITY_VERSION
-#define HYBRIDCLR_UNITY_VERSION 20200333
-#define HYBRIDCLR_UNITY_2020 1
-#define HYBRIDCLR_UNITY_2019_OR_NEW 1
-#define HYBRIDCLR_UNITY_2020_OR_NEW 1
-
-//!!!}}UNITY_VERSION
 
 /* first setup platform defines*/
 #include "os/c-api/il2cpp-config-platforms.h"
