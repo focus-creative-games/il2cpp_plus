@@ -63,7 +63,7 @@ namespace vm
     {
         os::FastAutoLock lock(&s_assemblyLock);
         AssemblyVector& assemblies = *s_Assemblies;
-        for (AssemblyVector::const_iterator assembly = assemblies.begin(); assembly != assemblies.end(); ++assembly)
+        for (AssemblyVector::const_reverse_iterator assembly = assemblies.rbegin(); assembly != assemblies.rend(); ++assembly)
         {
             if (strcmp((*assembly)->aname.name, name) == 0)
                 return *assembly;
