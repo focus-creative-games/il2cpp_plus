@@ -1,12 +1,8 @@
 #pragma once
 
-//!!!{{UNITY_VERSION
-#define HYBRIDCLR_UNITY_VERSION 20190440
-#define HYBRIDCLR_UNITY_2019 1
-#define HYBRIDCLR_UNITY_2019_OR_NEW 1
+#include "hybridclr/generated/UnityVersion.h"
 
-//!!!}}UNITY_VERSION
-
+#include <string.h>
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
