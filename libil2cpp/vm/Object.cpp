@@ -212,7 +212,7 @@ namespace vm
             vtableSlotMethod = obj->klass->vtable[virtualMethod->slot].method;
         }
 
-        if (Method::IsGenericInstance(virtualMethod))
+        if (Method::IsGenericInstanceMethod(virtualMethod))
             return il2cpp::metadata::GenericMethod::GetGenericVirtualMethod(vtableSlotMethod, virtualMethod);
         return vtableSlotMethod;
     }
