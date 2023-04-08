@@ -98,11 +98,6 @@ namespace System
     Il2CppArray* MonoCustomAttrs::GetCustomAttributesDataInternal(Il2CppObject* obj)
     {
         il2cpp::vm::ReflectionObjInfo refInfo = il2cpp::vm::Reflection::GetImageOfReflectionObject(obj);
-        if (hybridclr::metadata::IsInterpreterImage(refInfo.image))
-        {
-            return hybridclr::metadata::MetadataModule::GetImage(refInfo.image)->GetCustomAttributesDataInternal(refInfo.token);
-        }
-
         metadata::CustomAttributeDataReader reader = il2cpp::vm::Reflection::GetCustomAttrsDataReader(obj);
 
         Il2CppArray* result = il2cpp::vm::Array::New(il2cpp_defaults.customattribute_data_class, reader.GetCount());

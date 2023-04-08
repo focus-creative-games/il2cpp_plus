@@ -114,6 +114,7 @@ namespace vm
         static const uint8_t* GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue);
         static Il2CppMetadataGenericContainerHandle GetGenericContainerFromIndex(GenericContainerIndex index);
         static const Il2CppMethodDefinition* GetMethodDefinitionFromIndex(MethodIndex index);
+        static MethodIndex GetMethodIndexFromDefinition(const Il2CppMethodDefinition* methodDefine);
         static const Il2CppType* GetInterfaceFromOffset(const Il2CppTypeDefinition* def, TypeInterfaceIndex offset);
         static Il2CppInterfaceOffsetInfo GetInterfaceOffsetInfo(const Il2CppTypeDefinition* typeDefine, TypeInterfaceOffsetIndex index);
         static const Il2CppMethodDefinition* GetMethodDefinitionFromVTableSlot(const Il2CppTypeDefinition* typeDefine, int32_t vTableSlot);

@@ -1110,7 +1110,7 @@ std::tuple<void*, void*> il2cpp::vm::GlobalMetadata::GetCustomAttributeDataRange
 {
     if (hybridclr::metadata::IsInterpreterImage(image))
     {
-        return hybridclr::metadata::MetadataModule::GetCustomAttributeDataRange(image, token);
+        return hybridclr::metadata::MetadataModule::GetImage(image)->CreateCustomAttributeDataTupleByToken(token);
     }
     const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, 0);
     Il2CppCustomAttributeDataRange key = {token, 0};
@@ -1135,13 +1135,17 @@ CustomAttributesCache* il2cpp::vm::GlobalMetadata::GenerateCustomAttributesCache
 
 static bool HasAttributeFromTypeRange(const Il2CppImage* image, const Il2CppCustomAttributeDataRange* dataRange, Il2CppClass* attribute)
 {
+    void* start;
+    void* end;
     if (hybridclr::metadata::IsInterpreterIndex(dataRange->startOffset))
     {
-        return hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(dataRange->startOffset)->HasAttribute(dataRange, attribute);
+        std::tie(start, end) = hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(dataRange->startOffset)->CreateCustomAttributeDataTuple(dataRange);
     }
-
-    void* start = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, dataRange->startOffset);
-    void* end = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, (dataRange + 1)->startOffset);
+    else
+    {
+        start = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, dataRange->startOffset);
+        end = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, (dataRange + 1)->startOffset);
+    }
 
     il2cpp::metadata::CustomAttributeDataReader reader(start, end);
 
@@ -1174,17 +1178,11 @@ bool il2cpp::vm::GlobalMetadata::HasAttribute(Il2CppMetadataCustomAttributeHandl
 
 bool il2cpp::vm::GlobalMetadata::HasAttribute(const Il2CppImage* image, uint32_t token, Il2CppClass* attribute)
 {
-    if (hybridclr::metadata::IsInterpreterImage(image))
+    const Il2CppCustomAttributeDataRange* attributeTypeRange = (const Il2CppCustomAttributeDataRange*)GetCustomAttributeTypeToken(image, token);
+    if (!attributeTypeRange)
     {
-        return hybridclr::metadata::MetadataModule::HasAttribute(image, token, attribute);
-    }
-    CustomAttributeIndex index = GetCustomAttributeIndex(image, token);
-    if (index == kCustomAttributeIndexInvalid)
         return false;
-
-    IL2CPP_ASSERT(attribute);
-
-    const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, index);
+    }
     return HasAttributeFromTypeRange(image, attributeTypeRange, attribute);
 }
 
@@ -1867,6 +1865,16 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(TypeIndex inde
         s_TypeInfoTable[index] = ClassInlines::InitFromCodegenSlow(klass, throwOnError);
     }
     return s_TypeInfoTable[index];
+}
+
+
+MethodIndex il2cpp::vm::GlobalMetadata::GetMethodIndexFromDefinition(const Il2CppMethodDefinition* methodDef)
+{
+    if (hybridclr::metadata::IsInterpreterMethod(methodDef))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(methodDef)->GetMethodIndexFromDefinition(methodDef);
+    }
+    return methodDef - MetadataOffset<const Il2CppMethodDefinition*>(s_GlobalMetadata, s_GlobalMetadataHeader->methodsOffset, 0);
 }
 
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle)

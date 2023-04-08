@@ -74,7 +74,7 @@ static bool ReadAttributeDataValue(const Il2CppImage* image, const char** buffer
 {
     const Il2CppTypeEnum type = il2cpp::utils::BlobReader::ReadEncodedTypeEnum(image, buffer, &arg->klass);
 
-    if (!il2cpp::utils::BlobReader::GetConstantValueFromBlob(image, type, buffer, &arg->data, deserializedManagedObjects, hybridclr::metadata::IsInterpreterImage(image)))
+    if (!il2cpp::utils::BlobReader::GetConstantValueFromBlob(image, type, buffer, &arg->data, deserializedManagedObjects))
     {
         SetInvalidDataException(exc);
         return false;
@@ -193,6 +193,7 @@ namespace metadata
     bool CustomAttributeDataReader::VisitCustomAttributeDataImpl(const Il2CppImage* image, const MethodInfo* ctor, CustomAttributeDataIterator* iter, CustomAttributeReaderVisitor* visitor, Il2CppException** exc, bool deserializedManagedObjects)
     {
         il2cpp::gc::WriteBarrier::GenericStoreNull(exc);
+        const Il2CppImage* ctorImage = ctor->klass->image;
 
         const Il2CppClass* attrClass = ctor->klass;
 
@@ -249,6 +250,7 @@ namespace metadata
         for (uint32_t i = 0; i < propertyCount; i++)
         {
             CustomAttributePropertyArgument propArg = { 0 };
+            //if (!ReadAttributeDataValue(image, &iter->dataBuffer, &propArg.arg, exc, deserializedManagedObjects))
             if (!ReadAttributeDataValue(image, &iter->dataBuffer, &propArg.arg, exc, deserializedManagedObjects))
                 return false;
 
