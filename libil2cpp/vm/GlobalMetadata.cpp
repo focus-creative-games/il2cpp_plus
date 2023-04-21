@@ -512,12 +512,10 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
         case kIl2CppMetadataUsageFieldRva:
             const Il2CppType* unused;
             initialized = (void*)GetFieldDefaultValue(GetFieldInfoFromIndex(decodedIndex), &unused);
-#if HYBRIDCLR_UNITY_VERSION >= 20210314
             {
                 const size_t MappedFieldDataAlignment = 8; // Should match System.Reflection.Metadata.ManagedPEBuilder.MappedFieldDataAlignment
                 IL2CPP_ASSERT(((uintptr_t)initialized % MappedFieldDataAlignment) == 0);
             }
-#endif
             break;
         case kIl2CppMetadataUsageInvalid:
             break;
@@ -526,9 +524,7 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
             break;
     }
 
-#if HYBRIDCLR_UNITY_VERSION >= 20210314
     IL2CPP_ASSERT(IsRuntimeMetadataInitialized(initialized) && "ERROR: The low bit of the metadata item is still set, alignment issue");
-#endif
 
     if (initialized != NULL)
         *metadataPointer = (uintptr_t)initialized;
@@ -975,76 +971,6 @@ static int CompareTokens(const void* pkey, const void* pelem)
     return (int)(((Il2CppCustomAttributeDataRange*)pkey)->token - ((Il2CppCustomAttributeDataRange*)pelem)->token);
 }
 
-/*
-static CustomAttributesCache* GenerateCustomAttributesCacheInternal(const Il2CppImageGlobalMetadata* imageMetadata, CustomAttributeIndex index)
-{
-    if (index == kCustomAttributeIndexInvalid || imageMetadata == NULL)
-        return NULL;
-
-    if (hybridclr::metadata::IsInterpreterImage(imageMetadata->image))
-    {
-        return hybridclr::metadata::MetadataModule::GetImage(imageMetadata->image)
-            ->GenerateCustomAttributesCacheInternal(hybridclr::metadata::DecodeMetadataIndex(index));
-    }
-
-    il2cpp::utils::CallOnce(s_CustomAttributesOnceFlag, &InitializeCustomAttributesCaches, NULL);
-
-    IL2CPP_ASSERT(index >= 0 && index < s_CustomAttributesCount);
-    IL2CPP_ASSERT(index >= 0 && index < static_cast<int32_t>(s_GlobalMetadataHeader->attributeDataRangeOffset / sizeof(Il2CppCustomAttributeDataRange)));
-
-    // use atomics rather than a Mutex here to avoid deadlock. The attribute generators call arbitrary managed code
-    CustomAttributesCache* cache = il2cpp::os::Atomic::ReadPointer(&s_CustomAttributesCaches[index]);
-
-    if (cache == NULL)
-    {
-        const Il2CppCustomAttributeDataRange* startRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, index);
-        const Il2CppCustomAttributeDataRange* endRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, index + 1);
-
-        void* start = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, startRange->startOffset);
-        void* end = MetadataOffset<uint8_t*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataOffset, endRange->startOffset);
-        IL2CPP_ASSERT(start && end);
-
-        il2cpp::metadata::CustomAttributeDataReader reader(start, end);
-
-        cache = (CustomAttributesCache*)IL2CPP_CALLOC(1, sizeof(CustomAttributesCache));
-        cache->count = (int)reader.GetCount();
-        cache->attributes = (Il2CppObject**)il2cpp::gc::GarbageCollector::AllocateFixed(sizeof(Il2CppObject*) * cache->count, 0);
-
-        il2cpp::metadata::CustomAttributeDataIterator iter = reader.GetDataIterator();
-        for (int i = 0; i < cache->count; i++)
-        {
-            Il2CppException* exc = NULL;
-            il2cpp::metadata::CustomAttributeCreator creator;
-            if (reader.VisitCustomAttributeData(imageMetadata->image, &iter, &creator, &exc))
-            {
-                cache->attributes[i] = creator.GetAttribute(&exc);
-                il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)&cache->attributes[i]);
-            }
-
-            if (exc != NULL)
-            {
-                il2cpp::gc::GarbageCollector::FreeFixed(cache->attributes);
-                IL2CPP_FREE(cache);
-                il2cpp::vm::Exception::Raise(exc);
-            }
-        }
-
-        CustomAttributesCache* original = il2cpp::os::Atomic::CompareExchangePointer(&s_CustomAttributesCaches[index], cache, (CustomAttributesCache*)NULL);
-        if (original)
-        {
-            // A non-NULL return value indicates some other thread already generated this cache.
-            // We need to cleanup the resources we allocated
-            il2cpp::gc::GarbageCollector::FreeFixed(cache->attributes);
-            IL2CPP_FREE(cache);
-
-            cache = original;
-        }
-    }
-
-    return cache;
-}
-*/
-
 static const Il2CppImageGlobalMetadata* GetImageForCustomAttributeIndex(CustomAttributeIndex index)
 {
     if (hybridclr::metadata::IsInterpreterIndex(index))
@@ -1146,37 +1072,6 @@ il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCusto
 {
     return CreateCustomAttributeDataReader(handle, GetCustomAttributeImageFromHandle(handle));
 }
-
-//bool il2cpp::vm::GlobalMetadata::HasAttribute(Il2CppMetadataCustomAttributeHandle token, Il2CppClass* attribute)
-//{
-//    if (token == NULL)
-//        return false;
-//
-//    const Il2CppCustomAttributeDataRange* dataRange = reinterpret_cast<const Il2CppCustomAttributeDataRange*>(token);
-//
-//    CustomAttributeIndex index = GetCustomAttributeIndex(dataRange);
-//    const Il2CppImageGlobalMetadata* imageMetadata = GetImageForCustomAttributeIndex(index);
-//    if (imageMetadata == NULL)
-//        return false;
-//
-//    return HasAttributeFromTypeRange(imageMetadata->image, dataRange, attribute);
-//}
-//
-//bool il2cpp::vm::GlobalMetadata::HasAttribute(const Il2CppImage* image, uint32_t token, Il2CppClass* attribute)
-//{
-//    if (hybridclr::metadata::IsInterpreterImage(image))
-//    {
-//        return hybridclr::metadata::MetadataModule::HasAttribute(image, token, attribute);
-//    }
-//    CustomAttributeIndex index = GetCustomAttributeIndex(image, token);
-//    if (index == kCustomAttributeIndexInvalid)
-//        return false;
-//
-//    IL2CPP_ASSERT(attribute);
-//
-//    const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRangeOffset, index);
-//    return HasAttributeFromTypeRange(image, attributeTypeRange, attribute);
-//}
 
 const Il2CppMethodDefinition* il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromVTableSlot(const Il2CppTypeDefinition* typeDefinition, int32_t vTableSlot)
 {
@@ -1283,7 +1178,6 @@ static const Il2CppParameterDefaultValue * GetParameterDefaultValueEntry(const M
     IL2CPP_ASSERT(!il2cpp::vm::Method::IsGenericInstance(method));
 
     const Il2CppMethodDefinition* methodDefinition = reinterpret_cast<const Il2CppMethodDefinition*>(method->methodMetadataHandle);
-
     if (methodDefinition == NULL)
         return NULL;
 

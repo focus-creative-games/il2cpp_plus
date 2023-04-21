@@ -40,6 +40,8 @@
 
 typedef Il2CppReaderWriterLockedHashMap<Il2CppClass*, Il2CppClass*> PointerTypeMap;
 
+typedef Il2CppReaderWriterLockedHashMap<Il2CppClass*, Il2CppClass*> PointerTypeMap;
+
 typedef Il2CppHashSet<const Il2CppGenericMethod*, il2cpp::metadata::Il2CppGenericMethodHash, il2cpp::metadata::Il2CppGenericMethodCompare> Il2CppGenericMethodSet;
 typedef Il2CppGenericMethodSet::const_iterator Il2CppGenericMethodSetIter;
 static Il2CppGenericMethodSet s_GenericMethodSet;
@@ -461,7 +463,7 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
         return foundInst;
 
     Il2CppGenericInst* newInst = NULL;
-    newInst = (Il2CppGenericInst*)MetadataMalloc(sizeof(Il2CppGenericInst));
+    newInst  = (Il2CppGenericInst*)MetadataMalloc(sizeof(Il2CppGenericInst));
     newInst->type_argc = typeCount;
     newInst->type_argv = (const Il2CppType**)MetadataMalloc(newInst->type_argc * sizeof(Il2CppType*));
 

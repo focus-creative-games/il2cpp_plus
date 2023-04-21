@@ -310,6 +310,7 @@ namespace metadata
             newMethod->virtualMethodPointer = stubs.virtualMethodPointer;
         }
 
+        newMethod->has_full_generic_sharing_signature = hasFullGenericSharingSignature;
         bool isInterpMethod = hybridclr::metadata::IsInterpreterMethod(newMethod);
         if (!isInterpMethod)
         {

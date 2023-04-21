@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "os/Mutex.h"
 #include "il2cpp-class-internals.h"
+#include "vm/Type.h"
 
 namespace il2cpp
 {
@@ -39,6 +40,11 @@ namespace metadata
         */
         static inline Il2CppClass* GetArrayVarianceReducedType(Il2CppClass* type)
         {
+            if (il2cpp::vm::Type::IsArray(&type->byval_arg))
+            {
+                return type;
+            }
+
             // Using castClass to handle reducing enum types - for enums castClass is the underling type
             switch (type->castClass->byval_arg.type)
             {
