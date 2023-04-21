@@ -1,8 +1,11 @@
 #include "il2cpp-config.h"
 #include "metadata/GenericMetadata.h"
+#include "metadata/Il2CppGenericClassHash.h"
+#include "metadata/Il2CppGenericClassCompare.h"
 #include "os/Atomic.h"
 #include "os/Mutex.h"
 #include "utils/Memory.h"
+#include "utils/Il2CppHashSet.h"
 #include "vm/Class.h"
 #include "vm/GenericClass.h"
 #include "vm/Exception.h"
@@ -161,6 +164,9 @@ namespace vm
         return CreateClass(gclass, throwOnError);
     }
 
+    typedef Il2CppHashSet < Il2CppGenericClass*, il2cpp::metadata::Il2CppGenericClassHash, il2cpp::metadata::Il2CppGenericClassCompare > Il2CppGenericClassSet;
+    static Il2CppGenericClassSet s_GenericClassSet;
+
     Il2CppClass* GenericClass::CreateClass(Il2CppGenericClass *gclass, bool throwOnError)
     {
         Il2CppClass* definition = GetTypeDefinition(gclass);
@@ -172,7 +178,14 @@ namespace vm
         }
 
         os::FastAutoLock lock(&g_MetadataLock);
-
+        Il2CppGenericClassSet::const_iterator iter = s_GenericClassSet.find(gclass);
+        if (iter != s_GenericClassSet.end())
+        {
+            Il2CppGenericClass* cacheGclass = *iter;
+            IL2CPP_ASSERT(cacheGclass->cached_class);
+            il2cpp::os::Atomic::ExchangePointer(&gclass->cached_class, cacheGclass->cached_class);
+            return gclass->cached_class;
+        }
         if (!gclass->cached_class)
         {
             Il2CppClass* klass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
@@ -227,10 +240,12 @@ namespace vm
                 klass->element_class = klass->castClass = definition->element_class;
 
             klass->is_import_or_windows_runtime = definition->is_import_or_windows_runtime;
-
             // Do not update gclass->cached_class until `klass` is fully initialized
             // And do so with an atomic barrier so no threads observer the writes out of order
             il2cpp::os::Atomic::ExchangePointer(&gclass->cached_class, klass);
+            Il2CppGenericClass* cloneGclass = (Il2CppGenericClass*)IL2CPP_MALLOC_ZERO(sizeof(Il2CppGenericClass));
+            *cloneGclass = *gclass;
+            s_GenericClassSet.insert(cloneGclass);
         }
 
         return gclass->cached_class;
