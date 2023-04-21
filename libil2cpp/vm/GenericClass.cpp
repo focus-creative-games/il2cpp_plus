@@ -175,7 +175,7 @@ namespace vm
 
         if (!gclass->cached_class)
         {
-            Il2CppClass* klass = gclass->cached_class = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
+            Il2CppClass* klass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
             klass->klass = klass;
 
             klass->name = definition->name;
@@ -227,6 +227,10 @@ namespace vm
                 klass->element_class = klass->castClass = definition->element_class;
 
             klass->is_import_or_windows_runtime = definition->is_import_or_windows_runtime;
+
+            // Do not update gclass->cached_class until `klass` is fully initialized
+            // And do so with an atomic barrier so no threads observer the writes out of order
+            il2cpp::os::Atomic::ExchangePointer(&gclass->cached_class, klass);
         }
 
         return gclass->cached_class;

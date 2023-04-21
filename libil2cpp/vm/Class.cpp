@@ -2188,7 +2188,10 @@ namespace vm
         const MethodInfo* vtableSlotMethod;
         if (Class::IsInterface(methodDeclaringType))
         {
-            vtableSlotMethod = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot)->method;
+            const VirtualInvokeData* invokeData = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot);
+            if (invokeData == NULL)
+                return NULL;
+            vtableSlotMethod = invokeData->method;
         }
         else
         {

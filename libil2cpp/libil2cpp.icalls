@@ -889,6 +889,10 @@ System.Net.Dns::GetHostByAddr_icall(System.String,System.String&,System.String[]
 System.Net.Dns::GetHostByName_icall(System.String,System.String&,System.String[]&,System.String[]&,System.Int32) System::System::Net::Dns::GetHostByName_icall
 System.Net.Dns::GetHostName_icall(System.String&) System::System::Net::Dns::GetHostName_icall
 
+// System.Net.NetworkInformation.LinuxNetworkInterface
+>icalls/System/System.Net.NetworkInformation/LinuxNetworkInterface.h
+System.Net.NetworkInformation.LinuxNetworkInterface::unitydroid_get_network_interface_up_state(System.String,System.Boolean&) System::System::Net::NetworkInformation::LinuxNetworkInterface::unitydroid_get_network_interface_up_state
+
 // System.Net.NetworkInformation.MacOsIPInterfaceProperties
 >icalls/System/System.Net.NetworkInformation/MacOsIPInterfaceProperties.h
 System.Net.NetworkInformation.MacOsIPInterfaceProperties::ParseRouteInfo_icall(System.String,System.String[]&) System::System::Net::NetworkInformation::MacOsIPInterfaceProperties::ParseRouteInfo_icall

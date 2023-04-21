@@ -430,7 +430,7 @@ namespace vm
         if (vm::Reflection::IsField(obj))
         {
             Il2CppReflectionField* field = (Il2CppReflectionField*)obj;
-            return std::make_tuple(vm::Field::GetToken(field->field), field->klass->image);
+            return std::make_tuple(vm::Field::GetToken(field->field), field->field->parent->image);
         }
         if (vm::Reflection::IsAnyMethod(obj))
         {

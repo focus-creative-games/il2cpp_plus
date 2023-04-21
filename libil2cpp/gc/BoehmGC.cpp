@@ -43,8 +43,8 @@ static ephemeron_node* ephemeron_list;
 static void
 clear_ephemerons(void);
 
-static void
-push_ephemerons(void);
+static GC_ms_entry*
+push_ephemerons(GC_ms_entry* mark_stack_ptr, GC_ms_entry* mark_stack_limit);
 
 #if !IL2CPP_ENABLE_WRITE_BARRIER_VALIDATION
 #define ELEMENT_CHUNK_SIZE 256
@@ -642,8 +642,8 @@ clear_ephemerons(void)
     }
 }
 
-static void
-push_ephemerons(void)
+static GC_ms_entry*
+push_ephemerons(GC_ms_entry* mark_stack_ptr, GC_ms_entry* mark_stack_limit)
 {
     ephemeron_node* prev_node = NULL;
     ephemeron_node* current_node = NULL;
@@ -678,13 +678,14 @@ push_ephemerons(void)
             if (!GC_is_marked(current_ephemeron->key))
                 continue;
 
-            if (current_ephemeron->value && !GC_is_marked(current_ephemeron->value))
+            if (current_ephemeron->value)
             {
-                /* the key is marked, so mark the value if needed */
-                GC_push_all(&current_ephemeron->value, &current_ephemeron->value + 1);
+                mark_stack_ptr = GC_mark_and_push((void*)current_ephemeron->value, mark_stack_ptr, mark_stack_limit, (void**)&current_ephemeron->value);
             }
         }
     }
+
+    return mark_stack_ptr;
 }
 
 bool il2cpp::gc::GarbageCollector::EphemeronArrayAdd(Il2CppObject* obj)
