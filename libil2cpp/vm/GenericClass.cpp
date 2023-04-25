@@ -1,8 +1,11 @@
 #include "il2cpp-config.h"
 #include "metadata/GenericMetadata.h"
+#include "metadata/Il2CppGenericClassHash.h"
+#include "metadata/Il2CppGenericClassCompare.h"
 #include "os/Atomic.h"
 #include "os/Mutex.h"
 #include "utils/Memory.h"
+#include "utils/Il2CppHashSet.h"
 #include "vm/Class.h"
 #include "vm/GenericClass.h"
 #include "vm/Exception.h"
@@ -12,13 +15,6 @@
 #include "il2cpp-class-internals.h"
 #include "il2cpp-runtime-metadata.h"
 #include "il2cpp-runtime-stats.h"
-
-#include "metadata/Il2CppGenericClassHash.h"
-#include "metadata/Il2CppGenericClassCompare.h"
-#include "utils/Il2CppHashSet.h"
-#include "utils/Il2CppHashMap.h"
-
-#include "hybridclr/CommonDef.h"
 
 namespace il2cpp
 {
@@ -160,67 +156,19 @@ namespace vm
         genericInstanceType->fields = fields;
     }
 
-    void InitCacheClass(Il2CppClass* definition, Il2CppGenericClass* gclass, bool throwOnError)
+    Il2CppClass* GenericClass::GetClass(Il2CppGenericClass* gclass, bool throwOnError)
     {
-        Il2CppClass* klass = gclass->cached_class = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
-        klass->klass = klass;
-
-        klass->name = definition->name;
-        klass->namespaze = definition->namespaze;
-
-        klass->image = definition->image;
-        klass->flags = definition->flags;
-        //klass->type_token = definition->type_token;
-        klass->generic_class = gclass;
-
-        Il2CppClass* genericTypeDefinition = GenericClass::GetTypeDefinition(klass->generic_class);
-        Il2CppGenericContext* context = &klass->generic_class->context;
-
-        if (genericTypeDefinition->parent)
-            klass->parent = Class::FromIl2CppType(metadata::GenericMetadata::InflateIfNeeded(&genericTypeDefinition->parent->byval_arg, context, false));
-
-        if (genericTypeDefinition->declaringType)
-            klass->declaringType = Class::FromIl2CppType(metadata::GenericMetadata::InflateIfNeeded(&genericTypeDefinition->declaringType->byval_arg, context, false));
-
-        klass->this_arg.type = klass->byval_arg.type = IL2CPP_TYPE_GENERICINST;
-        klass->this_arg.data.generic_class = klass->byval_arg.data.generic_class = gclass;
-        klass->this_arg.byref = true;
-
-        klass->event_count = definition->event_count;
-        klass->field_count = definition->field_count;
-        klass->interfaces_count = definition->interfaces_count;
-        klass->method_count = definition->method_count;
-        klass->property_count = definition->property_count;
-
-        klass->enumtype = definition->enumtype;
-        klass->valuetype = definition->valuetype;
-        klass->element_class = klass->castClass = klass;
-
-        klass->has_cctor = definition->has_cctor;
-        klass->has_finalize = definition->has_finalize;
-        klass->native_size = klass->thread_static_fields_offset = -1;
-        klass->token = definition->token;
-        klass->interopData = MetadataCache::GetInteropDataForType(&klass->byval_arg);
-
-        if (Class::IsNullable(klass))
-            klass->element_class = klass->castClass = Class::GetNullableArgument(klass);
-
-        if (klass->enumtype)
-            klass->element_class = klass->castClass = definition->element_class;
-
-        klass->is_import_or_windows_runtime = definition->is_import_or_windows_runtime;
+        Il2CppClass* cachedClass = os::Atomic::LoadPointerRelaxed(&gclass->cached_class);
+        if (cachedClass)
+            return cachedClass;
+        return CreateClass(gclass, throwOnError);
     }
 
     typedef Il2CppHashSet < Il2CppGenericClass*, il2cpp::metadata::Il2CppGenericClassHash, il2cpp::metadata::Il2CppGenericClassCompare > Il2CppGenericClassSet;
     static Il2CppGenericClassSet s_GenericClassSet;
 
-    Il2CppClass* GenericClass::GetClass(Il2CppGenericClass *gclass, bool throwOnError)
+    Il2CppClass* GenericClass::CreateClass(Il2CppGenericClass *gclass, bool throwOnError)
     {
-        Il2CppClass* cachedClass = os::Atomic::LoadPointerRelaxed(&gclass->cached_class);
-        if (cachedClass)
-            return cachedClass;
-
-        os::FastAutoLock lock(&g_MetadataLock);
         Il2CppClass* definition = GetTypeDefinition(gclass);
         if (definition == NULL)
         {
@@ -229,17 +177,69 @@ namespace vm
             return NULL;
         }
 
+        os::FastAutoLock lock(&g_MetadataLock);
+        Il2CppGenericClassSet::const_iterator iter = s_GenericClassSet.find(gclass);
+        if (iter != s_GenericClassSet.end())
+        {
+            Il2CppGenericClass* cacheGclass = *iter;
+            IL2CPP_ASSERT(cacheGclass->cached_class);
+            il2cpp::os::Atomic::ExchangePointer(&gclass->cached_class, cacheGclass->cached_class);
+            return gclass->cached_class;
+        }
+
         if (!gclass->cached_class)
         {
-            Il2CppGenericClassSet::const_iterator iter = s_GenericClassSet.find(gclass);
-            if (iter != s_GenericClassSet.end())
-            {
-                Il2CppGenericClass* cacheGclass = *iter;
-                IL2CPP_ASSERT(cacheGclass->cached_class);
-                return gclass->cached_class = cacheGclass->cached_class;
-            }
-            // TODO thread safe error! hybridclr
-            InitCacheClass(definition, gclass, throwOnError);
+            Il2CppClass* klass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
+            klass->klass = klass;
+
+            klass->name = definition->name;
+            klass->namespaze = definition->namespaze;
+
+            klass->image = definition->image;
+            klass->flags = definition->flags;
+            //klass->type_token = definition->type_token;
+            klass->generic_class = gclass;
+
+            Il2CppClass* genericTypeDefinition = GenericClass::GetTypeDefinition(klass->generic_class);
+            Il2CppGenericContext* context = &klass->generic_class->context;
+
+            if (genericTypeDefinition->parent)
+                klass->parent = Class::FromIl2CppType(metadata::GenericMetadata::InflateIfNeeded(&genericTypeDefinition->parent->byval_arg, context, false));
+
+            if (genericTypeDefinition->declaringType)
+                klass->declaringType = Class::FromIl2CppType(metadata::GenericMetadata::InflateIfNeeded(&genericTypeDefinition->declaringType->byval_arg, context, false));
+
+            klass->this_arg.type = klass->byval_arg.type = IL2CPP_TYPE_GENERICINST;
+            klass->this_arg.data.generic_class = klass->byval_arg.data.generic_class = gclass;
+            klass->this_arg.byref = true;
+
+            klass->event_count = definition->event_count;
+            klass->field_count = definition->field_count;
+            klass->interfaces_count = definition->interfaces_count;
+            klass->method_count = definition->method_count;
+            klass->property_count = definition->property_count;
+
+            klass->enumtype = definition->enumtype;
+            klass->valuetype = definition->valuetype;
+            klass->element_class = klass->castClass = klass;
+
+            klass->has_cctor = definition->has_cctor;
+            klass->has_finalize = definition->has_finalize;
+            klass->native_size = klass->thread_static_fields_offset = -1;
+            klass->token = definition->token;
+            klass->interopData = MetadataCache::GetInteropDataForType(&klass->byval_arg);
+
+            if (Class::IsNullable(klass))
+                klass->element_class = klass->castClass  = Class::GetNullableArgument(klass);
+
+            if (klass->enumtype)
+                klass->element_class = klass->castClass = definition->element_class;
+
+            klass->is_import_or_windows_runtime = definition->is_import_or_windows_runtime;
+
+            // Do not update gclass->cached_class until `klass` is fully initialized
+            // And do so with an atomic barrier so no threads observer the writes out of order
+            il2cpp::os::Atomic::ExchangePointer(&gclass->cached_class, klass);
             s_GenericClassSet.insert(gclass);
         }
 

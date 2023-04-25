@@ -227,6 +227,7 @@ namespace vm
         static bool IsStruct(const Il2CppType* type);
         static bool GenericInstIsValuetype(const Il2CppType* type);
 
+        static bool IsArray(const Il2CppType *type);
         static bool IsEnum(const Il2CppType *type);
         static bool IsValueType(const Il2CppType *type);
         static bool IsEmptyType(const Il2CppType *type);
