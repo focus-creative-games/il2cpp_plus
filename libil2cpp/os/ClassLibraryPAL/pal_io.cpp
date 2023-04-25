@@ -41,10 +41,12 @@ extern "C"
     IL2CPP_EXPORT int32_t SystemNative_MkDir(const char* path, int32_t mode); // 592
     IL2CPP_EXPORT int32_t SystemNative_ChMod(const char* path, int32_t mode); // 599
     IL2CPP_EXPORT int32_t SystemNative_Link(const char* source, const char* linkTarget); // 660
+    IL2CPP_EXPORT int32_t SystemNative_Symlink(const char* target, const char* linkPath);
     IL2CPP_EXPORT int32_t SystemNative_ReadLink(const char* path, char* buffer, int32_t bufferSize); // 1142
     IL2CPP_EXPORT int32_t SystemNative_Rename(const char* oldPath, const char* newPath); // 1159
     IL2CPP_EXPORT int32_t SystemNative_RmDir(const char* path); // 1166
     IL2CPP_EXPORT int32_t SystemNative_CopyFile(intptr_t sourceFd, intptr_t destinationFd); // 1251
+    IL2CPP_EXPORT int32_t SystemNative_LChflags(const char* path, uint32_t flags);
     IL2CPP_EXPORT int32_t SystemNative_LChflagsCanSetHiddenFlag(); // 1482
 }
 
@@ -248,7 +250,19 @@ int32_t SystemNative_GetReadDirRBufferSize(void)
 
 static int CompareByName(const void *p1, const void *p2)
 {
-    return strcmp(((struct DirectoryEntry*)p1)->Name, ((struct DirectoryEntry*)p2)->Name);
+    auto directoryEntry1 = ((struct DirectoryEntry*)p1);
+    auto directoryEntry2 = ((struct DirectoryEntry*)p2);
+
+    // Sort NULL values to the end of the array. This can happen when
+    // a file is deleted while GetFiles is called.
+    if (directoryEntry1->Name == directoryEntry2->Name)
+        return 0;
+    if (directoryEntry1->Name == NULL)
+        return 1;
+    if (directoryEntry2->Name == NULL)
+        return -1;
+
+    return strcmp(directoryEntry1->Name, directoryEntry2->Name);
 }
 
 // To reduce the number of string copies, the caller of this function is responsible to ensure the memory
@@ -327,7 +341,8 @@ int32_t SystemNative_ReadDirR(struct DIRWrapper* dirWrapper, uint8_t* buffer, in
             numEntries++;
         if (numEntries)
         {
-            dirWrapper->result = (DirectoryEntry*)malloc(numEntries * sizeof(struct DirectoryEntry));
+            // Use calloc to ensure the array is zero-initialized.
+            dirWrapper->result = (DirectoryEntry*)calloc(numEntries, sizeof(struct DirectoryEntry));
             dirWrapper->curIndex = 0;
 #if IL2CPP_HAVE_REWINDDIR
             rewinddir(dirWrapper->dir);
@@ -336,6 +351,10 @@ int32_t SystemNative_ReadDirR(struct DIRWrapper* dirWrapper, uint8_t* buffer, in
             dirWrapper->dir = opendir(dirWrapper->dirPath);
 #endif
 
+            // If we iterate fewer entries than exist because some files were deleted
+            // since the time we computed numEntries above, that will be fine. Those
+            // extra entries will be zero-initialized and will be sorted to the end
+            // of the array by the qsort below.
             size_t index = 0;
             while ((entry = readdir(dirWrapper->dir)) && index < numEntries)
             {
@@ -662,6 +681,18 @@ int32_t SystemNative_CopyFile(intptr_t sourceFd, intptr_t destinationFd)
     return 0;
 #endif // IL2CPP_HAVE_FCOPYFILE
 #endif // IL2CPP_HAVE_CUSTOM_COPYFILE
+}
+
+int32_t SystemNative_LChflags(const char* path, uint32_t flags)
+{
+#if defined(UF_HIDDEN) && defined(IL2CPP_HAVE_STAT_FLAGS) && defined(IL2CPP_HAVE_LCHFLAGS)
+    int32_t result;
+    while ((result = lchflags(path, flags)) < 0 && errno == EINTR)
+        ;
+    return result;
+#else
+    return -1;
+#endif
 }
 
 int32_t SystemNative_LChflagsCanSetHiddenFlag(void)

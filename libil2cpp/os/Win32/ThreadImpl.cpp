@@ -5,6 +5,8 @@
 #include "ThreadImpl.h"
 #include "os/ThreadLocalValue.h"
 #include "os/Time.h"
+#include "utils/StringUtils.h"
+#include "os/Debug.h"
 #include "WindowsHelpers.h"
 
 namespace il2cpp
@@ -43,13 +45,13 @@ namespace os
         return m_ThreadId;
     }
 
-    void ThreadImpl::SetName(const char* name)
+    void ThreadImpl::SetNameForDebugger(const char* name)
     {
         // http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
 
         const DWORD MS_VC_EXCEPTION = 0x406D1388;
 
-    #pragma pack(push,8)
+#pragma pack(push,8)
         typedef struct tagTHREADNAME_INFO
         {
             DWORD dwType; // Must be 0x1000.
@@ -57,7 +59,7 @@ namespace os
             DWORD dwThreadID; // Thread ID (-1=caller thread).
             DWORD dwFlags; // Reserved for future use, must be zero.
         } THREADNAME_INFO;
-    #pragma pack(pop)
+#pragma pack(pop)
 
         THREADNAME_INFO info;
         info.dwType = 0x1000;
@@ -72,6 +74,23 @@ namespace os
         __except (EXCEPTION_EXECUTE_HANDLER)
         {
         }
+    }
+
+    typedef HRESULT (__stdcall *SETTHREADPROC) (HANDLE, PCWSTR);
+    void ThreadImpl::SetName(const char* name)
+    {
+#if !IL2CPP_TARGET_WINRT
+        SETTHREADPROC ProcSetThreadDescription;
+        ProcSetThreadDescription = (SETTHREADPROC)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "SetThreadDescription");
+        if (ProcSetThreadDescription != NULL)
+        {
+            const UTF16String varName = utils::StringUtils::Utf8ToUtf16(name);
+            (ProcSetThreadDescription)(m_ThreadHandle, varName.c_str());
+        }
+#endif
+
+        if (Debug::IsDebuggerPresent())
+            SetNameForDebugger(name);
     }
 
     void ThreadImpl::SetPriority(ThreadPriority priority)

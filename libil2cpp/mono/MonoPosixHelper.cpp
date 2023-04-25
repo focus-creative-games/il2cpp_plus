@@ -5,6 +5,8 @@
 
 #include "../external/zlib/zlib.h"
 
+#include "vm/Exception.h"
+
 #define BUFFER_SIZE 4096
 #define ARGUMENT_ERROR -10
 #define IO_ERROR -11
@@ -260,4 +262,30 @@ int32_t WriteZStream(intptr_t zstream, intptr_t zbuffer, int32_t length)
         }
     }
     return length;
+}
+
+// The following methods are used by LinuxNetworkChange
+// Which the implementation for System.Net.NetworkInformation.NetworkChange on linux
+// These are here we throw a NotImplemented exception rather than getting an entry point not found
+// We could probably port this if we hard the time
+
+intptr_t CreateNLSocket()
+{
+    IL2CPP_NOT_IMPLEMENTED(CreateNLSocket);
+    NOT_SUPPORTED_IL2CPP(CreateNLSocket, Not implemented);
+    return 0;
+}
+
+int32_t ReadEvents(intptr_t sock, intptr_t buffer, int32_t count, int32_t size)
+{
+    IL2CPP_NOT_IMPLEMENTED(ReadEvents);
+    NOT_SUPPORTED_IL2CPP(ReadEvents, Not implemented);
+    return 0;
+}
+
+intptr_t CloseNLSocket(intptr_t sock)
+{
+    IL2CPP_NOT_IMPLEMENTED(CloseNLSocket);
+    NOT_SUPPORTED_IL2CPP(CloseNLSocket, Not implemented);
+    return 0;
 }

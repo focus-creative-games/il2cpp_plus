@@ -67,6 +67,8 @@ namespace os
         SIZE_T m_StackSize;
         ApartmentState m_ApartmentState;
         ThreadPriority m_Priority;
+
+        void SetNameForDebugger(const char* name);
     };
 }
 }
