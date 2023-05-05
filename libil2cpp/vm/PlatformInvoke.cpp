@@ -454,6 +454,9 @@ namespace vm
 
     Il2CppDelegate* PlatformInvoke::MarshalFunctionPointerToDelegate(void* functionPtr, Il2CppClass* delegateType)
     {
+        if (functionPtr == NULL)
+            return NULL;
+
         if (!Class::HasParent(delegateType, il2cpp_defaults.delegate_class))
             Exception::Raise(Exception::GetArgumentException("t", "Type must derive from Delegate."));
 

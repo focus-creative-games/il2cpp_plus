@@ -339,7 +339,7 @@ namespace vm
 
         IL2CPP_ASSERT(object);
 
-        if (!klass->initialized)
+        if (!klass->size_inited)
         {
             IL2CPP_ASSERT(isStruct);
             return false;
