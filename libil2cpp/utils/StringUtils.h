@@ -252,7 +252,7 @@ namespace utils
 // Assumes str is not NULL
 #if defined(_MSC_VER)
 #define DECLARE_IL2CPP_STRING_AS_STRING_VIEW_OF_NATIVE_CHARS(variableName, str) \
-    il2cpp::utils::StringView<Il2CppNativeChar> variableName(reinterpret_cast<Il2CppString*>(str)->chars, reinterpret_cast<Il2CppString*>(str)->length);
+    il2cpp::utils::StringView<Il2CppNativeChar> variableName((str)->chars, (str)->length);
 #define DECLARE_IL2CPP_CHAR_PTR_AS_STRING_VIEW_OF_NATIVE_CHARS(variableName, str) \
     il2cpp::utils::StringView<Il2CppNativeChar> variableName(str, il2cpp::utils::StringUtils::StrLen (str));
 #define DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(variableName, str) \
@@ -261,7 +261,7 @@ namespace utils
     il2cpp::utils::StringView<Il2CppChar> variableName = STRING_TO_STRINGVIEW(str);
 #else
 #define DECLARE_IL2CPP_STRING_AS_STRING_VIEW_OF_NATIVE_CHARS(variableName, str) \
-    Il2CppNativeString variableName##_native_string_storage = il2cpp::utils::StringUtils::Utf16ToUtf8(reinterpret_cast<Il2CppString*>(str)->chars, reinterpret_cast<Il2CppString*>(str)->length); \
+    Il2CppNativeString variableName##_native_string_storage = il2cpp::utils::StringUtils::Utf16ToUtf8((str)->chars, (str)->length); \
     il2cpp::utils::StringView<Il2CppNativeChar> variableName(variableName##_native_string_storage.c_str(), variableName##_native_string_storage.length());
 #define DECLARE_IL2CPP_CHAR_PTR_AS_STRING_VIEW_OF_NATIVE_CHARS(variableName, str) \
     Il2CppNativeString variableName##_native_string_storage = il2cpp::utils::StringUtils::Utf16ToUtf8(str, il2cpp::utils::StringUtils::StrLen (str)); \

@@ -254,7 +254,19 @@ int32_t SystemNative_GetReadDirRBufferSize(void)
 
 static int CompareByName(const void *p1, const void *p2)
 {
-    return strcmp(((struct DirectoryEntry*)p1)->Name, ((struct DirectoryEntry*)p2)->Name);
+    auto directoryEntry1 = ((struct DirectoryEntry*)p1);
+    auto directoryEntry2 = ((struct DirectoryEntry*)p2);
+
+    // Sort NULL values to the end of the array. This can happen when
+    // a file is deleted while GetFiles is called.
+    if (directoryEntry1->Name == directoryEntry2->Name)
+        return 0;
+    if (directoryEntry1->Name == NULL)
+        return 1;
+    if (directoryEntry2->Name == NULL)
+        return -1;
+
+    return strcmp(directoryEntry1->Name, directoryEntry2->Name);
 }
 
 // To reduce the number of string copies, the caller of this function is responsible to ensure the memory
@@ -333,7 +345,8 @@ int32_t SystemNative_ReadDirR(struct DIRWrapper* dirWrapper, uint8_t* buffer, in
             numEntries++;
         if (numEntries)
         {
-            dirWrapper->result = (DirectoryEntry*)malloc(numEntries * sizeof(struct DirectoryEntry));
+            // Use calloc to ensure the array is zero-initialized.
+            dirWrapper->result = (DirectoryEntry*)calloc(numEntries, sizeof(struct DirectoryEntry));
             dirWrapper->curIndex = 0;
 #if IL2CPP_HAVE_REWINDDIR
             rewinddir(dirWrapper->dir);
@@ -342,6 +355,10 @@ int32_t SystemNative_ReadDirR(struct DIRWrapper* dirWrapper, uint8_t* buffer, in
             dirWrapper->dir = opendir(dirWrapper->dirPath);
 #endif
 
+            // If we iterate fewer entries than exist because some files were deleted
+            // since the time we computed numEntries above, that will be fine. Those
+            // extra entries will be zero-initialized and will be sorted to the end
+            // of the array by the qsort below.
             size_t index = 0;
             while ((entry = readdir(dirWrapper->dir)) && index < numEntries)
             {
