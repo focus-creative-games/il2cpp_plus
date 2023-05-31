@@ -82,7 +82,7 @@ namespace gc
         static void* AllocateFixed(size_t size, void *descr);
         static void FreeFixed(void* addr);
 
-        static bool RegisterThread(void *baseptr);
+        static void RegisterThread();
         static bool UnregisterThread();
 
 #if !RUNTIME_TINY

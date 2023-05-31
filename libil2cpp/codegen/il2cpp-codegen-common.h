@@ -19,6 +19,8 @@
 #define IL2CPP_ENABLE_OPTIMIZATIONS
 #endif
 
+template<typename T>
+using no_infer = typename std::common_type<T>::type;
 
 #if IL2CPP_ENABLE_WRITE_BARRIERS
 void Il2CppCodeGenWriteBarrier(void** targetAddress, void* object);

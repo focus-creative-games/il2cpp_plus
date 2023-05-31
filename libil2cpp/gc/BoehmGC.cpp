@@ -281,8 +281,8 @@ il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
     }
 }
 
-bool
-il2cpp::gc::GarbageCollector::RegisterThread(void *baseptr)
+void
+il2cpp::gc::GarbageCollector::RegisterThread()
 {
 #if defined(GC_THREADS) && !IL2CPP_TARGET_JAVASCRIPT
     struct GC_stack_base sb;
@@ -291,20 +291,19 @@ il2cpp::gc::GarbageCollector::RegisterThread(void *baseptr)
     res = GC_get_stack_base(&sb);
     if (res != GC_SUCCESS)
     {
-        sb.mem_base = baseptr;
-#ifdef __ia64__
         /* Can't determine the register stack bounds */
-        IL2CPP_ASSERT(false && "mono_gc_register_thread failed ().");
-#endif
+        IL2CPP_ASSERT(false && "GC_get_stack_base () failed, aborting.");
+        /* Abort we can't scan the stack, so we can't use the GC */
+        abort();
     }
     res = GC_register_my_thread(&sb);
     if ((res != GC_SUCCESS) && (res != GC_DUPLICATE))
     {
         IL2CPP_ASSERT(false && "GC_register_my_thread () failed.");
-        return false;
+        /* Abort we can't use the GC on this thread, so we can't run managed code */
+        abort();
     }
 #endif
-    return true;
 }
 
 bool
