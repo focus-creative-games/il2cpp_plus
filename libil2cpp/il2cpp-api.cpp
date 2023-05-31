@@ -233,6 +233,11 @@ Il2CppClass* il2cpp_class_from_system_type(Il2CppReflectionType *type)
     return Class::FromSystemType(type);
 }
 
+bool il2cpp_class_is_inited(const Il2CppClass *klass)
+{
+    return klass->initialized;
+}
+
 bool il2cpp_class_is_generic(const Il2CppClass *klass)
 {
     return Class::IsGeneric(klass);

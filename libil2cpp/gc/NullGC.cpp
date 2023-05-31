@@ -67,10 +67,9 @@ il2cpp::gc::GarbageCollector::AddWeakLink(void **link_addr, Il2CppObject *obj, b
     *link_addr = obj;
 }
 
-bool
-il2cpp::gc::GarbageCollector::RegisterThread(void *baseptr)
+void
+il2cpp::gc::GarbageCollector::RegisterThread()
 {
-    return true;
 }
 
 bool

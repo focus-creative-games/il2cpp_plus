@@ -764,12 +764,12 @@ InvokerMethod il2cpp::vm::MetadataCache::GetMethodInvoker(const Il2CppImage* ima
     uint32_t rid = GetTokenRowId(token);
     uint32_t table = GetTokenType(token);
     if (rid == 0)
-        return NULL;
+        return Runtime::GetMissingMethodInvoker();
 
     int32_t index = image->codeGenModule->invokerIndices[rid - 1];
 
     if (index == kMethodIndexInvalid)
-        return NULL;
+        return Runtime::GetMissingMethodInvoker();
 
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) < s_Il2CppCodeRegistration->invokerPointersCount);
     return s_Il2CppCodeRegistration->invokerPointers[index];

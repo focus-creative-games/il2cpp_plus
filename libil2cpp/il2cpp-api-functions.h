@@ -37,6 +37,7 @@ DO_API(const Il2CppImage*, il2cpp_assembly_get_image, (const Il2CppAssembly * as
 // class
 DO_API(void, il2cpp_class_for_each, (void(*klassReportFunc)(Il2CppClass* klass, void* userData), void* userData));
 DO_API(const Il2CppType*, il2cpp_class_enum_basetype, (Il2CppClass * klass));
+DO_API(bool, il2cpp_class_is_inited, (const Il2CppClass * klass));
 DO_API(bool, il2cpp_class_is_generic, (const Il2CppClass * klass));
 DO_API(bool, il2cpp_class_is_inflated, (const Il2CppClass * klass));
 DO_API(bool, il2cpp_class_is_assignable_from, (Il2CppClass * klass, Il2CppClass * oklass));
