@@ -110,9 +110,7 @@ namespace vm
         if (managedThread != NULL)
             return managedThread;
 
-        int temp = 0;
-        if (!gc::GarbageCollector::RegisterThread(&temp))
-            IL2CPP_ASSERT(0 && "gc::GarbageCollector::RegisterThread failed");
+        gc::GarbageCollector::RegisterThread();
 
         StackTrace::InitializeStackTracesForCurrentThread();
 
@@ -684,9 +682,7 @@ namespace vm
         startData->m_Semaphore->Wait();
 
         {
-            int temp = 0;
-            if (!gc::GarbageCollector::RegisterThread(&temp))
-                IL2CPP_ASSERT(0 && "gc::GarbageCollector::RegisterThread failed");
+            gc::GarbageCollector::RegisterThread();
 
             il2cpp::vm::StackTrace::InitializeStackTracesForCurrentThread();
 

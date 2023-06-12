@@ -957,7 +957,7 @@ void* il2cpp_codegen_get_thread_static_field_data_pointer(RuntimeField* field);
 void il2cpp_codegen_write_thread_static_field_data(RuntimeField* field, void* data, uint32_t size);
 
 template<typename T>
-void il2cpp_codegen_write_instance_field_data(void* instance, RuntimeField* field, T data)
+void il2cpp_codegen_write_instance_field_data(void* instance, RuntimeField* field, no_infer<T> data)
 {
     il2cpp_codegen_assert_field_size(field, sizeof(T));
 
@@ -967,19 +967,19 @@ void il2cpp_codegen_write_instance_field_data(void* instance, RuntimeField* fiel
 }
 
 template<typename T>
-inline void il2cpp_codegen_write_instance_field_data(intptr_t instance, RuntimeField* field, T data)
+inline void il2cpp_codegen_write_instance_field_data(intptr_t instance, RuntimeField* field, no_infer<T> data)
 {
-    il2cpp_codegen_write_instance_field_data((void*)instance, field, data);
+    il2cpp_codegen_write_instance_field_data<T>((void*)instance, field, data);
 }
 
 template<typename T>
-inline void il2cpp_codegen_write_instance_field_data(uintptr_t instance, RuntimeField* field, T data)
+inline void il2cpp_codegen_write_instance_field_data(uintptr_t instance, RuntimeField* field, no_infer<T> data)
 {
-    il2cpp_codegen_write_instance_field_data((void*)instance, field, data);
+    il2cpp_codegen_write_instance_field_data<T>((void*)instance, field, data);
 }
 
 template<typename T>
-void il2cpp_codegen_write_static_field_data(RuntimeField* field, T data)
+void il2cpp_codegen_write_static_field_data(RuntimeField* field, no_infer<T> data)
 {
     il2cpp_codegen_assert_field_size(field, sizeof(T));
 
@@ -989,7 +989,7 @@ void il2cpp_codegen_write_static_field_data(RuntimeField* field, T data)
 }
 
 template<typename T>
-void il2cpp_codegen_write_thread_static_field_data(RuntimeField* field, T data)
+void il2cpp_codegen_write_thread_static_field_data(RuntimeField* field, no_infer<T> data)
 {
     il2cpp_codegen_assert_field_size(field, sizeof(T));
 
