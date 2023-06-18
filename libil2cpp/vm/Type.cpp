@@ -130,15 +130,35 @@ namespace vm
 
         if (last_dot == _end)
         {
-            _info._name.assign(begin, _p);
+            //_info._name.assign(begin, _p);
+            AssignSkipEscapeSymbol(_info._name, begin, _p);
         }
         else
         {
-            _info._namespace.assign(begin, last_dot);
-            _info._name.assign(last_dot + 1, _p);
+            //_info._namespace.assign(begin, last_dot);
+            AssignSkipEscapeSymbol(_info._namespace, begin, last_dot);
+            //_info._name.assign(last_dot + 1, _p);
+            AssignSkipEscapeSymbol(_info._name, last_dot + 1, _p);
         }
 
         return true;
+    }
+
+    void TypeNameParser::AssignSkipEscapeSymbol(std::string& s, std::string::const_iterator begin, std::string::const_iterator end)
+    {
+        for (std::string::const_iterator it = begin; it != end; ++it)
+        {
+            auto ch = *it;
+            if (ch != '\\')
+            {
+                s.push_back(ch);
+            }
+            else
+            {
+                ++it;
+                s.push_back(*it);
+            }
+        }
     }
 
     bool TypeNameParser::ParseNestedTypeOptional(int32_t &arity)
@@ -165,7 +185,9 @@ namespace vm
                 arity += nested_arity;
             }
 
-            _info._nested.push_back(std::string(begin, _p));
+            std::string nestedTypeName;
+            AssignSkipEscapeSymbol(nestedTypeName, begin, _p);
+            _info._nested.push_back(nestedTypeName);
         }
 
         return true;
