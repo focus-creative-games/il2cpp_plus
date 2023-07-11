@@ -5,7 +5,7 @@
 #if IL2CPP_TARGET_LINUX
 #include "os/Linux/pal_linux.h"
 #elif IL2CPP_TARGET_QNX
-#include "os/QNX/pal_qnx.h"
+#include "pal/pal_qnx.h"
 #elif IL2CPP_TARGET_DARWIN
 #include "os/OSX/pal_darwin.h"
 #elif IL2CPP_TARGET_ANDROID
