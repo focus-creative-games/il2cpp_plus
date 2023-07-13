@@ -69,6 +69,7 @@ extern "C" {
 #endif
 
 #include "hybridclr/Runtime.h"
+#include "hybridclr/Il2CppCompatibleDef.h"
 
 Il2CppDefaults il2cpp_defaults;
 bool g_il2cpp_is_fully_initialized = false;
@@ -576,6 +577,7 @@ namespace vm
 
     Il2CppObject* Runtime::InvokeWithThrow(const MethodInfo *method, void *obj, void **params)
     {
+        hybridclr::InitAndGetInterpreterDirectlyCallMethodPointer(method);
         if (method->return_type->type == IL2CPP_TYPE_VOID)
         {
             method->invoker_method(method->methodPointer, method, obj, params, NULL);
