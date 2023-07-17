@@ -474,8 +474,7 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
             break;
     }
 
-    if (initialized != NULL)
-        *metadataPointer = (uintptr_t)initialized;
+    il2cpp::os::Atomic::ExchangePointer((void**)metadataPointer, initialized);
 
     return initialized;
 }
