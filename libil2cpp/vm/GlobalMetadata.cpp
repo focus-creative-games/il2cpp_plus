@@ -522,8 +522,7 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
     IL2CPP_ASSERT(IsRuntimeMetadataInitialized(initialized) && "ERROR: The low bit of the metadata item is still set, alignment issue");
 #endif
 
-    if (initialized != NULL)
-        *metadataPointer = (uintptr_t)initialized;
+    il2cpp::os::Atomic::ExchangePointer((void**)metadataPointer, initialized);
 
     return initialized;
 }
