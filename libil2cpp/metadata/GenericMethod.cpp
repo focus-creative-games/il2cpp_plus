@@ -368,6 +368,16 @@ namespace metadata
                     }
                 }
             }
+
+			newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+			if (!hasAdjustorThunk)
+			{
+				newMethod->virtualMethodPointerCallByInterp = newMethod->methodPointer;
+			}
+			else
+			{
+				newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
+			}
         }
         else
         {
