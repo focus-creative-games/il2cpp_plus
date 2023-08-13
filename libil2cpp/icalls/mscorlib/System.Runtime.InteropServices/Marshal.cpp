@@ -582,13 +582,19 @@ namespace InteropServices
         {
             type = *it;
             void* iter = NULL;
+            int layout = vm::Class::GetFlags(type) & TYPE_ATTRIBUTE_LAYOUT_MASK;
+            bool layoutIsExplicit = layout == TYPE_ATTRIBUTE_EXPLICIT_LAYOUT;
+
             while ((field = vm::Class::GetFields(type, &iter)))
             {
                 if (vm::Field::GetFlags(field) & FIELD_ATTRIBUTE_STATIC)
                     continue;
 
-                // Determine how much the previous field added to the offset.
-                if (previousField != NULL)
+                if (layoutIsExplicit)
+                {
+                    offset = field->offset - sizeof(Il2CppObject);
+                }
+                else if (previousField != NULL) // Determine how much the previous field added to the offset.
                 {
                     if (!vm::Type::IsStruct(previousField->type))
                     {
