@@ -369,14 +369,14 @@ namespace metadata
                 }
             }
 
-			newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+			newMethod->methodPointerCallByInterp = sharedMethodInfo->rawDirectMethodPointer;
 			if (!hasAdjustorThunk)
 			{
-				newMethod->virtualMethodPointerCallByInterp = newMethod->methodPointer;
+				newMethod->virtualMethodPointerCallByInterp = sharedMethodInfo->rawDirectMethodPointer;
 			}
 			else
 			{
-				newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
+				newMethod->virtualMethodPointerCallByInterp = sharedMethodInfo->rawVirtualMethodPointer;
 			}
         }
         else
