@@ -1125,9 +1125,6 @@ namespace vm
                 // We did not find an adjustor thunk, or maybe did not need to look for one. Let's get the real method pointer.
                 if (newMethod->virtualMethodPointer == NULL)
                     newMethod->virtualMethodPointer = newMethod->methodPointer;
-
-                newMethod->methodPointerCallByInterp = newMethod->methodPointer;
-                newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
                 newMethod->initInterpCallMethodPointer = true;
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
@@ -1162,6 +1159,14 @@ namespace vm
                     newMethod->invoker_method = Runtime::GetMissingMethodInvoker();
                     newMethod->virtualMethodPointer = MetadataCache::GetUnresolvedVirtualCallStub(newMethod);
                 }
+
+                //if (!newMethod->methodPointer && !klass->byval_arg.valuetype)
+                //{
+                //    newMethod->methodPointer = newMethod->virtualMethodPointer;
+                //}
+
+                newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+                newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
 
                 newMethod->isInterpterImpl = hybridclr::interpreter::InterpreterModule::IsImplementsByInterpreter(newMethod);
 
