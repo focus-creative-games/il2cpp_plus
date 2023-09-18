@@ -382,7 +382,9 @@ namespace metadata
             newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
             newMethod->methodPointer = newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
             newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
-                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : newMethod->methodPointerCallByInterp;
+                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) :
+                (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
+                    newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
             if (indirectCallViaInvokers)
             {
                 FullySharedGenericMethodInfo* sharedMethodInfo = reinterpret_cast<FullySharedGenericMethodInfo*>(newMethod);
@@ -398,6 +400,7 @@ namespace metadata
             newMethod->initInterpCallMethodPointer = true;
             newMethod->isInterpterImpl = true;
         }
+        IL2CPP_ASSERT(!indirectCallViaInvokers || !isAdjustorThunkMethod || newMethod->methodPointerCallByInterp != newMethod->virtualMethodPointerCallByInterp);
 
         // If we are a default interface method on a generic instance interface we need to ensure that the interfaces rgctx is inflated
         if (Method::IsDefaultInterfaceMethodOnGenericInstance(newMethod))
