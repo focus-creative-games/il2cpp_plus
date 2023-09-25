@@ -159,6 +159,13 @@ namespace vm
         ++s_assemblyVersion;
     }
 
+    void Assembly::InvalidateAssemblyList()
+    {
+        os::FastAutoLock lock(&s_assemblyLock);
+
+        ++s_assemblyVersion;
+    }
+
     void Assembly::ClearAllAssemblies()
     {
         os::FastAutoLock lock(&s_assemblyLock);
