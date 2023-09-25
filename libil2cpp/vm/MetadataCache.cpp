@@ -911,6 +911,7 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyFromBytes(const cha
     {
         if (ass == newAssembly)
         {
+            il2cpp::vm::Assembly::InvalidateAssemblyList();
             return ass;
         }
     }
