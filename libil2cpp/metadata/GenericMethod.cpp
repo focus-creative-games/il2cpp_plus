@@ -290,12 +290,6 @@ namespace metadata
                 sharedMethodInfo->virtualCallMethodPointer = newMethod->virtualMethodPointer;
         }
 
-        if (!newMethod->indirect_call_via_invokers)
-        {
-            newMethod->methodPointerCallByInterp = newMethod->methodPointer;
-            newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
-        }
-
         bool isAotImplByInterp = hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod);
         bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
         if (methodPointers.methodPointer == nullptr)
@@ -317,7 +311,7 @@ namespace metadata
             if (newMethod->indirect_call_via_invokers && isAotImplByInterp)
             {
                 newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-                newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
+                newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
                     hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) :
                     (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
                         newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
@@ -337,7 +331,12 @@ namespace metadata
                 newMethod->isInterpterImpl = true;
             }
         }
-        IL2CPP_ASSERT(!newMethod->indirect_call_via_invokers || !isAdjustorThunkMethod || newMethod->methodPointerCallByInterp != newMethod->virtualMethodPointerCallByInterp);
+
+        if (!newMethod->isInterpterImpl)
+        {
+            newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+            newMethod->virtualMethodPointerCallByInterp = GetVirtualCallMethodPointer(newMethod);
+        }
 
         // If we are a default interface method on a generic instance interface we need to ensure that the interfaces rgctx is inflated
         if (Method::IsDefaultInterfaceMethodOnGenericInstance(newMethod))
