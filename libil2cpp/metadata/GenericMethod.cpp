@@ -387,12 +387,26 @@ namespace metadata
 
         bool isAotImplByInterp = hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod);
         bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
-        if (isInterpMethod || (isAotImplByInterp && (methodPointers.methodPointer == nullptr || indirectCallViaInvokers)))
+        if (isInterpMethod)
         {
             newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-            newMethod->methodPointer = newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
-            newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
-                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) : newMethod->methodPointerCallByInterp;
+            newMethod->methodPointerCallByInterp = newMethod->methodPointer = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+            newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer = isAdjustorThunkMethod ?
+                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) :
+                (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
+                    newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
+            IL2CPP_ASSERT(!newMethod->has_full_generic_sharing_signature);
+            newMethod->initInterpCallMethodPointer = true;
+            newMethod->isInterpterImpl = true;
+        }
+        else if (isAotImplByInterp && (methodPointers.methodPointer == nullptr || indirectCallViaInvokers))
+        {
+            newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+            newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
+            newMethod->virtualMethodPointerCallByInterp = isAdjustorThunkMethod ?
+                hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) :
+                (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
+                    newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
             if (indirectCallViaInvokers)
             {
                 FullySharedGenericMethodInfo* sharedMethodInfo = reinterpret_cast<FullySharedGenericMethodInfo*>(newMethod);
@@ -405,9 +419,21 @@ namespace metadata
                     newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = sharedMethodInfo->rawVirtualMethodPointer;
                 }
             }
+            else
+            {
+
+            }
             newMethod->initInterpCallMethodPointer = true;
             newMethod->isInterpterImpl = true;
         }
+        else
+        {
+            newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+            newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
+            newMethod->initInterpCallMethodPointer = false;
+            newMethod->isInterpterImpl = false;
+        }
+        //IL2CPP_ASSERT(!indirectCallViaInvokers || !isAdjustorThunkMethod || newMethod->methodPointerCallByInterp != newMethod->virtualMethodPointerCallByInterp || !newMethod->methodPointerCallByInterp);
 
         // If we are a default interface method on a generic instance interface we need to ensure that the interfaces rgctx is inflated
         if (Method::IsDefaultInterfaceMethodOnGenericInstance(newMethod))
