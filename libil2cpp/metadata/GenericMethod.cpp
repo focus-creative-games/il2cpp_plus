@@ -409,18 +409,17 @@ namespace metadata
                     newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = sharedMethodInfo->rawVirtualMethodPointer;
                 }
             }
-            else
-            {
 
-            }
             newMethod->initInterpCallMethodPointer = true;
             newMethod->isInterpterImpl = true;
         }
-        else
+
+        if (indirectCallViaInvokers)
         {
-            newMethod->methodPointerCallByInterp = newMethod->methodPointer;
-            newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
-            newMethod->initInterpCallMethodPointer = false;
+            FullySharedGenericMethodInfo* sharedMethodInfo = reinterpret_cast<FullySharedGenericMethodInfo*>(newMethod);
+            newMethod->methodPointerCallByInterp = sharedMethodInfo->rawDirectMethodPointer;
+            newMethod->virtualMethodPointerCallByInterp = sharedMethodInfo->rawVirtualMethodPointer;
+            newMethod->initInterpCallMethodPointer = true;
             newMethod->isInterpterImpl = false;
         }
         //IL2CPP_ASSERT(!indirectCallViaInvokers || !isAdjustorThunkMethod || newMethod->methodPointerCallByInterp != newMethod->virtualMethodPointerCallByInterp || !newMethod->methodPointerCallByInterp);
@@ -506,3 +505,4 @@ namespace metadata
     }
 } /* namespace vm */
 } /* namespace il2cpp */
+
