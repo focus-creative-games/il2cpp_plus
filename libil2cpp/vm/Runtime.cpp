@@ -426,7 +426,9 @@ namespace vm
         MONO_PROFILER_RAISE(runtime_shutdown_end, ());
 #endif
 
+#if IL2CPP_SUPPORT_THREADS
         threadpool_ms_cleanup();
+#endif
 
         // Tries to abort all threads
         // Threads at alertable waits may not have existing when this return
