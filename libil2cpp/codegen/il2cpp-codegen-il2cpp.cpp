@@ -171,7 +171,7 @@ void* il2cpp_codegen_get_thread_static_field_data_pointer(RuntimeField* field)
     IL2CPP_ASSERT(il2cpp::vm::Field::IsThreadStatic(field));
 
     int threadStaticFieldOffset = il2cpp::vm::MetadataCache::GetThreadLocalStaticOffsetForField(field);
-    void* threadStaticData = il2cpp::vm::Thread::GetThreadStaticDataForThread(field->parent->thread_static_fields_offset, il2cpp::vm::Thread::Current());
+    void* threadStaticData = il2cpp::vm::Thread::GetThreadStaticData(field->parent->thread_static_fields_offset);
     return static_cast<uint8_t*>(threadStaticData) + threadStaticFieldOffset;
 }
 
