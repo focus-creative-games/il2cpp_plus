@@ -25,10 +25,11 @@ namespace utils
             m_count++;
         }
 
-        void pop()
+        T pop()
         {
             IL2CPP_ASSERT(!empty());
             m_count--;
+            return m_Storage[m_count];
         }
 
         T top() const

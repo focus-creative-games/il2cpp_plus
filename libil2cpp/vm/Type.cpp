@@ -1032,7 +1032,7 @@ namespace vm
             return Class::FromIl2CppType(type->data.type);
 
         // IL2CPP_TYPE_SZARRAY stores element class in klass
-        return MetadataCache::GetTypeInfoFromType(type);
+        return Class::FromIl2CppType(type);
     }
 
     const Il2CppType* Type::GetUnderlyingType(const Il2CppType *type)

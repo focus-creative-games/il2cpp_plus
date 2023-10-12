@@ -35,8 +35,8 @@ NORETURN void il2cpp_codegen_raise_exception(il2cpp_hresult_t hresult, bool defa
 #define IL2CPP_PUSH_ACTIVE_EXCEPTION(Exception) \
     __active_exceptions.push(Exception)
 
-#define IL2CPP_POP_ACTIVE_EXCEPTION() \
-    __active_exceptions.pop()
+#define IL2CPP_POP_ACTIVE_EXCEPTION(ExcType) \
+    (ExcType)__active_exceptions.pop()
 
 #define IL2CPP_GET_ACTIVE_EXCEPTION(ExcType) \
     (ExcType)__active_exceptions.top()
