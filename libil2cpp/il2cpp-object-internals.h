@@ -378,7 +378,7 @@ typedef struct Il2CppInternalThread
     int abort_state_handle;
     uint64_t tid;
     intptr_t debugger_thread;
-    void** static_data;
+    void* static_data;
     void* runtime_thread_info;
     Il2CppObject* current_appcontext;
     Il2CppObject* root_domain_thread;
