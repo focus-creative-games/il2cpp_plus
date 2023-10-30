@@ -400,10 +400,10 @@ namespace metadata
             newMethod->initInterpCallMethodPointer = true;
             newMethod->isInterpterImpl = true;
         }
-        else
+        else if (!indirectCallViaInvokers)
         {
-            newMethod->methodPointerCallByInterp = newMethod->methodPointer;
-            newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
+            //newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+            //newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
         }
         // IL2CPP_ASSERT(!indirectCallViaInvokers || !isAdjustorThunkMethod || newMethod->methodPointerCallByInterp != newMethod->virtualMethodPointerCallByInterp);
 
