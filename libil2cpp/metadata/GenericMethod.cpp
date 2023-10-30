@@ -302,7 +302,6 @@ namespace metadata
                     hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) :
                     (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
                         newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
-                newMethod->initInterpCallMethodPointer = true;
                 newMethod->isInterpterImpl = true;
             }
         }
@@ -315,19 +314,9 @@ namespace metadata
                     hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) :
                     (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
                         newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
-                if (newMethod->invoker_method == nullptr)
-                {
-                    newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
-                }
-                if (newMethod->methodPointer == nullptr)
-                {
-                    newMethod->methodPointer = newMethod->methodPointerCallByInterp;
-                }
-                if (newMethod->virtualMethodPointer == nullptr)
-                {
-                    newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp;
-                }
-                newMethod->initInterpCallMethodPointer = true;
+                newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
+                newMethod->methodPointer = newMethod->methodPointerCallByInterp;
+                newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp;
                 newMethod->isInterpterImpl = true;
             }
         }
@@ -336,6 +325,12 @@ namespace metadata
         {
             newMethod->methodPointerCallByInterp = newMethod->methodPointer;
             newMethod->virtualMethodPointerCallByInterp = GetVirtualCallMethodPointer(newMethod);
+        }
+        else
+        {
+            newMethod->initInterpCallMethodPointer = true;
+            newMethod->indirect_call_via_invokers = false;
+            newMethod->has_full_generic_sharing_signature = false;
         }
 
         // If we are a default interface method on a generic instance interface we need to ensure that the interfaces rgctx is inflated
