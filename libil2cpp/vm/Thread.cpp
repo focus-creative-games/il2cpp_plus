@@ -488,6 +488,7 @@ namespace vm
     int32_t Thread::AllocThreadStaticData(int32_t size)
     {
         AUTO_LOCK_THREADS();
+        IL2CPP_ASSERT(size > 0);
         int32_t index = (int32_t)s_ThreadStaticSizes.size();
 
         IL2CPP_ASSERT(index < kMaxThreadStaticSlots * kMaxThreadStaticDataPointers);
