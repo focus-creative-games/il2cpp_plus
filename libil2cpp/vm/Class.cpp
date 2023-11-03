@@ -241,7 +241,7 @@ namespace vm
 
         klass->instance_size = sizeof(void*);
         klass->stack_slot_size = sizeof(void*);
-        klass->thread_static_fields_size = -1;
+        klass->thread_static_fields_size = 0;
         klass->native_size = -1;
         klass->size_inited = true;
         klass->typeHierarchyDepth = 1;
