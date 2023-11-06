@@ -14,8 +14,10 @@ namespace metadata
 
     bool Il2CppGenericContextCompare::Compare(const Il2CppGenericContext* gc1, const Il2CppGenericContext* gc2)
     {
-        // return gc1->class_inst == gc2->class_inst && gc1->method_inst == gc2->method_inst;
-        return Il2CppGenericInstCompare::Compare(gc1->class_inst, gc2->class_inst) && Il2CppGenericInstCompare::Compare(gc1->method_inst, gc2->method_inst);
+        bool ret = gc1->class_inst == gc2->class_inst && gc1->method_inst == gc2->method_inst;
+        IL2CPP_ASSERT(ret == (Il2CppGenericInstCompare::Compare(gc1->class_inst, gc2->class_inst) && Il2CppGenericInstCompare::Compare(gc1->method_inst, gc2->method_inst)));
+        //return Il2CppGenericInstCompare::Compare(gc1->class_inst, gc2->class_inst) && Il2CppGenericInstCompare::Compare(gc1->method_inst, gc2->method_inst);
+        return ret;
     }
 } /* namespace vm */
 } /* namespace il2cpp */
