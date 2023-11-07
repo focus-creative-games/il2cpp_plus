@@ -1215,6 +1215,11 @@ TypeDefinitionIndex il2cpp::vm::GlobalMetadata::GetIndexForTypeDefinition(const 
     return GetIndexForTypeDefinitionInternal(typeDefinition);
 }
 
+TypeDefinitionIndex il2cpp::vm::GlobalMetadata::GetIndexForTypeDefinition(const Il2CppTypeDefinition* typeDef)
+{
+    return GetIndexForTypeDefinitionInternal(typeDef);
+}
+
 uint32_t il2cpp::vm::GlobalMetadata::GetFieldOffset(const Il2CppClass* klass, int32_t fieldIndexInType, FieldInfo* field)
 {
     if (hybridclr::metadata::IsInterpreterType(klass))
