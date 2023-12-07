@@ -303,6 +303,7 @@ namespace metadata
                     (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
                         newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
                 newMethod->isInterpterImpl = true;
+                newMethod->initInterpCallMethodPointer = true;
             }
         }
         else
@@ -318,17 +319,18 @@ namespace metadata
                 newMethod->methodPointer = newMethod->methodPointerCallByInterp;
                 newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp;
                 newMethod->isInterpterImpl = true;
+                newMethod->initInterpCallMethodPointer = true;
             }
         }
 
-        if (!newMethod->isInterpterImpl)
+        if (!newMethod->isInterpterImpl && !newMethod->indirect_call_via_invokers)
         {
             newMethod->methodPointerCallByInterp = newMethod->methodPointer;
             newMethod->virtualMethodPointerCallByInterp = GetVirtualCallMethodPointer(newMethod);
         }
         else
         {
-            newMethod->initInterpCallMethodPointer = true;
+            //newMethod->initInterpCallMethodPointer = true;
             newMethod->indirect_call_via_invokers = false;
             newMethod->has_full_generic_sharing_signature = false;
         }
