@@ -8,7 +8,7 @@
 
 #if defined(__APPLE__)
 #include "mach-o/dyld.h"
-#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID
+#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_OPENHARMONY
 #include <linux/limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -34,7 +34,7 @@ namespace os
         result.resize(size + 1);
         _NSGetExecutablePath(&result[0], &size);
         return result;
-#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID
+#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_OPENHARMONY
         char path[PATH_MAX];
         char dest[PATH_MAX + 1];
         //readlink does not null terminate

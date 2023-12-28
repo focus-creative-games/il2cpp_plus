@@ -44,7 +44,7 @@ namespace Image
         for (uint32_t i = 0; i < numberOfImages; i++)
         {
             const char* imageName = _dyld_get_image_name(i);
-            if (strstr(imageName, "GameAssembly.dylib") != NULL || strstr(imageName, "UnityFramework.framework/UnityFramework") != NULL)
+            if (strstr(imageName, "GameAssembly.dylib") != NULL || strstr(imageName, "TuanjieFramework.framework/TuanjieFramework") != NULL)
             {
                 gameAssemblyImageIndex = i;
                 break;
@@ -149,7 +149,7 @@ namespace Image
             if (((const struct load_command *)command)->cmd == LC_UUID)
             {
                 command += sizeof(struct load_command);
-                char* uuid = static_cast<char*>(IL2CPP_MALLOC(33));
+                char* uuid = static_cast<char*>(IL2CPP_MALLOC(33, IL2CPP_MEM_IMAGE));
                 snprintf(uuid, 33, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
                     command[0], command[1], command[2], command[3],
                     command[4], command[5], command[6], command[7],
@@ -170,7 +170,7 @@ namespace Image
     {
         const char* imageName = _dyld_get_image_name(GetImageIndex());
         size_t nameSize = strlen(imageName);
-        char* imageNameCopy = (char*)IL2CPP_MALLOC(nameSize);
+        char* imageNameCopy = (char*)IL2CPP_MALLOC(nameSize, IL2CPP_MEM_STRING);
         strncpy(imageNameCopy, imageName, nameSize);
         return imageNameCopy;
     }

@@ -6,6 +6,9 @@ typedef enum
     kFileTypeDisk = 0x0001,
     kFileTypeChar = 0x0002,
     kFileTypePipe = 0x0003,
+#if ENABLE_HMI_MODE && IL2CPP_TARGET_ANDROID
+    kFileTypeApk = 0x0004,
+#endif
     kFileTypeRemote = 0x8000
 } FileType;
 

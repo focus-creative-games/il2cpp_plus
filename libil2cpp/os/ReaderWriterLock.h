@@ -29,14 +29,16 @@ namespace os
         ReaderWriterAutoSharedLock(ReaderWriterLock* lock)
             : m_Lock(lock)
         {
+#if !IL2CPP_SLIM_CLASS
             m_Lock->LockShared();
+#endif
         }
-
+#if !IL2CPP_SLIM_CLASS
         ~ReaderWriterAutoSharedLock()
         {
             m_Lock->ReleaseShared();
         }
-
+#endif
     private:
         ReaderWriterLock* m_Lock;
     };
@@ -46,14 +48,17 @@ namespace os
         ReaderWriterAutoExclusiveLock(ReaderWriterLock* lock)
             : m_Lock(lock)
         {
+#if !IL2CPP_SLIM_CLASS
             m_Lock->LockExclusive();
+#endif
         }
 
+#if !IL2CPP_SLIM_CLASS
         ~ReaderWriterAutoExclusiveLock()
         {
             m_Lock->ReleaseExclusive();
         }
-
+#endif
     private:
         ReaderWriterLock* m_Lock;
     };

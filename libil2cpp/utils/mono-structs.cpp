@@ -38,9 +38,9 @@ void free_gptr_array(MonoGPtrArray *pArray)
 
     if (pArray->pdata)
     {
-        IL2CPP_FREE(pArray->pdata);
+        IL2CPP_FREE(pArray->pdata, IL2CPP_MEM_OS_ALLOCATOR);
         pArray->pdata = NULL;
     }
 
-    IL2CPP_FREE(pArray);
+    IL2CPP_FREE(pArray, IL2CPP_MEM_OS_ALLOCATOR);
 }

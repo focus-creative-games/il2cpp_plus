@@ -2,6 +2,8 @@
 #include "MetadataAlloc.h"
 #include "il2cpp-class-internals.h"
 #include "utils/MemoryPool.h"
+#include "il2cpp-runtime-stats.h"
+
 #if IL2CPP_SANITIZE_ADDRESS
 #include "utils/MemoryPoolAddressSanitizer.h"
 #endif
@@ -50,24 +52,52 @@ namespace vm
         s_GenericMethodMemoryPool = NULL;
     }
 
-    void* MetadataMalloc(size_t size)
+    void* MetadataMalloc(size_t size, Il2CppMemStat label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        mem_stats_add_on_label(label, size);
+#endif 
         return s_MetadataMemoryPool->Malloc(size);
     }
 
-    void* MetadataCalloc(size_t count, size_t size)
+    void* MetadataCalloc(size_t count, size_t size, Il2CppMemStat label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        mem_stats_add_on_label(label, size * count);
+#endif 
         return s_MetadataMemoryPool->Calloc(count, size);
     }
 
     Il2CppGenericClass* MetadataAllocGenericClass()
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        size_t size = sizeof(Il2CppGenericClass);
+        il2cpp_mem_stats.meta.generic_class_size += size;
+        ++il2cpp_mem_stats.meta.generic_class_count;
+#endif
+
         return (Il2CppGenericClass*)s_GenericClassMemoryPool->Calloc(1, sizeof(Il2CppGenericClass));
     }
 
     Il2CppGenericMethod* MetadataAllocGenericMethod()
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        size_t size = sizeof(Il2CppGenericMethod);
+        il2cpp_mem_stats.meta.generic_method_size += size;
+        ++il2cpp_mem_stats.meta.generic_method_count;
+#endif
         return (Il2CppGenericMethod*)s_GenericMethodMemoryPool->Calloc(1, sizeof(Il2CppGenericMethod));
+    }
+
+#if IL2CPP_ENABLE_MEM_STATS
+    std::size_t mem_stats_get_metadata_free() {
+        return s_MetadataMemoryPool->FreeSize() + s_GenericClassMemoryPool->FreeSize() + s_GenericMethodMemoryPool->FreeSize();
+    }
+#endif 
+
+    std::size_t MetadataTotalMemSize() {
+        std::size_t total = s_MetadataMemoryPool->TotalSize() + s_GenericClassMemoryPool->TotalSize() + s_GenericMethodMemoryPool->TotalSize();
+        return total;
     }
 }
 }

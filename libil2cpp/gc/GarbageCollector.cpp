@@ -75,11 +75,12 @@ namespace gc
         Il2CppIManagedObjectHolder* managedObjectHolder;
         bool hasFinalizer;
     };
-
+#if !IL2CPP_TRIM_COM
     typedef Il2CppHashMap<Il2CppObject*, CachedCCW, utils::PointerHash<Il2CppObject> > CCWCache;
 
     static baselib::ReentrantLock s_CCWCacheMutex;
     static CCWCache s_CCWCache;
+#endif
 
 #if IL2CPP_SUPPORT_THREADS
 
@@ -190,6 +191,9 @@ namespace gc
 
     void GarbageCollector::RegisterFinalizer(Il2CppObject* obj)
     {
+#if IL2CPP_TRIM_COM
+        RegisterFinalizerWithCallback(obj, &GarbageCollector::RunFinalizer);
+#else
         // Slow path
         // Check in CCW cache first
         os::FastAutoLock lock(&s_CCWCacheMutex);
@@ -203,10 +207,14 @@ namespace gc
         {
             RegisterFinalizerWithCallback(obj, &GarbageCollector::RunFinalizer);
         }
+#endif
     }
 
     void GarbageCollector::SuppressFinalizer(Il2CppObject* obj)
     {
+#if IL2CPP_TRIM_COM
+        RegisterFinalizerWithCallback(obj, NULL);
+#else
         // Slow path
         // Check in CCW cache first
         os::FastAutoLock lock(&s_CCWCacheMutex);
@@ -220,6 +228,7 @@ namespace gc
         {
             RegisterFinalizerWithCallback(obj, NULL);
         }
+#endif
     }
 
     void GarbageCollector::WaitForPendingFinalizers()
@@ -242,6 +251,9 @@ namespace gc
 
     static void CleanupCCW(void* obj, void* data)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(CleanupCCW);
+#else
         bool hasFinalizer;
 
         // We have to destroy CCW before invoking the finalizer, because we cannot know whether the finalizer will revive the object
@@ -261,6 +273,7 @@ namespace gc
 
         if (hasFinalizer)
             GarbageCollector::RunFinalizer(obj, data);
+#endif
     }
 
     // When creating COM Callable Wrappers for classes that project to other Windows Runtime classes
@@ -270,6 +283,9 @@ namespace gc
     // we do not (AND CANNOT!) put it into a CCW cache because it's not a CCW.
     static bool ShouldInsertIntoCCWCache(Il2CppObject* obj)
     {
+#if IL2CPP_TRIM_COM
+        return false;
+#else
         if (obj->klass == il2cpp_defaults.system_uri_class && il2cpp_defaults.windows_foundation_uri_class != NULL)
             return false;
 
@@ -279,10 +295,15 @@ namespace gc
         */
 
         return true;
+#endif
     }
 
     Il2CppIUnknown* GarbageCollector::GetOrCreateCCW(Il2CppObject* obj, const Il2CppGuid& iid)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(GarbageCollector::GetOrCreateCCW);
+        return NULL;
+#else
         if (obj == NULL)
             return NULL;
 
@@ -329,6 +350,7 @@ namespace gc
         il2cpp_hresult_t hr = comCallableWrapper->QueryInterface(iid, reinterpret_cast<void**>(&result));
         vm::Exception::RaiseIfFailed(hr, true);
         return result;
+#endif
     }
 
 #endif // !RUNTIME_TINY

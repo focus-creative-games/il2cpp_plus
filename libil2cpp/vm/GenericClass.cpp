@@ -32,17 +32,48 @@ namespace vm
             return;
         }
 
-        const MethodInfo** methods = (const MethodInfo**)MetadataCalloc(methodCount, sizeof(MethodInfo*));
+        if (genericInstanceType->methods == NULL) {
+            genericInstanceType->methods = (const MethodInfo**)MetadataCalloc(methodCount, sizeof(MethodInfo*), IL2CPP_MSTAT_METHOD);
+        }
 
         for (uint16_t methodIndex = 0; methodIndex < methodCount; ++methodIndex)
         {
-            const MethodInfo* methodDefinition = genericTypeDefinition->methods[methodIndex];
-            methods[methodIndex] = metadata::GenericMetadata::Inflate(methodDefinition, GenericClass::GetContext(genericInstanceType->generic_class));
+            if (genericInstanceType->methods[methodIndex] != NULL)
+                continue;
+
+            //const MethodInfo* methodDefinition = genericTypeDefinition->methods[methodIndex];
+            const MethodInfo* methodDefinition = Class::GetOrSetupOneMethod(genericTypeDefinition, methodIndex);
+            genericInstanceType->methods[methodIndex] = metadata::GenericMetadata::Inflate(methodDefinition, GenericClass::GetContext(genericInstanceType->generic_class));
+
+            ++il2cpp_runtime_stats.method_count;
+        }
+    }
+
+    const MethodInfo* GenericClass::GetOrSetupOneMethod(Il2CppClass* genericInstanceType, MethodIndex index)
+    {
+        Il2CppClass* genericTypeDefinition = GenericClass::GetTypeDefinition(genericInstanceType->generic_class);
+        uint16_t methodCount = genericTypeDefinition->method_count;
+        IL2CPP_ASSERT(genericTypeDefinition->method_count == genericInstanceType->method_count);
+
+        if (methodCount == 0)
+        {
+            genericInstanceType->methods = NULL;
+            return NULL;
         }
 
-        genericInstanceType->methods = methods;
+        if (genericInstanceType->methods == NULL) {
+            genericInstanceType->methods = (const MethodInfo**)MetadataCalloc(methodCount, sizeof(MethodInfo*), IL2CPP_MSTAT_METHOD);
+        }
 
-        il2cpp_runtime_stats.method_count += methodCount;
+        if (genericInstanceType->methods[index] == NULL)
+        {
+            //const MethodInfo* methodDefinition = genericTypeDefinition->methods[index];
+            const MethodInfo* methodDefinition = Class::GetOrSetupOneMethod(genericTypeDefinition, index);
+            genericInstanceType->methods[index] = metadata::GenericMetadata::Inflate(methodDefinition, GenericClass::GetContext(genericInstanceType->generic_class));
+            ++il2cpp_runtime_stats.method_count;
+        }
+
+        return genericInstanceType->methods[index];
     }
 
     static void InflatePropertyDefinition(const PropertyInfo* propertyDefinition, PropertyInfo* newProperty, Il2CppClass* declaringClass, Il2CppGenericContext* context)
@@ -70,16 +101,49 @@ namespace vm
             return;
         }
 
-        PropertyInfo* properties = (PropertyInfo*)MetadataCalloc(propertyCount, sizeof(PropertyInfo));
-        PropertyInfo* property = properties;
+        Class::SetupProperties(genericTypeDefinition);
 
+        const PropertyInfo** properties = (const PropertyInfo**)MetadataCalloc(propertyCount, sizeof(PropertyInfo*), IL2CPP_MSTAT_PROPERTY);
+        
         for (uint16_t propertyIndex = 0; propertyIndex < propertyCount; ++propertyIndex)
         {
-            InflatePropertyDefinition(genericTypeDefinition->properties + propertyIndex, property, genericInstanceType, GenericClass::GetContext(genericInstanceType->generic_class));
-            property++;
+            PropertyInfo* property = (PropertyInfo*)MetadataCalloc(1, sizeof(PropertyInfo), IL2CPP_MSTAT_PROPERTY);
+            InflatePropertyDefinition(genericTypeDefinition->properties[propertyIndex], property, genericInstanceType, GenericClass::GetContext(genericInstanceType->generic_class));
+            properties[propertyIndex] = property;
         }
 
         genericInstanceType->properties = properties;
+    }
+
+    const PropertyInfo* GenericClass::GetOrSetupOneProperty(Il2CppClass* genericInstanceType, PropertyIndex index) 
+    {
+        Il2CppClass* genericTypeDefinition = GenericClass::GetTypeDefinition(genericInstanceType->generic_class);
+        uint16_t propertyCount = genericTypeDefinition->property_count;
+        IL2CPP_ASSERT(genericTypeDefinition->property_count == genericInstanceType->property_count);
+
+        if (propertyCount == 0)
+        {
+            genericInstanceType->properties = NULL;
+            return nullptr;
+        }
+
+        Class::GetOrSetupOneProperty(genericTypeDefinition,index);
+
+        if (genericInstanceType->properties == nullptr) {
+            genericInstanceType->properties = (const PropertyInfo**)MetadataCalloc(propertyCount, sizeof(PropertyInfo*), IL2CPP_MSTAT_PROPERTY);
+        }
+
+        if (index >= propertyCount) {
+            return nullptr;
+        }
+
+        if (genericInstanceType->properties[index] == nullptr) {
+            PropertyInfo* property = (PropertyInfo*)MetadataCalloc(1, sizeof(PropertyInfo), IL2CPP_MSTAT_PROPERTY);
+            InflatePropertyDefinition(genericTypeDefinition->properties[index], property, genericInstanceType, GenericClass::GetContext(genericInstanceType->generic_class));
+            genericInstanceType->properties[index] = property;
+        }
+
+        return genericInstanceType->properties[index];
     }
 
     static void InflateEventDefinition(const EventInfo* eventDefinition, EventInfo* newEvent, Il2CppClass* declaringClass, Il2CppGenericContext* context)
@@ -109,7 +173,10 @@ namespace vm
             return;
         }
 
-        EventInfo* events = (EventInfo*)MetadataCalloc(eventCount, sizeof(EventInfo));
+        //[WL]
+        Class::SetupEvents(genericTypeDefinition);
+
+        EventInfo* events = (EventInfo*)MetadataCalloc(eventCount, sizeof(EventInfo), IL2CPP_MSTAT_FIELD);
         EventInfo* event = events;
 
         for (uint16_t eventIndex = 0; eventIndex < eventCount; ++eventIndex)
@@ -144,7 +211,7 @@ namespace vm
             return;
         }
 
-        FieldInfo* fields = (FieldInfo*)MetadataCalloc(fieldCount, sizeof(FieldInfo));
+        FieldInfo* fields = (FieldInfo*)MetadataCalloc(fieldCount, sizeof(FieldInfo), IL2CPP_MSTAT_FIELD);
         FieldInfo* field = fields;
 
         for (uint16_t fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex)
@@ -188,8 +255,10 @@ namespace vm
         }
         if (!gclass->cached_class)
         {
-            Il2CppClass* klass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count));
+            Il2CppClass* klass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * definition->vtable_count), IL2CPP_MSTAT_CLASS);
+#if !IL2CPP_SLIM_CLASS
             klass->klass = klass;
+#endif
 
             klass->name = definition->name;
             klass->namespaze = definition->namespaze;
@@ -243,7 +312,7 @@ namespace vm
             // Do not update gclass->cached_class until `klass` is fully initialized
             // And do so with an atomic barrier so no threads observer the writes out of order
             il2cpp::os::Atomic::ExchangePointer(&gclass->cached_class, klass);
-            Il2CppGenericClass* cloneGclass = (Il2CppGenericClass*)IL2CPP_MALLOC_ZERO(sizeof(Il2CppGenericClass));
+            Il2CppGenericClass* cloneGclass = (Il2CppGenericClass*)IL2CPP_MALLOC_ZERO(sizeof(Il2CppGenericClass), IL2CPP_MEM_META_POOL);
             *cloneGclass = *gclass;
             s_GenericClassSet.insert(cloneGclass);
         }

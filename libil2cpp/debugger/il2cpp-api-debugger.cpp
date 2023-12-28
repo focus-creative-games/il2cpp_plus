@@ -433,7 +433,7 @@ extern "C" {
             il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)&m_attributeData->namedArgs);
 
             m_propertyIndexOffset = fieldCount;
-            m_attributeData->argInfo = numberOfNamedArguments == 0 ? nullptr : (Il2CppCattrNamedArg*)IL2CPP_CALLOC(numberOfNamedArguments, sizeof(Il2CppCattrNamedArg));
+            m_attributeData->argInfo = (Il2CppCattrNamedArg*)IL2CPP_CALLOC(numberOfNamedArguments, sizeof(Il2CppCattrNamedArg), IL2CPP_MEM_CustomAttribute);
         }
 
         virtual void VisitArgument(const il2cpp::metadata::CustomAttributeArgument& argument, uint32_t index)
@@ -476,7 +476,7 @@ extern "C" {
     static void free_custom_attribute_data(Il2CppCustomAttributeData* attr)
     {
         if (attr->argInfo != NULL)
-            IL2CPP_FREE(attr->argInfo);
+            IL2CPP_FREE(attr->argInfo, IL2CPP_MEM_CustomAttribute);
     }
 
     static Il2CppCustomAttributeDataList EmptyDataList = { 0 };

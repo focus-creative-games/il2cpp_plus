@@ -10,6 +10,7 @@
 
 #include "os/Atomic.h"
 #include "metadata/GenericMethod.h"
+#include "metadata/GenericMetadata.h"
 #include "gc/WriteBarrier.h"
 #include "vm/Array.h"
 #include "vm/CCW.h"
@@ -476,118 +477,226 @@ void il2cpp_codegen_store_exception_info(RuntimeException* ex, String_t* excepti
 
 void il2cpp_codegen_com_marshal_variant(RuntimeObject* obj, Il2CppVariant* variant)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_marshal_variant);
+#else
     il2cpp::vm::COM::MarshalVariant(obj, variant);
+#endif 
 }
 
 RuntimeObject* il2cpp_codegen_com_marshal_variant_result(const Il2CppVariant* variant)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_marshal_variant_result);
+    return NULL;
+#else
     return il2cpp::vm::COM::MarshalVariantResult(variant);
+#endif
 }
 
 void il2cpp_codegen_com_destroy_variant(Il2CppVariant* variant)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_destroy_variant);
+#else
     il2cpp::vm::COM::DestroyVariant(variant);
+#endif
 }
 
 Il2CppSafeArray* il2cpp_codegen_com_marshal_safe_array(Il2CppChar type, RuntimeArray* managedArray)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_marshal_safe_array);
+    return NULL;
+#else
     return il2cpp::vm::COM::MarshalSafeArray(type, managedArray);
+#endif
 }
 
 RuntimeArray* il2cpp_codegen_com_marshal_safe_array_result(Il2CppChar variantType, RuntimeClass* type, Il2CppSafeArray* safeArray)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_marshal_safe_array_result);
+    return NULL;
+#else
     return il2cpp::vm::COM::MarshalSafeArrayResult(variantType, type, safeArray);
+#endif
 }
 
 Il2CppSafeArray* il2cpp_codegen_com_marshal_safe_array_bstring(RuntimeArray* managedArray)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_marshal_safe_array_bstring);
+    return NULL;
+#else
     return il2cpp::vm::COM::MarshalSafeArrayBString(managedArray);
+#endif
 }
 
 RuntimeArray* il2cpp_codegen_com_marshal_safe_array_bstring_result(RuntimeClass* type, Il2CppSafeArray* safeArray)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_marshal_safe_array_bstring_result);
+    return NULL;
+#else
     return il2cpp::vm::COM::MarshalSafeArrayBStringResult(type, safeArray);
+#endif
 }
 
 void il2cpp_codegen_com_destroy_safe_array(Il2CppSafeArray* safeArray)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_destroy_safe_array);
+#else
     il2cpp::vm::COM::DestroySafeArray(safeArray);
+#endif
 }
 
 void il2cpp_codegen_com_create_instance(const Il2CppGuid& clsid, Il2CppIUnknown** identity)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_create_instance);
+#else
     il2cpp::vm::COM::CreateInstance(clsid, identity);
+#endif
 }
 
 il2cpp_hresult_t il2cpp_codegen_com_handle_invalid_iproperty_conversion(const char* fromType, const char* toType)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_handle_invalid_iproperty_conversion);
+    return 0;
+#else
     return il2cpp::vm::CCW::HandleInvalidIPropertyConversion(fromType, toType);
+#endif
 }
 
 il2cpp_hresult_t il2cpp_codegen_com_handle_invalid_iproperty_conversion(RuntimeObject* value, const char* fromType, const char* toType)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_handle_invalid_iproperty_conversion);
+    return 0;
+#else
     return il2cpp::vm::CCW::HandleInvalidIPropertyConversion(value, fromType, toType);
+#endif
 }
 
 il2cpp_hresult_t il2cpp_codegen_com_handle_invalid_ipropertyarray_conversion(const char* fromArrayType, const char* fromElementType, const char* toElementType, il2cpp_array_size_t index)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_handle_invalid_ipropertyarray_conversion);
+    return 0;
+#else
     return il2cpp::vm::CCW::HandleInvalidIPropertyArrayConversion(fromArrayType, fromElementType, toElementType, index);
+#endif
 }
 
 il2cpp_hresult_t il2cpp_codegen_com_handle_invalid_ipropertyarray_conversion(RuntimeObject* value, const char* fromArrayType, const char* fromElementType, const char* toElementType, il2cpp_array_size_t index)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_handle_invalid_ipropertyarray_conversion);
+    return 0;
+#else
     return il2cpp::vm::CCW::HandleInvalidIPropertyArrayConversion(value, fromArrayType, fromElementType, toElementType, index);
+#endif
 }
 
 Il2CppIUnknown* il2cpp_codegen_com_get_or_create_ccw_internal(RuntimeObject* obj, const Il2CppGuid& iid)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_ccw_internal);
+    return NULL;
+#else
     return il2cpp::vm::CCW::GetOrCreate(obj, iid);
+#endif
 }
 
 Il2CppObject* il2cpp_codegen_com_unpack_ccw(Il2CppIUnknown* obj)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_unpack_ccw);
+    return NULL;
+#else
     return il2cpp::vm::CCW::Unpack(obj);
+#endif
 }
 
 void il2cpp_codegen_com_register_rcw(Il2CppComObject* rcw)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_register_rcw);
+#else
     il2cpp::vm::RCW::Register(rcw);
+#endif
 }
 
 RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_from_iunknown_internal(Il2CppIUnknown* unknown, RuntimeClass* fallbackClass)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_rcw_from_iunknown_internal);
+    return NULL;
+#else
     return il2cpp::vm::RCW::GetOrCreateFromIUnknown(unknown, fallbackClass);
+#endif
 }
 
 RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_from_iinspectable_internal(Il2CppIInspectable* unknown, RuntimeClass* fallbackClass)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_rcw_from_iinspectable_internal);
+    return NULL;
+#else
     return il2cpp::vm::RCW::GetOrCreateFromIInspectable(unknown, fallbackClass);
+#endif
 }
 
 RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_for_sealed_class_internal(Il2CppIUnknown* unknown, RuntimeClass* objectClass)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_rcw_for_sealed_class_internal);
+    return NULL;
+#else
     return il2cpp::vm::RCW::GetOrCreateForSealedClass(unknown, objectClass);
+#endif
 }
 
 Il2CppIUnknown* il2cpp_codegen_com_query_interface_internal(Il2CppComObject* rcw, const Il2CppGuid& guid)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_query_interface_internal);
+    return NULL;
+#else
     return il2cpp::vm::RCW::QueryInterfaceNoAddRef<true>(rcw, guid);
+#endif
 }
 
 Il2CppIUnknown* il2cpp_codegen_com_query_interface_no_throw_internal(Il2CppComObject* rcw, const Il2CppGuid& guid)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_query_interface_no_throw_internal);
+    return NULL;
+#else
     return il2cpp::vm::RCW::QueryInterfaceNoAddRef<false>(rcw, guid);
+#endif
 }
 
 void il2cpp_codegen_com_cache_queried_interface(Il2CppComObject* rcw, const Il2CppGuid& iid, Il2CppIUnknown* queriedInterface)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_cache_queried_interface);
+#else
     if (il2cpp::vm::RCW::CacheQueriedInterface(rcw, iid, queriedInterface))
         queriedInterface->AddRef();
+#endif
 }
 
 void il2cpp_codegen_il2cpp_com_object_cleanup(Il2CppComObject* rcw)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_il2cpp_com_object_cleanup);
+#else
     il2cpp::vm::RCW::Cleanup(rcw);
+#endif
 }
 
 String_t* il2cpp_codegen_string_new_wrapper(const char* str)
@@ -838,37 +947,69 @@ Il2CppMethodPointer il2cpp_codegen_resolve(const PInvokeArguments& pinvokeArgs)
 
 Il2CppHString il2cpp_codegen_create_hstring(String_t* str)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_create_hstring);
+    return NULL;
+#else
     return il2cpp::vm::WindowsRuntime::CreateHString(reinterpret_cast<RuntimeString*>(str));
+#endif
 }
 
 String_t* il2cpp_codegen_marshal_hstring_result(Il2CppHString hstring)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_marshal_hstring_result);
+    return NULL;
+#else
     return reinterpret_cast<String_t*>(il2cpp::vm::WindowsRuntime::HStringToManagedString(hstring));
+#endif
 }
 
 void il2cpp_codegen_marshal_free_hstring(Il2CppHString hstring)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_marshal_free_hstring);
+#else
     il2cpp::vm::WindowsRuntime::DeleteHString(hstring);
+#endif
 }
 
 void il2cpp_codegen_marshal_type_to_native(Type_t* type, Il2CppWindowsRuntimeTypeName& nativeType)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_marshal_type_to_native);
+#else
     return il2cpp::vm::WindowsRuntime::MarshalTypeToNative(type != NULL ? reinterpret_cast<Il2CppReflectionType*>(type)->type : NULL, nativeType);
+#endif
 }
 
 const Il2CppType* il2cpp_codegen_marshal_type_from_native_internal(Il2CppWindowsRuntimeTypeName& nativeType)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_marshal_type_from_native_internal);
+    return NULL;
+#else
     return il2cpp::vm::WindowsRuntime::MarshalTypeFromNative(nativeType);
+#endif
 }
 
 void il2cpp_codegen_delete_native_type(Il2CppWindowsRuntimeTypeName& nativeType)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_delete_native_type);
+#else
     return il2cpp::vm::WindowsRuntime::DeleteNativeType(nativeType);
+#endif
 }
 
 Il2CppIActivationFactory* il2cpp_codegen_windows_runtime_get_activation_factory(const il2cpp::utils::StringView<Il2CppNativeChar>& runtimeClassName)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_windows_runtime_get_activation_factory);
+    return NULL;
+#else
     return il2cpp::vm::WindowsRuntime::GetActivationFactory(runtimeClassName);
+#endif
 }
 
 void il2cpp_codegen_stacktrace_push_frame(Il2CppStackFrameInfo& frame)
@@ -1039,6 +1180,33 @@ bool il2cpp_codegen_is_reference_or_contains_references(const RuntimeMethod* met
 bool il2cpp_codegen_is_unmanaged(const RuntimeMethod* method)
 {
     return !il2cpp_codegen_is_reference_or_contains_references(method);
+}
+
+RuntimeClass* il2cpp_rgctx_data_no_init(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    if (rgctxVar[index].klass == NULL)
+    {
+        il2cpp::metadata::GenericMetadata::InflateRGCTXClass(rgctxVar, index);
+    }
+    return rgctxVar[index].klass;
+}
+
+const Il2CppType* il2cpp_rgctx_type(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    if (rgctxVar[index].type == NULL)
+    {
+        il2cpp::metadata::GenericMetadata::InflateRGCTXType(rgctxVar, index);
+    }
+    return rgctxVar[index].type;
+}
+
+const MethodInfo* il2cpp_rgctx_method(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    if (rgctxVar[index].method == NULL)
+    {
+        il2cpp::metadata::GenericMetadata::InflateRGCTXMethod(rgctxVar, index);
+    }
+    return rgctxVar[index].method;
 }
 
 #endif // !RUNTIME_TINY

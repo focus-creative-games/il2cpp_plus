@@ -54,7 +54,7 @@ extern "C"
 
     BOOL WINAPI FreeEnvironmentStringsW(LPWCH strings)
     {
-        IL2CPP_FREE(strings);
+        IL2CPP_FREE(strings, IL2CPP_MEM_STRING);
         return TRUE;
     }
 
@@ -76,7 +76,7 @@ extern "C"
         // Terminating '\0'
         length++;
 
-        LPWCH result = static_cast<LPWCH>(IL2CPP_MALLOC(length * sizeof(WCHAR)));
+        LPWCH result = static_cast<LPWCH>(IL2CPP_MALLOC(length * sizeof(WCHAR), IL2CPP_MEM_STRING));
         size_t index = 0;
 
         for (EnvironmentVariableMap::const_iterator it = s_EnvironmentVariables.begin(); it != s_EnvironmentVariables.end(); it++)

@@ -30,7 +30,7 @@
 #include <sys/poll.h>
 #include <sys/stat.h>
 
-#if IL2CPP_SUPPORT_SEND_FILE && (IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID)
+#if IL2CPP_SUPPORT_SEND_FILE && (IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_OPENHARMONY)
 #include <sys/sendfile.h>
 #endif
 
@@ -682,7 +682,7 @@ namespace os
                 in_addr address;
                 if (inet_pton(family, it->c_str(), &address))
                 {
-                    void* addressLocation = il2cpp::utils::Memory::Malloc(addr_size);
+                    void* addressLocation = il2cpp::utils::Memory::Malloc(addr_size, IL2CPP_MEM_Socket);
                     memcpy(addressLocation, &address.s_addr, addr_size);
                     addr_list.push_back(addressLocation);
                 }
@@ -698,7 +698,7 @@ namespace os
                 in6_addr address;
                 if (inet_pton(family, it->c_str(), &address))
                 {
-                    void* addressLocation = il2cpp::utils::Memory::Malloc(addr_size);
+                    void* addressLocation = il2cpp::utils::Memory::Malloc(addr_size, IL2CPP_MEM_Socket);
                     memcpy(addressLocation, &address.s6_addr, addr_size);
                     addr_list.push_back(addressLocation);
                 }
@@ -1059,7 +1059,7 @@ namespace os
         if (len >= sizeof(sa_un->sun_path))
             return NULL;
 
-        sa_un = (struct sockaddr_un*)IL2CPP_CALLOC(1, sizeof(sockaddr_un));
+        sa_un = (struct sockaddr_un*)IL2CPP_CALLOC(1, sizeof(sockaddr_un), IL2CPP_MEM_Socket);
 
         sa_un->sun_family = AF_UNIX;
         memcpy(sa_un->sun_path, path, len);
@@ -1151,7 +1151,7 @@ namespace os
 
         int result = bind(_fd, sa, sa_size);
 
-        IL2CPP_FREE(sa);
+        IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
 
         if (result == -1)
         {
@@ -1298,7 +1298,7 @@ namespace os
 
         WaitStatus status = ConnectInternal(sa, sa_size);
 
-        IL2CPP_FREE(sa);
+        IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
 
         return status;
 #else
@@ -1817,7 +1817,7 @@ namespace os
 
         WaitStatus status = SendToInternal(sa, sa_size, data, count, flags, len);
 
-        IL2CPP_FREE(sa);
+        IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
 
         return status;
 #else
@@ -1891,7 +1891,7 @@ namespace os
         if (c_flags == -1)
         {
             _saved_error = kWSAeopnotsupp;
-            IL2CPP_FREE(sa);
+            IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
             return kWaitStatusFailure;
         }
 
@@ -1900,13 +1900,13 @@ namespace os
         if (status != kWaitStatusSuccess)
         {
             ep.family = os::kAddressFamilyError;
-            IL2CPP_FREE(sa);
+            IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
             return kWaitStatusFailure;
         }
 
         if (sa_size == 0)
         {
-            IL2CPP_FREE(sa);
+            IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
             return kWaitStatusSuccess;
         }
 
@@ -1914,11 +1914,11 @@ namespace os
         {
             ep.family = os::kAddressFamilyError;
             _saved_error = kWSAeafnosupport;
-            IL2CPP_FREE(sa);
+            IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
             return kWaitStatusFailure;
         }
 
-        IL2CPP_FREE(sa);
+        IL2CPP_FREE(sa, IL2CPP_MEM_Socket);
         return kWaitStatusSuccess;
 #else
         return kWaitStatusFailure;

@@ -142,13 +142,13 @@ namespace NetworkInformation
             return false;
 
         // Allocate suffcient memory for available data based on the previous sysctl call
-        if ((buf = (char*)IL2CPP_MALLOC(needed)) == NULL)
+        if ((buf = (char*)IL2CPP_MALLOC(needed, IL2CPP_MEM_Socket)) == NULL)
             return false;
 
         // Second sysctl call to retrieve data into appropriately sized buffer
         if (sysctl(mib, 6, buf, &needed, NULL, 0) < 0)
         {
-            IL2CPP_FREE(buf);
+            IL2CPP_FREE(buf, IL2CPP_MEM_Socket);
             return false;
         }
 
@@ -195,7 +195,7 @@ namespace NetworkInformation
             gwnum++;
         }
 
-        IL2CPP_FREE(buf);
+        IL2CPP_FREE(buf, IL2CPP_MEM_Socket);
 
         return true;
 #else

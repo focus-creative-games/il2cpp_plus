@@ -103,7 +103,7 @@ namespace IO
 
         Il2CppNativeString resultFileNameNative;
 
-        os::Directory::FindHandle* findHandle = new(utils::Memory::Malloc(sizeof(os::Directory::FindHandle))) os::Directory::FindHandle(searchPathNative);
+        os::Directory::FindHandle* findHandle = new(utils::Memory::Malloc(sizeof(os::Directory::FindHandle), IL2CPP_MEM_FindHandle)) os::Directory::FindHandle(searchPathNative);
         int error = os::BrokeredFileSystem::FindFirstFileW(findHandle, searchPathNative, &resultFileNameNative, (int32_t*)fileAttributes);
         vm::LastError::SetLastError(error);
 
@@ -132,7 +132,7 @@ namespace IO
     void BrokeredFileSystem::FindHandleClose(void* findHandle)
     {
         os::BrokeredFileSystem::FindClose(((os::Directory::FindHandle*)findHandle)->osHandle);
-        utils::Memory::Free(findHandle);
+        utils::Memory::Free(findHandle, IL2CPP_MEM_FindHandle);
     }
 } /* namespace IO */
 } /* namespace System */

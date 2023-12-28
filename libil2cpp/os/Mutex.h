@@ -32,8 +32,15 @@ namespace os
 
     struct AutoLock : public il2cpp::utils::NonCopyable
     {
-        AutoLock(Mutex* mutex) : m_Mutex(mutex) { m_Mutex->Lock(); }
+        AutoLock(Mutex* mutex) : m_Mutex(mutex) 
+        { 
+#if !IL2CPP_SLIM_CLASS
+            m_Mutex->Lock(); 
+#endif
+        }
+#if !IL2CPP_SLIM_CLASS
         ~AutoLock() { m_Mutex->Unlock(); }
+#endif
     private:
         Mutex* m_Mutex;
     };
@@ -78,13 +85,17 @@ namespace os
         FastAutoLock(baselib::ReentrantLock* mutex)
             : m_Mutex(mutex)
         {
+#if !IL2CPP_SLIM_CLASS
             m_Mutex->Acquire();
+#endif
         }
 
+#if !IL2CPP_SLIM_CLASS
         ~FastAutoLock()
         {
             m_Mutex->Release();
         }
+#endif
 
 #if IL2CPP_DEBUG
         bool IsLock(baselib::ReentrantLock* mutex) const
@@ -103,14 +114,16 @@ namespace os
         FastAutoUnlock(baselib::ReentrantLock* mutex)
             : m_Mutex(mutex)
         {
+#if !IL2CPP_SLIM_CLASS
             m_Mutex->Release();
+#endif
         }
-
+#if !IL2CPP_SLIM_CLASS
         ~FastAutoUnlock()
         {
             m_Mutex->Acquire();
         }
-
+#endif
     private:
         baselib::ReentrantLock* m_Mutex;
     };

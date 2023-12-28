@@ -200,7 +200,7 @@ namespace utils
             return false;
         }
 
-        IL2CPP_FREE(our_uuid);
+        IL2CPP_FREE(our_uuid, IL2CPP_MEM_IMAGE);
 #endif
 
         s_usym.os = std::string(GetString(s_usym.header.os));

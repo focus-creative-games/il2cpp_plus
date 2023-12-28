@@ -53,7 +53,7 @@ static size_t SizeOfGenericMethodInfo(bool hasFullGenericSignature)
 
 static MethodInfo* AllocGenericMethodInfo(bool hasFullGenericSignature)
 {
-    return (MethodInfo*)MetadataCalloc(1, SizeOfGenericMethodInfo(hasFullGenericSignature));
+    return (MethodInfo*)MetadataCalloc(1, SizeOfGenericMethodInfo(hasFullGenericSignature), IL2CPP_MSTAT_METHOD);
 }
 
 static MethodInfo* AllocCopyGenericMethodInfo(const MethodInfo* sourceMethodInfo)

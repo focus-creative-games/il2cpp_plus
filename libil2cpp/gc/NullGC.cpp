@@ -20,7 +20,7 @@ void il2cpp::gc::GarbageCollector::UninitializeGC()
 void*
 il2cpp::gc::GarbageCollector::AllocateFixed(size_t size, void *descr)
 {
-    return IL2CPP_MALLOC_ZERO(size);
+    return IL2CPP_MALLOC_ZERO(size, IL2CPP_MEM_GC);
 }
 
 void*
@@ -67,8 +67,12 @@ il2cpp::gc::GarbageCollector::AddWeakLink(void **link_addr, Il2CppObject *obj, b
     *link_addr = obj;
 }
 
+#if ENABLE_HMI_MODE
 void
+il2cpp::gc::GarbageCollector::RegisterThread(void *baseptr)
+#else
 il2cpp::gc::GarbageCollector::RegisterThread()
+#endif
 {
 }
 
@@ -86,7 +90,7 @@ il2cpp::gc::GarbageCollector::FinalizerCallback il2cpp::gc::GarbageCollector::Re
 void
 il2cpp::gc::GarbageCollector::FreeFixed(void* addr)
 {
-    IL2CPP_FREE(addr);
+    IL2CPP_FREE(addr, IL2CPP_MEM_GC);
 }
 
 int32_t

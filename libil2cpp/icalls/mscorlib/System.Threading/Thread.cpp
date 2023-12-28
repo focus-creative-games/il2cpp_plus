@@ -48,7 +48,12 @@ namespace Threading
         startData->m_Semaphore->Wait();
 
         {
+#if ENABLE_HMI_MODE
+            int temp = 0;
+            GarbageCollector::RegisterThread(&temp);
+#else
             GarbageCollector::RegisterThread();
+#endif
 
             il2cpp::vm::StackTrace::InitializeStackTracesForCurrentThread();
 

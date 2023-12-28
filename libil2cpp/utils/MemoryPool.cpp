@@ -41,8 +41,8 @@ namespace utils
     {
         for (RegionList::iterator iter = m_Regions.begin(); iter != m_Regions.end(); ++iter)
         {
-            IL2CPP_FREE((*iter)->start);
-            IL2CPP_FREE(*iter);
+            IL2CPP_FREE((*iter)->start, IL2CPP_MEM_META_POOL);
+            IL2CPP_FREE(*iter, IL2CPP_MEM_META_POOL);
         }
 
         m_Regions.clear();
@@ -54,7 +54,13 @@ namespace utils
 
         Region* region = m_Regions.back();
         if (region->free < size)
+        {
+#if IL2CPP_ENABLE_MEM_STATS
+            il2cpp_mem_stats.meta.meta_wasted += region->free;
+#endif //IL2CPP_ENABLE_MEM_STATS
+
             region = AddRegion(size);
+        }
 
         IL2CPP_ASSERT(region->free >= size);
 
@@ -73,7 +79,7 @@ namespace utils
 
     MemoryPool::Region* MemoryPool::AddRegion(size_t size)
     {
-        Region* newRegion = (Region*)IL2CPP_MALLOC(sizeof(Region));
+        Region* newRegion = (Region*)IL2CPP_MALLOC(sizeof(Region), IL2CPP_MEM_META_POOL);
         Region* lastFreeRegion = m_Regions.size() > 0 ? m_Regions.back() : NULL;
         size_t allocationSize;
 
@@ -91,10 +97,32 @@ namespace utils
             m_Regions.push_back(newRegion);
         }
 
-        newRegion->start = newRegion->current = (char*)IL2CPP_MALLOC(allocationSize);
+        newRegion->start = newRegion->current = (char*)IL2CPP_MALLOC(allocationSize, IL2CPP_MEM_META_POOL);
         newRegion->size = newRegion->free = allocationSize;
+		
+#if IL2CPP_ENABLE_MEM_STATS
+        il2cpp_mem_stats.meta.meta_total += (allocationSize + sizeof(Region));
+        ++il2cpp_mem_stats.meta.meta_region_count;
+#endif //IL2CPP_ENABLE_MEM_STATS
 
         return newRegion;
+    }
+	
+	size_t MemoryPool::RegionSize() {
+        return sizeof(Region);
+    }
+
+    size_t MemoryPool::FreeSize(){
+        return m_Regions.back()->free;
+    }
+    
+    size_t  MemoryPool::TotalSize() {
+        size_t total = 0;
+        for (RegionList::iterator iter = m_Regions.begin(); iter != m_Regions.end(); ++iter)
+        {
+            total += (*iter)->size;
+        }
+        return total + sizeof(Region) * m_Regions.size();
     }
 }
 }

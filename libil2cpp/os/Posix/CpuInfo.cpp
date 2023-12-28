@@ -37,7 +37,7 @@ namespace os
 {
     void* CpuInfo::Create()
     {
-        return IL2CPP_MALLOC_ZERO(sizeof(Il2CppCpuUsageState));
+        return IL2CPP_MALLOC_ZERO(sizeof(Il2CppCpuUsageState), IL2CPP_MEM_CpuUsageState);
     }
 
     int32_t CpuInfo::Usage(void* previous)

@@ -30,13 +30,17 @@ namespace os
         FastReaderReaderWriterAutoSharedLock(FastReaderReaderWriterLock* lock)
             : m_Lock(lock)
         {
+#if !IL2CPP_SLIM_CLASS
             m_Lock->LockShared();
+#endif
         }
 
+#if !IL2CPP_SLIM_CLASS
         ~FastReaderReaderWriterAutoSharedLock()
         {
             m_Lock->ReleaseShared();
         }
+#endif
 
     private:
         FastReaderReaderWriterLock* m_Lock;
@@ -47,14 +51,17 @@ namespace os
         FastReaderReaderWriterAutoExclusiveLock(FastReaderReaderWriterLock* lock)
             : m_Lock(lock)
         {
+#if !IL2CPP_SLIM_CLASS
             m_Lock->LockExclusive();
+#endif
         }
 
+#if !IL2CPP_SLIM_CLASS
         ~FastReaderReaderWriterAutoExclusiveLock()
         {
             m_Lock->ReleaseExclusive();
         }
-
+#endif
     private:
         FastReaderReaderWriterLock* m_Lock;
     };

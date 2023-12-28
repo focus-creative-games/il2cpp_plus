@@ -225,6 +225,10 @@ namespace vm
         {
             IL2CPP_ASSERT(virtualMethod->slot < obj->klass->vtable_count);
             vtableSlotMethod = obj->klass->vtable[virtualMethod->slot].method;
+			if(vtableSlotMethod == NULL)
+			{
+				vtableSlotMethod = Class::GetOrSetupOneVTableSlot(obj->klass, NULL, virtualMethod->slot)->method;
+			}
         }
 
         if (Method::IsGenericInstanceMethod(virtualMethod))
@@ -241,6 +245,7 @@ namespace vm
         if (Class::IsAssignableFrom(klass, objClass))
             return obj;
 
+#if !IL2CPP_TRIM_COM
         if (!objClass->is_import_or_windows_runtime)
             return NULL;
 
@@ -255,6 +260,7 @@ namespace vm
                     return static_cast<Il2CppComObject*>(obj);
             }
         }
+#endif
 
         return (klass == il2cpp_defaults.object_class) ? obj : NULL;
     }

@@ -52,7 +52,7 @@ namespace Reflection
         vm::Assembly::GetReferencedAssemblies(module->assembly, &referencedAssemblies);
         for (vm::AssemblyNameVector::const_iterator aname = referencedAssemblies.begin(); aname != referencedAssemblies.end(); ++aname)
         {
-            Il2CppMonoAssemblyName* monoAssemblyName = (Il2CppMonoAssemblyName*)IL2CPP_MALLOC_ZERO(sizeof(Il2CppMonoAssemblyName));
+            Il2CppMonoAssemblyName* monoAssemblyName = (Il2CppMonoAssemblyName*)IL2CPP_MALLOC_ZERO(sizeof(Il2CppMonoAssemblyName), IL2CPP_MEM_MonoAssemblyName);
             il2cpp::vm::AssemblyName::FillNativeAssemblyName(*(*aname), monoAssemblyName);
             assemblyPointers.push_back(monoAssemblyName);
         }

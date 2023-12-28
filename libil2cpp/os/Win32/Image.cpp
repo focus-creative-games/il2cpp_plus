@@ -63,7 +63,7 @@ namespace Image
         if (IMAGE_DEBUG_TYPE_CODEVIEW == dbg_dir->Type)
         {
             PdbInfo* pdb_info = (PdbInfo*)(base_pointer + dbg_dir->AddressOfRawData);
-            char* uuid = static_cast<char*>(IL2CPP_MALLOC(41));
+            char* uuid = static_cast<char*>(IL2CPP_MALLOC(41, IL2CPP_MEM_IMAGE));
 
             // Crash reporting expects the GUID without dashes (the format used by symbol servers)
             _snprintf_s(uuid, 41, 40, "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX%X",
@@ -86,7 +86,7 @@ namespace Image
 
     char* GetImageName()
     {
-        char* name = static_cast<char*>(IL2CPP_MALLOC(MAX_PATH + 1));
+        char* name = static_cast<char*>(IL2CPP_MALLOC(MAX_PATH + 1, IL2CPP_MEM_STRING));
         GetModuleFileNameA((HMODULE)&__ImageBase, name, MAX_PATH + 1);
         return name;
     }

@@ -20,16 +20,16 @@ namespace os
             : size(dataSize)
         {
             size_t nameSize = strlen(name);
-            mapName = (char*)IL2CPP_MALLOC(nameSize  + 1);
+            mapName = (char*)IL2CPP_MALLOC(nameSize  + 1, IL2CPP_MEM_STRING);
             strcpy(mapName, name);
 
-            handle = IL2CPP_MALLOC_ZERO((size_t)dataSize);
+            handle = IL2CPP_MALLOC_ZERO((size_t)dataSize, IL2CPP_MEM_MEMORY_MAP);
         }
 
         ~MemoryFileData()
         {
-            IL2CPP_FREE(mapName);
-            IL2CPP_FREE(handle);
+            IL2CPP_FREE(mapName, IL2CPP_MEM_STRING);
+            IL2CPP_FREE(handle, IL2CPP_MEM_MEMORY_MAP);
         }
 
         char* mapName;
@@ -126,12 +126,12 @@ namespace os
             }
         }
 
-        void* buffer = IL2CPP_MALLOC_ZERO((size_t)*length);
+        void* buffer = IL2CPP_MALLOC_ZERO((size_t)*length, IL2CPP_MEM_MEMORY_MAP);
 
         os::File::Seek(mappedFileHandle, offset, 0, &fileError);
         if (fileError != 0)
         {
-            IL2CPP_FREE(buffer);
+            IL2CPP_FREE(buffer, IL2CPP_MEM_MEMORY_MAP);
             if (error != NULL)
                 *error = COULD_NOT_MAP_MEMORY;
             return NULL;
@@ -140,7 +140,7 @@ namespace os
         int bytesRead = File::Read(mappedFileHandle, (char*)buffer, (int)*length, &fileError);
         if (bytesRead != *length || fileError != 0)
         {
-            IL2CPP_FREE(buffer);
+            IL2CPP_FREE(buffer, IL2CPP_MEM_MEMORY_MAP);
             if (error != NULL)
                 *error = COULD_NOT_MAP_MEMORY;
             return NULL;
@@ -192,7 +192,7 @@ namespace os
         if (IsMemoryFileView(memoryMappedFileData))
             s_MemoryFileViews.erase_swap_back(&memoryMappedFileData);
         else if (!IsMemoryFile(memoryMappedFileData))
-            IL2CPP_FREE(memoryMappedFileData);
+            IL2CPP_FREE(memoryMappedFileData, IL2CPP_MEM_MEMORY_MAP);
         return true;
     }
 

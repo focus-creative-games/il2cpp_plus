@@ -19,6 +19,17 @@
 #define IL2CPP_ENABLE_OPTIMIZATIONS
 #endif
 
+
+#if defined(__GNUC__) || defined(__SNC__) || defined(__clang__)
+    #define IL2CPP_FORCE_INLINE_FOR_MINIGAME inline __attribute__ ((always_inline))
+#elif defined(_MSC_VER)
+    #define IL2CPP_FORCE_INLINE_FOR_MINIGAME __forceinline
+#else
+    #define IL2CPP_FORCE_INLINE_FOR_MINIGAME inline
+#endif
+
+
+
 template<typename T>
 using no_infer = typename std::common_type<T>::type;
 
@@ -32,77 +43,77 @@ inline void Il2CppCodeGenWriteBarrierForType(const Il2CppType* type, void** targ
 inline void Il2CppCodeGenWriteBarrierForClass(Il2CppClass* klass, void** targetAddress, void* object) {}
 #endif
 
-inline void* il2cpp_codegen_memcpy(void* dest, const void* src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(void* dest, const void* src, size_t count)
 {
     return memcpy(dest, src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(intptr_t dest, const void* src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(intptr_t dest, const void* src, size_t count)
 {
     return memcpy((void*)dest, src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(uintptr_t dest, const void* src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(uintptr_t dest, const void* src, size_t count)
 {
     return memcpy((void*)dest, src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(void* dest, intptr_t src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(void* dest, intptr_t src, size_t count)
 {
     return memcpy(dest, (void*)src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(intptr_t dest, intptr_t src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(intptr_t dest, intptr_t src, size_t count)
 {
     return memcpy((void*)dest, (void*)src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(uintptr_t dest, intptr_t src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(uintptr_t dest, intptr_t src, size_t count)
 {
     return memcpy((void*)dest, (void*)src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(void* dest, uintptr_t src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(void* dest, uintptr_t src, size_t count)
 {
     return memcpy(dest, (void*)src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(intptr_t dest, uintptr_t src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(intptr_t dest, uintptr_t src, size_t count)
 {
     return memcpy((void*)dest, (void*)src, count);
 }
 
-inline void* il2cpp_codegen_memcpy(uintptr_t dest, uintptr_t src, size_t count)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void* il2cpp_codegen_memcpy(uintptr_t dest, uintptr_t src, size_t count)
 {
     return memcpy((void*)dest, (void*)src, count);
 }
 
-inline void il2cpp_codegen_memset(void* ptr, int value, size_t num)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void il2cpp_codegen_memset(void* ptr, int value, size_t num)
 {
     memset(ptr, value, num);
 }
 
-inline void il2cpp_codegen_memset(intptr_t ptr, int value, size_t num)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void il2cpp_codegen_memset(intptr_t ptr, int value, size_t num)
 {
     memset((void*)ptr, value, num);
 }
 
-inline void il2cpp_codegen_memset(uintptr_t ptr, int value, size_t num)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void il2cpp_codegen_memset(uintptr_t ptr, int value, size_t num)
 {
     memset((void*)ptr, value, num);
 }
 
-inline void il2cpp_codegen_initobj(void* value, size_t size)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void il2cpp_codegen_initobj(void* value, size_t size)
 {
     memset(value, 0, size);
 }
 
-inline void il2cpp_codegen_initobj(intptr_t value, size_t size)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void il2cpp_codegen_initobj(intptr_t value, size_t size)
 {
     memset((void*)value, 0, size);
 }
 
-inline void il2cpp_codegen_initobj(uintptr_t value, size_t size)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME void il2cpp_codegen_initobj(uintptr_t value, size_t size)
 {
     memset((void*)value, 0, size);
 }
@@ -164,19 +175,19 @@ struct pick_bigger
 };
 
 template<typename T, typename U>
-inline typename pick_bigger<T, U>::type il2cpp_codegen_multiply(T left, U right)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME typename pick_bigger<T, U>::type il2cpp_codegen_multiply(T left, U right)
 {
     return left * right;
 }
 
 template<typename T, typename U>
-inline typename pick_bigger<T, U>::type il2cpp_codegen_add(T left, U right)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME typename pick_bigger<T, U>::type il2cpp_codegen_add(T left, U right)
 {
     return left + right;
 }
 
 template<typename T, typename U>
-inline typename pick_bigger<T, U>::type il2cpp_codegen_subtract(T left, U right)
+IL2CPP_FORCE_INLINE_FOR_MINIGAME typename pick_bigger<T, U>::type il2cpp_codegen_subtract(T left, U right)
 {
     return left - right;
 }

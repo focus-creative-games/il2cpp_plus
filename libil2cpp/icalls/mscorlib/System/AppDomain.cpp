@@ -105,7 +105,7 @@ namespace System
 
     static inline void InitializeDomainData()
     {
-        void* memory = utils::Memory::Malloc(sizeof(DomainDataStorage));
+        void* memory = utils::Memory::Malloc(sizeof(DomainDataStorage), IL2CPP_MEM_DomainData);
         s_DomainData = new(memory) DomainDataStorage;
     }
 

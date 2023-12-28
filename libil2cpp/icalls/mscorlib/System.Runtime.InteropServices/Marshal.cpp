@@ -348,6 +348,10 @@ namespace InteropServices
 
     int32_t Marshal::ReleaseComObjectInternal(Il2CppObject* co)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(Marshal::ReleaseComObjectInternal);
+        return 0;
+#else
         // There's a check in mscorlib before calling this internal icall, so assert instead of full check is OK here.
         IL2CPP_ASSERT(co->klass->is_import_or_windows_runtime);
 
@@ -366,6 +370,7 @@ namespace InteropServices
         }
 
         return newRefCount;
+#endif
     }
 
     int Marshal::SizeOf(Il2CppReflectionType* rtype)
@@ -684,9 +689,14 @@ namespace InteropServices
 
     intptr_t Marshal::GetRawIUnknownForComObjectNoAddRef(Il2CppObject* o)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(Marshal::GetRawIUnknownForComObjectNoAddRef);
+        return 0;
+#else
         IL2CPP_ASSERT(o->klass->is_import_or_windows_runtime);
 
         return reinterpret_cast<intptr_t>(static_cast<Il2CppComObject*>(o)->identity);
+#endif
     }
 
     Il2CppObject* Marshal::GetNativeActivationFactory(Il2CppObject* type)

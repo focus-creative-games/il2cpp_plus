@@ -17,6 +17,7 @@ namespace il2cpp
 {
 namespace vm
 {
+#if !IL2CPP_TRIM_COM
     struct ManagedObject : CachedCCWBase<ManagedObject>
     {
         inline ManagedObject(Il2CppObject* obj) :
@@ -60,9 +61,14 @@ namespace vm
             return IL2CPP_E_NOINTERFACE;
         }
     };
+#endif
 
     Il2CppIUnknown* CCW::CreateCCW(Il2CppObject* obj)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(CCW::CreateCCW);
+        return NULL;
+#else
         // check for ccw create function, which is implemented by objects that implement COM or Windows Runtime interfaces
         const Il2CppInteropData* interopData = obj->klass->interopData;
         if (interopData != NULL)
@@ -74,10 +80,11 @@ namespace vm
         }
 
         // otherwise create generic ccw object that "only" implements IUnknown, IMarshal, IInspectable, IAgileObject and IManagedObjectHolder interfaces
-        void* memory = utils::Memory::Malloc(sizeof(ManagedObject));
+        void* memory = utils::Memory::Malloc(sizeof(ManagedObject), IL2CPP_MEM_ManagedObject);
         if (memory == NULL)
             Exception::RaiseOutOfMemoryException();
         return static_cast<Il2CppIManagedObjectHolder*>(new(memory) ManagedObject(obj));
+#endif
     }
 
     Il2CppObject* CCW::Unpack(Il2CppIUnknown* unknown)

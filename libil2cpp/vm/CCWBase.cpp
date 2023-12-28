@@ -33,6 +33,10 @@ static inline bool CanPotentiallyBeBoxedToWindowsRuntime(const Il2CppClass* klas
 
 il2cpp_hresult_t il2cpp::vm::CCWBase::GetRuntimeClassNameImpl(Il2CppHString* className)
 {
+#if IL2CPP_TRIM_COM
+    * className = NULL;
+    return IL2CPP_S_OK;
+#else
     const Il2CppClass* objectClass = GetManagedObjectInline()->klass;
     if (il2cpp_defaults.ireference_class != NULL && CanPotentiallyBeBoxedToWindowsRuntime(objectClass))
     {
@@ -64,6 +68,7 @@ il2cpp_hresult_t il2cpp::vm::CCWBase::GetRuntimeClassNameImpl(Il2CppHString* cla
 
     UTF16String nameUtf16 = utils::StringUtils::Utf8ToUtf16(name);
     return os::WindowsRuntime::CreateHString(utils::StringView<Il2CppChar>(nameUtf16.c_str(), nameUtf16.length()), className);
+#endif
 }
 
 Il2CppObject* STDCALL il2cpp::vm::CCWBase::GetManagedObject()

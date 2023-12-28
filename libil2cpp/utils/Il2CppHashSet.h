@@ -12,11 +12,12 @@
 
 #include "KeyWrapper.h"
 #include "os/FastReaderReaderWriterLock.h"
+#include "Memory.h"
 
 template<class Value,
          class HashFcn = SPARSEHASH_HASH<Value>,
          class EqualKey = std::equal_to<Value>,
-         class Alloc = GOOGLE_NAMESPACE::libc_allocator_with_realloc<KeyWrapper<Value> > >
+         class Alloc = libc_allocator_with_realloc_il2cpp<KeyWrapper<Value> > >
 #if IL2CPP_USE_SPARSEHASH
 class Il2CppHashSet : public GOOGLE_NAMESPACE::sparse_hash_set<KeyWrapper<Value>, HashFcn, typename KeyWrapper<Value>::template EqualsComparer<EqualKey>, Alloc>
 #else
@@ -64,7 +65,7 @@ public:
 template<class Value,
          class HashFcn = SPARSEHASH_HASH<Value>,
          class EqualKey = std::equal_to<Value>,
-         class Alloc = GOOGLE_NAMESPACE::libc_allocator_with_realloc<KeyWrapper<Value> > >
+         class Alloc = libc_allocator_with_realloc_il2cpp<KeyWrapper<Value> > >
 class Il2CppReaderWriterLockedHashSet
 {
 public:

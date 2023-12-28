@@ -43,19 +43,25 @@ namespace il2cpp
 {
 namespace vm
 {
+#if !IL2CPP_TRIM_COM
     typedef Il2CppHashMap<Il2CppIUnknown*, /* Weak GC Handle */ uint32_t, il2cpp::utils::PointerHash<Il2CppIUnknown> > RCWCache;
-
     static baselib::ReentrantLock s_RCWCacheMutex;
     static RCWCache s_RCWCache;
+#endif
 
     void RCW::Register(Il2CppComObject* rcw)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(RCW::Register);
+#else
+
         os::FastAutoLock lock(&s_RCWCacheMutex);
         rcw->refCount = 1;
         auto weakRef = gc::GCHandle::NewWeakref(rcw, false);
         vm::Exception::RaiseIfError(weakRef.GetError());
         const bool inserted = s_RCWCache.insert(std::make_pair(rcw->identity, weakRef.Get())).second;
         Assert(inserted);
+#endif
     }
 
     static inline Il2CppIUnknown* GetIdentity(Il2CppIUnknown* unknown)
@@ -127,7 +133,11 @@ namespace vm
 
     Il2CppObject* ReboxIReference(Il2CppIUnknown* comObject, Il2CppClass* objectClass)
     {
+#if IL2CPP_TRIM_COM
+        return NULL;
+#else
         Class::Init(objectClass);
+        Class::SetupVTable(objectClass);
 
         // Sanity checks
         IL2CPP_ASSERT(Class::IsInflated(objectClass));
@@ -149,11 +159,16 @@ namespace vm
             Exception::Raise(exception);
 
         return reboxed;
+#endif
     }
 
     Il2CppObject* ReboxKeyValuePair(Il2CppIUnknown* comObject, Il2CppClass* keyValuePairGenericInstance)
     {
+#if IL2CPP_TRIM_COM
+        return NULL;
+#else
         Class::Init(keyValuePairGenericInstance);
+        Class::SetupVTable(keyValuePairGenericInstance);
 
         // Sanity checks
         IL2CPP_ASSERT(Class::IsInflated(keyValuePairGenericInstance));
@@ -163,6 +178,7 @@ namespace vm
         Il2CppGenericClass* iKeyValuePairGenericClass = metadata::GenericMetadata::GetGenericClass(il2cpp_defaults.ikey_value_pair_class, keyValuePairGenericInstance->generic_class->context.class_inst);
         Il2CppClass* iKeyValuePairGenericInstance = GenericClass::GetClass(iKeyValuePairGenericClass);
         Class::Init(iKeyValuePairGenericInstance);
+        Class::SetupVTable(iKeyValuePairGenericInstance);
 
         IL2CPP_ASSERT(iKeyValuePairGenericInstance->vtable_count == 2);
 
@@ -214,15 +230,22 @@ namespace vm
         }
 
         return reboxed;
+#endif
     }
 
     Il2CppObject* ReboxUri(Il2CppIUnknown* comObject)
     {
+#if IL2CPP_TRIM_COM
+        return NULL;
+#else
         Il2CppClass* systemUriClass = il2cpp_defaults.system_uri_class;
         Il2CppClass* iUriRuntimeClassClass = il2cpp_defaults.windows_foundation_iuri_runtime_class_class;
 
         Class::Init(systemUriClass);
+        Class::SetupVTable(systemUriClass);
+
         Class::Init(iUriRuntimeClassClass);
+        Class::SetupVTable(iUriRuntimeClassClass);
 
         const int kGetRawUriMethodIndex = 10; // IUriRuntimeClass::get_RawUri
         IL2CPP_ASSERT(iUriRuntimeClassClass->vtable_count > kGetRawUriMethodIndex);
@@ -256,11 +279,16 @@ namespace vm
 
         Runtime::InvokeWithThrow(uriConstructor, reboxedUri, constructorArgs);
         return reboxedUri;
+#endif
     }
 
     template<typename T, bool isSealedClassInstance>
     static inline Il2CppObject* GetOrCreateRCW(T* comObject, Il2CppClass* objectClass)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(GetOrCreateRCW);
+        return NULL;
+#else
         IL2CPP_ASSERT(comObject != NULL);
 
         if (!isSealedClassInstance)
@@ -345,6 +373,7 @@ namespace vm
         Assert(inserted);
 
         return rcw;
+#endif
     }
 
     Il2CppObject* RCW::GetOrCreateFromIUnknown(Il2CppIUnknown* unknown, Il2CppClass* fallbackClass)
@@ -364,6 +393,9 @@ namespace vm
 
     void RCW::Cleanup(Il2CppComObject* rcw)
     {
+#if IL2CPP_TRIM_COM
+        IL2CPP_NOT_IMPLEMENTED(RCW::Cleanup);
+#else
         if (rcw->klass->is_import_or_windows_runtime)
         {
             os::FastAutoLock lock(&s_RCWCacheMutex);
@@ -399,8 +431,9 @@ namespace vm
             for (int32_t i = 0; i < longCacheSize; i++)
                 rcw->qiLongCache[i].qiResult->Release();
 
-            IL2CPP_FREE(rcw->qiLongCache);
+            IL2CPP_FREE(rcw->qiLongCache, IL2CPP_MEM_RCW);
         }
+#endif
     }
 
     Il2CppIUnknown* RCW::QueryInterfaceCached(Il2CppComObject* rcw, const Il2CppGuid& iid)
@@ -468,7 +501,7 @@ namespace vm
         if (longCacheSize == longCacheCapacity)
         {
             longCacheCapacity *= 2;
-            rcw->qiLongCache = static_cast<QICache*>(IL2CPP_REALLOC(rcw->qiLongCache, sizeof(QICache) * longCacheCapacity));
+            rcw->qiLongCache = static_cast<QICache*>(IL2CPP_REALLOC(rcw->qiLongCache, sizeof(QICache) * longCacheCapacity, IL2CPP_MEM_RCW));
             rcw->qiLongCacheCapacity = longCacheCapacity;
         }
 
@@ -480,6 +513,8 @@ namespace vm
     const VirtualInvokeData* RCW::GetComInterfaceInvokeData(Il2CppClass* queriedInterface, const Il2CppClass* targetInterface, Il2CppMethodSlot slot)
     {
         Class::Init(queriedInterface);
+        Class::SetupVTable(queriedInterface);
+
         uint16_t vtableCount = queriedInterface->vtable_count;
 
         if (targetInterface->generic_class != NULL)

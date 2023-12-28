@@ -34,6 +34,7 @@
 #include "utils/Memory.h"
 #include "utils/StringUtils.h"
 #include "utils/PathUtils.h"
+#include "utils/MemoryMappedFile.h"
 #include "vm/Assembly.h"
 #include "vm/Class.h"
 #include "vm/ClassInlines.h"
@@ -149,9 +150,15 @@ const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionI
     {
         const Il2CppMethodDefinition* methodDefinition = il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromIndex(index);
         Il2CppClass* typeInfo = il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(methodDefinition->declaringType);
-        il2cpp::vm::Class::SetupMethods(typeInfo);
+        //[WL]
+        //il2cpp::vm::Class::SetupMethods(typeInfo);
+        
         const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(typeInfo->typeMetadataHandle);
-        s_MethodInfoDefinitionTable[index] = typeInfo->methods[index - typeDefinition->methodStart];
+        MethodIndex indexInType = index - typeDefinition->methodStart;
+
+        //il2cpp::vm::Class::GetOrSetupOneMethod(typeInfo, indexInType);
+        //s_MethodInfoDefinitionTable[index] = typeInfo->methods[indexInType];
+        s_MethodInfoDefinitionTable[index] = il2cpp::vm::Class::GetOrSetupOneMethod(typeInfo, indexInType);
     }
 
     return s_MethodInfoDefinitionTable[index];
@@ -427,9 +434,18 @@ static void ProcessIl2CppTypeDefinitions(Il2CppTypeUpdater updateTypeDef, Il2Cpp
 
 bool il2cpp::vm::GlobalMetadata::Initialize(int32_t* imagesCount, int32_t* assembliesCount)
 {
+#if ENABLE_HMI_MODE && IL2CPP_TARGET_ANDROID
+    s_GlobalMetadata = vm::MetadataLoader::LoadMetadataFile("global-metadata.so");  // HACKY!! enforce 4k zip alignment
+#else
     s_GlobalMetadata = vm::MetadataLoader::LoadMetadataFile("global-metadata.dat");
+#endif
     if (!s_GlobalMetadata)
         return false;
+
+#if IL2CPP_ENABLE_MEM_STATS
+    il2cpp_mem_stats.globalMetadataMapfile = il2cpp::utils::MemoryMappedFile::MapSize(s_GlobalMetadata);
+#endif 
+    il2cpp_runtime_stats.global_metadata_file_size = il2cpp::utils::MemoryMappedFile::MapSize(s_GlobalMetadata);
 
     s_GlobalMetadataHeader = (const Il2CppGlobalMetadataHeader*)s_GlobalMetadata;
     IL2CPP_ASSERT(s_GlobalMetadataHeader->sanity == 0xFAB11BAF);
@@ -443,11 +459,11 @@ bool il2cpp::vm::GlobalMetadata::Initialize(int32_t* imagesCount, int32_t* assem
     // These arrays hold the runtime metadata representation for metadata explicitly
     // referenced during conversion. There is a corresponding table of same size
     // in the converted metadata, giving a description of runtime metadata to construct.
-    s_MetadataImagesTable = (Il2CppImageGlobalMetadata*)IL2CPP_CALLOC(s_MetadataImagesCount, sizeof(Il2CppImageGlobalMetadata));
-    s_TypeInfoTable = (Il2CppClass**)IL2CPP_CALLOC(s_Il2CppMetadataRegistration->typesCount, sizeof(Il2CppClass*));
-    s_TypeInfoDefinitionTable = (Il2CppClass**)IL2CPP_CALLOC(s_GlobalMetadataHeader->typeDefinitionsSize / sizeof(Il2CppTypeDefinition), sizeof(Il2CppClass*));
-    s_MethodInfoDefinitionTable = (const MethodInfo**)IL2CPP_CALLOC(s_GlobalMetadataHeader->methodsSize / sizeof(Il2CppMethodDefinition), sizeof(MethodInfo*));
-    s_GenericMethodTable = (const Il2CppGenericMethod**)IL2CPP_CALLOC(s_Il2CppMetadataRegistration->methodSpecsCount, sizeof(Il2CppGenericMethod*));
+    s_MetadataImagesTable = (Il2CppImageGlobalMetadata*)IL2CPP_CALLOC(s_MetadataImagesCount, sizeof(Il2CppImageGlobalMetadata), IL2CPP_MEM_GLOBAL_METADATA);
+    s_TypeInfoTable = (Il2CppClass**)IL2CPP_CALLOC(s_Il2CppMetadataRegistration->typesCount, sizeof(Il2CppClass*), IL2CPP_MEM_GLOBAL_METADATA);
+    s_TypeInfoDefinitionTable = (Il2CppClass**)IL2CPP_CALLOC(s_GlobalMetadataHeader->typeDefinitionsSize / sizeof(Il2CppTypeDefinition), sizeof(Il2CppClass*), IL2CPP_MEM_GLOBAL_METADATA);
+    s_MethodInfoDefinitionTable = (const MethodInfo**)IL2CPP_CALLOC(s_GlobalMetadataHeader->methodsSize / sizeof(Il2CppMethodDefinition), sizeof(MethodInfo*), IL2CPP_MEM_GLOBAL_METADATA);
+    s_GenericMethodTable = (const Il2CppGenericMethod**)IL2CPP_CALLOC(s_Il2CppMetadataRegistration->methodSpecsCount, sizeof(Il2CppGenericMethod*), IL2CPP_MEM_GLOBAL_METADATA);
 
     ProcessIl2CppTypeDefinitions(InitializeTypeHandle, InitializeGenericParameterHandle);
     return true;
@@ -536,6 +552,7 @@ void il2cpp::vm::GlobalMetadata::InitializeStringLiteralTable()
     s_StringLiteralTable = (Il2CppString**)il2cpp::gc::GarbageCollector::AllocateFixed(s_GlobalMetadataHeader->stringLiteralSize / sizeof(Il2CppStringLiteral) * sizeof(Il2CppString*), NULL);
 }
 
+#if !IL2CPP_TRIM_COM
 void il2cpp::vm::GlobalMetadata::InitializeWindowsRuntimeTypeNamesTables(WindowsRuntimeTypeNameToClassMap& windowsRuntimeTypeNameToClassMap, ClassToWindowsRuntimeTypeNameMap& classToWindowsRuntimeTypeNameMap)
 {
     int32_t typeCount = s_GlobalMetadataHeader->windowsRuntimeTypeNamesSize / sizeof(Il2CppWindowsRuntimeTypeNamePair);
@@ -561,6 +578,7 @@ void il2cpp::vm::GlobalMetadata::InitializeWindowsRuntimeTypeNamesTables(Windows
         classToWindowsRuntimeTypeNameMap.insert(std::make_pair(klass, name));
     }
 }
+#endif
 
 void il2cpp::vm::GlobalMetadata::InitializeUnresolvedSignatureTable(Il2CppUnresolvedSignatureMap& unresolvedSignatureMap)
 {
@@ -571,7 +589,7 @@ void il2cpp::vm::GlobalMetadata::InitializeUnresolvedSignatureTable(Il2CppUnreso
         const Il2CppMetadataRange* range = MetadataOffset<Il2CppMetadataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->unresolvedIndirectCallParameterRangesOffset, i);
         il2cpp::metadata::Il2CppSignature signature;
         signature.Count = range->length;
-        signature.Types = (const Il2CppType**)MetadataMalloc(range->length * sizeof(Il2CppType*));
+        signature.Types = (const Il2CppType**)MetadataMalloc(range->length * sizeof(Il2CppType*), IL2CPP_MSTAT_TYPE);
 
         for (int j = 0; j < range->length; ++j)
         {
@@ -596,6 +614,53 @@ void il2cpp::vm::GlobalMetadata::InitializeGenericMethodTable(Il2CppMethodTableM
     }
 }
 
+#if ENABLE_HMI_MODE
+uint32_t il2cpp::vm::GlobalMetadata::InitializeGenericMethodTableFast(Il2CppGenericMethodTableItem** outVector)
+{
+    *outVector = (Il2CppGenericMethodTableItem*)MetadataMalloc(s_Il2CppMetadataRegistration->genericMethodTableCount * sizeof(Il2CppGenericMethodTableItem), IL2CPP_MSTAT_METHOD);
+
+    for (uint32_t i = 0; i < s_Il2CppMetadataRegistration->genericMethodTableCount; i ++)
+    {
+        const Il2CppGenericMethodFunctionsDefinitions* genericMethodIndices = s_Il2CppMetadataRegistration->genericMethodTable + i;
+        GenericMethodIndex index = genericMethodIndices->genericMethodIndex;
+
+        const Il2CppGenericMethod* genericMethod = s_GenericMethodTable[index];
+        if (genericMethod == NULL) {
+            const Il2CppMethodSpec* methodSpec = s_Il2CppMetadataRegistration->methodSpecs + index;
+            const MethodInfo* methodDefinition = il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(methodSpec->methodDefinitionIndex);
+            const Il2CppGenericInst* classInst = NULL;
+            const Il2CppGenericInst* methodInst = NULL;
+            if (methodSpec->classIndexIndex != -1)
+            {
+                IL2CPP_ASSERT(methodSpec->classIndexIndex < s_Il2CppMetadataRegistration->genericInstsCount);
+                classInst = s_Il2CppMetadataRegistration->genericInsts[methodSpec->classIndexIndex];
+            }
+            if (methodSpec->methodIndexIndex != -1)
+            {
+                IL2CPP_ASSERT(methodSpec->methodIndexIndex < s_Il2CppMetadataRegistration->genericInstsCount);
+                methodInst = s_Il2CppMetadataRegistration->genericInsts[methodSpec->methodIndexIndex];
+            }
+
+            Il2CppGenericMethod* newMethod = MetadataAllocGenericMethod();
+            newMethod->methodDefinition = methodDefinition;
+            newMethod->context.class_inst = classInst;
+            newMethod->context.method_inst = methodInst;
+
+            s_GenericMethodTable[index] = newMethod;
+            (*outVector)[i].method = newMethod;
+        }
+        else
+        {
+            (*outVector)[i].method = const_cast<Il2CppGenericMethod*>(genericMethod);
+        }
+        (*outVector)[i].indices = const_cast<Il2CppGenericMethodIndices*>(&genericMethodIndices->indices);
+    }
+
+    std::sort(*outVector, (*outVector) + s_Il2CppMetadataRegistration->genericMethodTableCount);
+    return s_Il2CppMetadataRegistration->genericMethodTableCount;
+}
+#endif
+
 static void ClearStringLiteralTable()
 {
     il2cpp::gc::GarbageCollector::FreeFixed(s_StringLiteralTable);
@@ -604,7 +669,7 @@ static void ClearStringLiteralTable()
 
 static void FreeAndNull(void** pointer)
 {
-    IL2CPP_FREE(*pointer);
+    IL2CPP_FREE(*pointer, IL2CPP_MEM_GLOBAL_METADATA);
     *pointer = NULL;
 }
 
@@ -1336,8 +1401,8 @@ Il2CppMetadataPropertyInfo il2cpp::vm::GlobalMetadata::GetPropertyInfo(const Il2
 
     return {
             GetStringFromIndex(propertyDefintion->nameIndex),
-            propertyDefintion->get != kMethodIndexInvalid ? klass->methods[propertyDefintion->get] : NULL,
-            propertyDefintion->set != kMethodIndexInvalid ? klass->methods[propertyDefintion->set] : NULL,
+            propertyDefintion->get != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),propertyDefintion->get) : NULL,
+            propertyDefintion->set != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),propertyDefintion->set) : NULL,
             propertyDefintion->attrs,
             propertyDefintion->token,
     };
@@ -1359,9 +1424,9 @@ Il2CppMetadataEventInfo il2cpp::vm::GlobalMetadata::GetEventInfo(const Il2CppCla
     return {
             GetStringFromIndex(eventDefintion->nameIndex),
             GetIl2CppTypeFromIndex(eventDefintion->typeIndex),
-            eventDefintion->add != kMethodIndexInvalid ? klass->methods[eventDefintion->add] : NULL,
-            eventDefintion->remove != kMethodIndexInvalid ? klass->methods[eventDefintion->remove] : NULL,
-            eventDefintion->raise != kMethodIndexInvalid ? klass->methods[eventDefintion->raise] : NULL,
+            eventDefintion->add != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),eventDefintion->add) : NULL,
+            eventDefintion->remove != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),eventDefintion->remove) : NULL,
+            eventDefintion->raise != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),eventDefintion->raise) : NULL,
             eventDefintion->token,
     };
 }
@@ -1598,8 +1663,15 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::FromTypeDefinition(TypeDefinitionIndex 
         typeDefinition = typeDefinitions + index;
         typeDefinitionSizes = s_Il2CppMetadataRegistration->typeDefinitionsSizes[index];
     }
-    Il2CppClass* typeInfo = (Il2CppClass*)IL2CPP_CALLOC(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * typeDefinition->vtable_count));
+    Il2CppClass* typeInfo = (Il2CppClass*)IL2CPP_CALLOC(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * typeDefinition->vtable_count), IL2CPP_MEM_FromTypeDefinition);
+
+#if IL2CPP_ENABLE_MEM_STATS
+    ++il2cpp_mem_stats.classFromTypeDef_count;
+#endif
+
+#if !IL2CPP_SLIM_CLASS
     typeInfo->klass = typeInfo;
+#endif
     typeInfo->image = GetImageForTypeDefinitionIndex(index);
     typeInfo->name = il2cpp::vm::GlobalMetadata::GetStringFromIndex(typeDefinition->nameIndex);
     typeInfo->namespaze = il2cpp::vm::GlobalMetadata::GetStringFromIndex(typeDefinition->namespaceIndex);

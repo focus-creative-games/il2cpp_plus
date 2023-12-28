@@ -249,7 +249,10 @@ inline RuntimeObject* IsInstClass(RuntimeObject *obj, RuntimeClass* targetType)
         return NULL;
 
     // optimized version to compare classes
-    return il2cpp::vm::ClassInlines::HasParentUnsafe(obj->klass, targetType) ? obj : NULL;
+    //return il2cpp::vm::ClassInlines::HasParentUnsafe(obj->klass, targetType) ? obj : NULL;
+
+    //[WL]
+    return il2cpp::vm::ClassInlines::HasParent(obj->klass, targetType) ? obj : NULL;
 }
 
 // OpCode.Castclass
@@ -384,7 +387,12 @@ inline uint16_t il2cpp_codegen_method_get_slot(const RuntimeMethod* method)
 IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_virtual_invoke_data(Il2CppMethodSlot slot, const RuntimeObject* obj)
 {
     Assert(slot != kInvalidIl2CppMethodSlot && "il2cpp_codegen_get_virtual_invoke_data got called on a non-virtual method");
-    return obj->klass->vtable[slot];
+    //[WL]
+    //return obj->klass->vtable[slot];
+    if (obj->klass->is_vtable_initialized && obj->klass->vtable[slot].method != NULL) {
+        return obj->klass->vtable[slot];
+    }else
+        return il2cpp::vm::ClassInlines::GetVirtualInvokeData(slot, obj);
 }
 
 IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_interface_invoke_data(Il2CppMethodSlot slot, RuntimeObject* obj, const RuntimeClass* declaringInterface)
@@ -398,7 +406,17 @@ const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method_internal(const Ru
 IL2CPP_FORCE_INLINE const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method(const RuntimeMethod* method, const RuntimeObject* obj)
 {
     uint16_t slot = method->slot;
-    const RuntimeMethod* methodDefinition = obj->klass->vtable[slot].method;
+	
+	//const RuntimeMethod* methodDefinition = obj->klass->vtable[slot].method;
+    //[WL]
+    const RuntimeMethod* methodDefinition = NULL;
+    if (obj->klass->is_vtable_initialized && obj->klass->vtable[slot].method != NULL) {
+        methodDefinition = obj->klass->vtable[slot].method;
+    }
+    else {
+        const VirtualInvokeData& data = il2cpp::vm::ClassInlines::GetVirtualInvokeData(slot, obj);
+        methodDefinition = data.method;
+    }
     return il2cpp_codegen_get_generic_virtual_method_internal(methodDefinition, method);
 }
 
@@ -670,26 +688,16 @@ inline void il2cpp_codegen_runtime_class_init_inline(RuntimeClass* klass)
         il2cpp_codegen_runtime_class_init(klass);
 }
 
+RuntimeClass* il2cpp_rgctx_data_no_init(const Il2CppRGCTXData* rgctxVar, int32_t index);
+
 // generic sharing
-inline RuntimeClass* il2cpp_rgctx_data(const Il2CppRGCTXData* rgctxVar, int32_t index)
-{
-    return InitializedTypeInfo(rgctxVar[index].klass);
+inline RuntimeClass* il2cpp_rgctx_data(const Il2CppRGCTXData* rgctxVar, int32_t index) {
+    return InitializedTypeInfo(il2cpp_rgctx_data_no_init(rgctxVar,index));
 }
 
-inline RuntimeClass* il2cpp_rgctx_data_no_init(const Il2CppRGCTXData* rgctxVar, int32_t index)
-{
-    return rgctxVar[index].klass;
-}
+const Il2CppType* il2cpp_rgctx_type(const Il2CppRGCTXData* rgctxVar, int32_t index);
 
-inline const Il2CppType* il2cpp_rgctx_type(const Il2CppRGCTXData* rgctxVar, int32_t index)
-{
-    return rgctxVar[index].type;
-}
-
-inline const MethodInfo* il2cpp_rgctx_method(const Il2CppRGCTXData* rgctxVar, int32_t index)
-{
-    return rgctxVar[index].method;
-}
+const MethodInfo* il2cpp_rgctx_method(const Il2CppRGCTXData* rgctxVar, int32_t index);
 
 inline FieldInfo* il2cpp_rgctx_field(RuntimeClass* klass, int32_t index)
 {
@@ -724,8 +732,14 @@ inline const RuntimeMethod* GetVirtualMethodInfo(RuntimeObject* pThis, Il2CppMet
 {
     if (!pThis)
         il2cpp_codegen_raise_null_reference_exception();
-
-    return pThis->klass->vtable[slot].method;
+    //[WL]
+    if (pThis->klass->is_vtable_initialized && pThis->klass->vtable[slot].method != NULL) {
+        return pThis->klass->vtable[slot].method;
+    }
+    else {
+        const VirtualInvokeData& data = il2cpp::vm::ClassInlines::GetVirtualInvokeData(slot, pThis);
+        return data.method;
+    }
 }
 
 inline const RuntimeMethod* GetInterfaceMethodInfo(RuntimeObject* pThis, Il2CppMethodSlot slot, RuntimeClass* declaringInterface)
@@ -808,7 +822,12 @@ RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_from_iunknown_internal(Il2Cp
 template<typename T>
 inline T* il2cpp_codegen_com_get_or_create_rcw_from_iunknown(Il2CppIUnknown* unknown, RuntimeClass* fallbackClass)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_rcw_from_iunknown);
+    return NULL;
+#else
     return static_cast<T*>(il2cpp_codegen_com_get_or_create_rcw_from_iunknown_internal(unknown, fallbackClass));
+#endif
 }
 
 RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_from_iinspectable_internal(Il2CppIInspectable* unknown, RuntimeClass* fallbackClass);
@@ -816,7 +835,12 @@ RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_from_iinspectable_internal(I
 template<typename T>
 inline T* il2cpp_codegen_com_get_or_create_rcw_from_iinspectable(Il2CppIInspectable* unknown, RuntimeClass* fallbackClass)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_rcw_from_iinspectable);
+    return NULL;
+#else
     return static_cast<T*>(il2cpp_codegen_com_get_or_create_rcw_from_iinspectable_internal(unknown, fallbackClass));
+#endif
 }
 
 RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_for_sealed_class_internal(Il2CppIUnknown* unknown, RuntimeClass* objectClass);
@@ -824,7 +848,12 @@ RuntimeObject* il2cpp_codegen_com_get_or_create_rcw_for_sealed_class_internal(Il
 template<typename T>
 inline T* il2cpp_codegen_com_get_or_create_rcw_for_sealed_class(Il2CppIUnknown* unknown, RuntimeClass* objectClass)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_rcw_for_sealed_class);
+    return NULL;
+#else
     return static_cast<T*>(il2cpp_codegen_com_get_or_create_rcw_for_sealed_class_internal(unknown, objectClass));
+#endif
 }
 
 Il2CppIUnknown* il2cpp_codegen_com_query_interface_internal(Il2CppComObject* rcw, const Il2CppGuid& guid);
@@ -834,13 +863,23 @@ void il2cpp_codegen_com_cache_queried_interface(Il2CppComObject* rcw, const Il2C
 template<typename T>
 inline T* il2cpp_codegen_com_query_interface(Il2CppComObject* rcw)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_query_interface);
+    return NULL;
+#else
     return static_cast<T*>(il2cpp_codegen_com_query_interface_internal(rcw, T::IID));
+#endif
 }
 
 template<typename T>
 inline T* il2cpp_codegen_com_query_interface_no_throw(Il2CppComObject* rcw)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_query_interface_no_throw);
+    return NULL;
+#else
     return static_cast<T*>(il2cpp_codegen_com_query_interface_no_throw_internal(rcw, T::IID));
+#endif
 }
 
 void il2cpp_codegen_il2cpp_com_object_cleanup(Il2CppComObject* rcw);
@@ -850,26 +889,44 @@ Il2CppIUnknown* il2cpp_codegen_com_get_or_create_ccw_internal(RuntimeObject* obj
 template<typename InterfaceType>
 inline InterfaceType* il2cpp_codegen_com_get_or_create_ccw(RuntimeObject* obj)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_or_create_ccw);
+    return NULL;
+#else
     return static_cast<InterfaceType*>(il2cpp_codegen_com_get_or_create_ccw_internal(obj, InterfaceType::IID));
+#endif
 }
 
 inline intptr_t il2cpp_codegen_com_get_iunknown_for_object(RuntimeObject* obj)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_iunknown_for_object);
+    return NULL;
+#else
     return reinterpret_cast<intptr_t>(il2cpp_codegen_com_get_or_create_ccw_internal(obj, Il2CppIUnknown::IID));
+#endif
 }
 
 Il2CppObject* il2cpp_codegen_com_unpack_ccw(Il2CppIUnknown* obj);
 
 inline void il2cpp_codegen_com_raise_exception_if_failed(il2cpp_hresult_t hr, bool defaultToCOMException)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_raise_exception_if_failed);
+#else
     // Copied from il2cpp::vm::Exception::RaiseIfFailed to keep inlined
     if (IL2CPP_HR_FAILED(hr))
         il2cpp_codegen_raise_exception(hr, defaultToCOMException);
+#endif
 }
 
 inline RuntimeException* il2cpp_codegen_com_get_exception(il2cpp_hresult_t hr, bool defaultToCOMException)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_exception);
+#else
     return (RuntimeException*)il2cpp_codegen_get_exception(hr, defaultToCOMException);
+#endif
 }
 
 il2cpp_hresult_t il2cpp_codegen_com_handle_invalid_iproperty_conversion(const char* fromType, const char* toType);
@@ -1010,12 +1067,20 @@ inline const RuntimeType* il2cpp_codegen_method_parameter_type(const RuntimeMeth
 
 inline bool il2cpp_codegen_is_import_or_windows_runtime(const RuntimeObject *object)
 {
+#if IL2CPP_TRIM_COM
+    return false;
+#else
     return object->klass->is_import_or_windows_runtime;
+#endif
 }
 
 inline intptr_t il2cpp_codegen_get_com_interface_for_object(Il2CppObject* object, Type_t* type)
 {
+#if IL2CPP_TRIM_COM
+    return NULL;
+#else
     return il2cpp::icalls::mscorlib::System::Runtime::InteropServices::Marshal::GetCCW(object, reinterpret_cast<Il2CppReflectionType*>(type));
+#endif
 }
 
 NORETURN void il2cpp_codegen_raise_profile_exception(const RuntimeMethod* method);

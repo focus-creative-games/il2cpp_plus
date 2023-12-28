@@ -28,6 +28,9 @@ namespace vm
         static void SetupMethods(Il2CppClass* genericInstanceType);
         static void SetupProperties(Il2CppClass* genericInstanceType);
 
+        static const MethodInfo* GetOrSetupOneMethod(Il2CppClass* genericInstanceType, MethodIndex index);
+        static const PropertyInfo* GetOrSetupOneProperty(Il2CppClass* genericInstanceType, PropertyIndex index);
+
         static bool HasSameGenericTypeDefinition(const Il2CppGenericClass* gclass1, const Il2CppGenericClass* gclass2)
         {
             IL2CPP_ASSERT(gclass1->type->type == IL2CPP_TYPE_VALUETYPE || gclass1->type->type == IL2CPP_TYPE_CLASS);

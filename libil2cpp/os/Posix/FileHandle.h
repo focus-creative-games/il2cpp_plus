@@ -10,6 +10,10 @@
 #include "os/File.h"
 #include "os/c-api/OSGlobalEnums.h"
 
+#if ENABLE_HMI_MODE && IL2CPP_TARGET_ANDROID
+#include <android/asset_manager.h>
+#endif
+
 namespace il2cpp
 {
 namespace os
@@ -37,9 +41,17 @@ namespace os
         FileHandle *prev;
         FileHandle *next;
 
+#if ENABLE_HMI_MODE && IL2CPP_TARGET_ANDROID
+        AAsset *assetFile;
+        int64_t  fdOffset;
+#endif
+
         FileHandle()
             : fd(-1), type(kFileTypeUnknown), options(0), shareMode(0), accessMode(0),
             doesNotOwnFd(false), device(0), inode(0), prev(NULL), next(NULL)
+#if ENABLE_HMI_MODE && IL2CPP_TARGET_ANDROID
+            , assetFile(NULL), fdOffset(0)
+#endif
         {
         }
     };

@@ -20,7 +20,7 @@ namespace Mono
 
     void SafeStringMarshal::GFree(intptr_t ptr)
     {
-        IL2CPP_FREE((char*)ptr);
+        IL2CPP_FREE((char*)ptr, IL2CPP_MEM_STRING);
     }
 } // namespace Mono
 } // namespace mscorlib

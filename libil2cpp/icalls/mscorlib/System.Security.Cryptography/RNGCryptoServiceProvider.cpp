@@ -47,13 +47,13 @@ namespace Cryptography
 
         if ((provider != 0) && seed)
         {
-            unsigned char* data = (unsigned char*)IL2CPP_MALLOC(seed_length);
+            unsigned char* data = (unsigned char*)IL2CPP_MALLOC(seed_length, IL2CPP_MEM_Cryptography);
             if (data)
             {
                 memcpy(data, seed, seed_length);
                 os::Cryptography::FillBufferWithRandomBytes(provider, seed_length, data);
                 memset(data, 0, seed_length);
-                IL2CPP_FREE(data);
+                IL2CPP_FREE(data, IL2CPP_MEM_Cryptography);
             }
         }
 

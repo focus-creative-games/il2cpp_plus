@@ -52,11 +52,23 @@ namespace vm
         GenericParameterRestrictionValueType,
         GenericParameterRestrictionReferenceType,
     };
-
+#if !IL2CPP_TRIM_COM
     typedef Il2CppHashMap<const char*, Il2CppClass*, il2cpp::utils::StringUtils::StringHasher<const char*>, il2cpp::utils::VmStringUtils::CaseSensitiveComparer> WindowsRuntimeTypeNameToClassMap;
     typedef Il2CppHashMap<const Il2CppClass*, const char*, il2cpp::utils::PointerHash<Il2CppClass> > ClassToWindowsRuntimeTypeNameMap;
+#endif
+
     typedef Il2CppHashMap<il2cpp::metadata::Il2CppSignature, int32_t, il2cpp::metadata::Il2CppSignatureHash, il2cpp::metadata::Il2CppSignatureCompare> Il2CppUnresolvedSignatureMap;
     typedef Il2CppHashMap<const Il2CppGenericMethod*, const Il2CppGenericMethodIndices*, il2cpp::metadata::Il2CppGenericMethodHash, il2cpp::metadata::Il2CppGenericMethodCompare> Il2CppMethodTableMap;
+
+#if ENABLE_HMI_MODE
+    typedef struct Il2CppGenericMethodTableItem
+    {
+        Il2CppGenericMethod* method;
+        Il2CppGenericMethodIndices* indices;
+        bool operator<(const Il2CppGenericMethodTableItem& other) const;
+        bool operator==(const Il2CppGenericMethodTableItem& other) const;
+    } Il2CppGenericMethodTableItem;
+#endif
 
     class LIBIL2CPP_CODEGEN_API MetadataCache
     {

@@ -366,7 +366,7 @@ namespace os
 
         for (std::vector<std::string>::iterator it = addresses.begin(); it != addresses.end(); ++it)
         {
-            void* addressLocation = il2cpp::utils::Memory::Malloc(addr_size);
+            void* addressLocation = il2cpp::utils::Memory::Malloc(addr_size, IL2CPP_MEM_Socket);
             in_addr address;
             if (inet_pton(family, it->c_str(), &address))
             {

@@ -1,6 +1,8 @@
 #include "il2cpp-config.h"
 #include "os/Memory.h"
 #include "utils/Memory.h"
+#include "il2cpp-runtime-stats.h"
+
 #include <cstdlib>
 
 namespace il2cpp
@@ -60,37 +62,140 @@ namespace utils
 
     void* Memory::Malloc(size_t size)
     {
+        return Malloc(size, IL2CPP_MEM_OS_ALLOCATOR);
+    }
+
+    void Memory::Free(void* memory){
+        return Free(memory, IL2CPP_MEM_OS_ALLOCATOR);
+    }
+
+    void* Memory::Malloc(size_t size, Il2CppMemLabel label)
+    {
+#if IL2CPP_ENABLE_MEM_STATS
+        void* ret = s_Callbacks.malloc_func(size);
+        if (ret) {
+            il2cpp_mem_stats.il2cpp_malloc += size;
+            il2cpp_mem_stats.lableSizes[label] += size;
+
+            auto& sAllocMap = GetAllocMap();
+            sAllocMap[ret] = size;
+        }
+        return ret;
+#else
         return s_Callbacks.malloc_func(size);
+#endif
     }
 
-    void* Memory::AlignedMalloc(size_t size, size_t alignment)
+    void* Memory::AlignedMalloc(size_t size, size_t alignment, Il2CppMemLabel label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        void* ret = s_Callbacks.aligned_malloc_func(size, alignment);
+        if (ret) {
+            il2cpp_mem_stats.il2cpp_malloc += size;
+            il2cpp_mem_stats.lableSizes[label] += size;
+            auto& sAllocMap = GetAllocMap();
+            sAllocMap[ret] = size;
+        }
+        return ret;
+#else
         return s_Callbacks.aligned_malloc_func(size, alignment);
+#endif
     }
 
-    void Memory::Free(void* memory)
+    void Memory::Free(void* memory, Il2CppMemLabel label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        if (memory) {
+            auto& sAllocMap = GetAllocMap();
+            auto it = sAllocMap.find(memory);
+            if (it != sAllocMap.end()) {
+                il2cpp_mem_stats.il2cpp_malloc -= it->second;
+                il2cpp_mem_stats.lableSizes[label] -= it->second;
+                sAllocMap.erase(it);
+            }
+        }
+#endif
         return s_Callbacks.free_func(memory);
     }
 
-    void Memory::AlignedFree(void* memory)
+    void Memory::AlignedFree(void* memory, Il2CppMemLabel label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        if (memory) {
+            auto& sAllocMap = GetAllocMap();
+            auto it = sAllocMap.find(memory);
+            if (it != sAllocMap.end()) {
+                il2cpp_mem_stats.il2cpp_malloc -= it->second;
+                il2cpp_mem_stats.lableSizes[label] -= it->second;
+                sAllocMap.erase(it);
+            }
+        }
+#endif
         return s_Callbacks.aligned_free_func(memory);
     }
 
-    void* Memory::Calloc(size_t count, size_t size)
+    void* Memory::Calloc(size_t count, size_t size, Il2CppMemLabel label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        void* ret = s_Callbacks.calloc_func(count, size);
+        if (ret) {
+            il2cpp_mem_stats.il2cpp_malloc += size * count;
+            il2cpp_mem_stats.lableSizes[label] += size * count;
+            auto& sAllocMap = GetAllocMap();
+            sAllocMap[ret] = size * count;
+        }
+        return ret;
+#else
         return s_Callbacks.calloc_func(count, size);
+#endif
     }
 
-    void* Memory::Realloc(void* memory, size_t newSize)
+    void* Memory::Realloc(void* memory, size_t newSize, Il2CppMemLabel label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        void* ret = s_Callbacks.realloc_func(memory, newSize);
+        auto& sAllocMap = GetAllocMap();
+        if (memory) {
+            auto it = sAllocMap.find(memory);
+            if (it != sAllocMap.end()) {
+                il2cpp_mem_stats.il2cpp_malloc -= it->second;
+                il2cpp_mem_stats.lableSizes[label] -= it->second;
+                sAllocMap.erase(it);
+            }
+        }
+        if (ret) {
+            il2cpp_mem_stats.il2cpp_malloc += newSize;
+            il2cpp_mem_stats.lableSizes[label] += newSize;
+            sAllocMap[ret] = newSize;
+        }
+        return ret;
+#else
         return s_Callbacks.realloc_func(memory, newSize);
+#endif
     }
 
-    void* Memory::AlignedRealloc(void* memory, size_t newSize, size_t alignment)
+    void* Memory::AlignedRealloc(void* memory, size_t newSize, size_t alignment, Il2CppMemLabel label)
     {
+#if IL2CPP_ENABLE_MEM_STATS
+        void* ret = s_Callbacks.aligned_realloc_func(memory, newSize, alignment);
+        auto& sAllocMap = GetAllocMap();
+        if (memory) {
+            auto it = sAllocMap.find(memory);
+            if (it != sAllocMap.end()) {
+                il2cpp_mem_stats.il2cpp_malloc -= it->second;
+                il2cpp_mem_stats.lableSizes[label] -= it->second;
+                sAllocMap.erase(it);
+            }
+        }
+        if (ret) {
+            il2cpp_mem_stats.il2cpp_malloc += newSize;
+            il2cpp_mem_stats.lableSizes[label] += newSize;
+            sAllocMap[ret] = newSize;
+        }
+        return ret;
+#else
         return s_Callbacks.aligned_realloc_func(memory, newSize, alignment);
+#endif
     }
 } /* namespace utils */
 } /* namespace il2cpp */

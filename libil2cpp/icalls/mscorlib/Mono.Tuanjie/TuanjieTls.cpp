@@ -1,5 +1,5 @@
 #include "il2cpp-config.h"
-#include "icalls/mscorlib/Mono.Unity/UnityTls.h"
+#include "icalls/mscorlib/Mono.Tuanjie/TuanjieTls.h"
 #include "vm/Runtime.h"
 
 namespace il2cpp

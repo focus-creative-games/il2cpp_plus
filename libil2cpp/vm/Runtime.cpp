@@ -269,7 +269,9 @@ namespace vm
         DEFAULTS_INIT_TYPE(system_exception_class, "System", "SystemException", Il2CppSystemException);
         DEFAULTS_INIT_TYPE(argument_exception_class, "System", "ArgumentException", Il2CppArgumentException);
         DEFAULTS_INIT_TYPE(marshalbyrefobject_class, "System", "MarshalByRefObject", Il2CppMarshalByRefObject);
+#if !IL2CPP_TRIM_COM
         DEFAULTS_GEN_INIT_TYPE(il2cpp_com_object_class, "System", "__Il2CppComObject", Il2CppComObject);
+#endif
         DEFAULTS_INIT_TYPE(safe_handle_class, "System.Runtime.InteropServices", "SafeHandle", Il2CppSafeHandle);
         DEFAULTS_INIT_TYPE(sort_key_class, "System.Globalization", "SortKey", Il2CppSortKey);
         DEFAULTS_INIT(dbnull_class, "System", "DBNull");
@@ -315,6 +317,7 @@ namespace vm
         if (systemDll != NULL)
             il2cpp_defaults.system_uri_class = Class::FromName(Assembly::GetImage(systemDll), "System", "Uri");
 
+#if !IL2CPP_TRIM_COM
         // This will only exist if there was at least 1 winmd file present during conversion
         const Il2CppAssembly* windowsRuntimeMetadataAssembly = Assembly::Load("WindowsRuntimeMetadata");
         if (windowsRuntimeMetadataAssembly != NULL)
@@ -327,7 +330,7 @@ namespace vm
             il2cpp_defaults.windows_foundation_uri_class = Class::FromName(windowsRuntimeMetadataImage, "Windows.Foundation", "Uri");
             il2cpp_defaults.windows_foundation_iuri_runtime_class_class = Class::FromName(windowsRuntimeMetadataImage, "Windows.Foundation", "IUriRuntimeClass");
         }
-
+#endif
         Class::Init(il2cpp_defaults.string_class);
 
         os::Socket::Startup();
@@ -494,9 +497,9 @@ namespace vm
 
         vm::Image::ClearCachedResourceData();
         MetadataAllocCleanup();
-
+#if !IL2CPP_TRIM_COM
         vm::COMEntryPoints::FreeCachedData();
-
+#endif
         os::Locale::UnInitialize();
         os::Uninitialize();
 
@@ -905,6 +908,39 @@ namespace vm
 // 2. Just before reading any static field
 // 3. Just before calling any static method
 // 4. Just before calling class instance constructor from a derived class instance constructor
+#if IL2CPP_SLIM_CLASS
+    void Runtime::ClassInit(Il2CppClass* klass)
+    {
+        if (klass->cctor_finished_or_no_cctor)
+            return;
+
+        Il2CppException* exception = NULL;
+        const MethodInfo* cctor = Class::GetCCtor(klass);
+        if (cctor != NULL)
+        {
+            klass->cctor_finished_or_no_cctor = 1;
+            vm::Runtime::Invoke(cctor, NULL, NULL, &exception);
+        }
+
+        // Deal with exceptions.
+        if (exception == NULL)
+        {
+            klass->cctor_finished_or_no_cctor = 1;
+        }
+        else
+        {
+            klass->cctor_finished_or_no_cctor = 0;
+            const Il2CppType* type = Class::GetType(klass);
+            std::string n = il2cpp::utils::StringUtils::Printf("The type initializer for '%s' threw an exception.", Type::GetName(type, IL2CPP_TYPE_NAME_FORMAT_IL).c_str());
+            Class::SetClassInitializationError(klass, Exception::GetTypeInitializationException(n.c_str(), exception));
+        }
+
+        if (klass->initializationExceptionGCHandle)
+        {
+            il2cpp::vm::Exception::Raise((Il2CppException*)gc::GCHandle::GetTarget(klass->initializationExceptionGCHandle));
+        }
+    }
+#else
     void Runtime::ClassInit(Il2CppClass *klass)
     {
         // Nothing to do if class has no static constructor or already ran.
@@ -973,7 +1009,7 @@ namespace vm
             il2cpp::vm::Exception::Raise((Il2CppException*)gc::GCHandle::GetTarget(klass->initializationExceptionGCHandle));
         }
     }
-
+#endif //IL2CPP_SLIM_CLASS
     struct ConstCharCompare
     {
         bool operator()(char const *a, char const *b) const

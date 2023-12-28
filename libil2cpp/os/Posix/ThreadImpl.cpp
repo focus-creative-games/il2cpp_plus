@@ -138,7 +138,7 @@ namespace os
 
 #if IL2CPP_TARGET_DARWIN
         pthread_setname_np(name);
-#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_ENABLE_PLATFORM_THREAD_RENAME
+#elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_OPENHARMONY || IL2CPP_ENABLE_PLATFORM_THREAD_RENAME
         if (pthread_setname_np(m_Handle, name) == ERANGE)
         {
             char buf[16]; // TASK_COMM_LEN=16

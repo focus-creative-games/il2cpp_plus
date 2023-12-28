@@ -97,7 +97,7 @@ namespace vm
 
             TDerived* instance = static_cast<TDerived*>(this);
             instance->~TDerived();
-            utils::Memory::Free(instance);
+            utils::Memory::Free(instance, IL2CPP_MEM_GC_HANDLE);
         }
     };
 }

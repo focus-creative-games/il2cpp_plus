@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_TARGET_POSIX
+#if IL2CPP_TARGET_POSIX && (!(ENABLE_HMI_MODE && IL2CPP_TARGET_ANDROID))
 
 #include "FileHandle.h"
 

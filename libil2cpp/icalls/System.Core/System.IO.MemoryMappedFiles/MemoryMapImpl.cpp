@@ -75,7 +75,7 @@ namespace MemoryMappedFiles
 
         bool result = os::MemoryMappedFile::UnmapView(h->address, h->length);
 
-        IL2CPP_FREE(h);
+        IL2CPP_FREE(h, IL2CPP_MEM_MEMORY_MAP);
 
         return result;
     }
@@ -84,7 +84,7 @@ namespace MemoryMappedFiles
     {
         IL2CPP_ASSERT(handle);
 
-        MmapInstance* h = (MmapInstance*)IL2CPP_MALLOC_ZERO(sizeof(MmapInstance));
+        MmapInstance* h = (MmapInstance*)IL2CPP_MALLOC_ZERO(sizeof(MmapInstance), IL2CPP_MEM_MEMORY_MAP);
 
         os::MemoryMappedFileError error = os::NO_MEMORY_MAPPED_FILE_ERROR;
         int64_t actualOffset = offset;
@@ -98,7 +98,7 @@ namespace MemoryMappedFiles
         }
         else
         {
-            IL2CPP_FREE(h);
+            IL2CPP_FREE(h, IL2CPP_MEM_MEMORY_MAP);
         }
 
         return error;

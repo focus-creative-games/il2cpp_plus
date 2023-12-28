@@ -65,10 +65,10 @@ namespace gc
             }
             else
             {
-                handles->entries = (void**)IL2CPP_MALLOC_ZERO(sizeof(void*) * handles->size);
-                handles->domain_ids = (uint16_t*)IL2CPP_MALLOC_ZERO(sizeof(uint16_t) * handles->size);
+                handles->entries = (void**)IL2CPP_MALLOC_ZERO(sizeof(void*) * handles->size, IL2CPP_MEM_GC_HANDLE);
+                handles->domain_ids = (uint16_t*)IL2CPP_MALLOC_ZERO(sizeof(uint16_t) * handles->size, IL2CPP_MEM_GC_HANDLE);
             }
-            handles->bitmap = (uint32_t*)IL2CPP_MALLOC_ZERO(handles->size / 8);
+            handles->bitmap = (uint32_t*)IL2CPP_MALLOC_ZERO(handles->size / 8, IL2CPP_MEM_GC_HANDLE);
         }
         i = -1;
         for (slot = handles->slot_hint; slot < handles->size / 32; ++slot)
@@ -98,9 +98,9 @@ namespace gc
             uint32_t new_size = handles->size * 2; /* always double: we memset to 0 based on this below */
 
             /* resize and copy the bitmap */
-            new_bitmap = (uint32_t*)IL2CPP_MALLOC_ZERO(new_size / 8);
+            new_bitmap = (uint32_t*)IL2CPP_MALLOC_ZERO(new_size / 8, IL2CPP_MEM_GC_HANDLE);
             memcpy(new_bitmap, handles->bitmap, handles->size / 8);
-            IL2CPP_FREE(handles->bitmap);
+            IL2CPP_FREE(handles->bitmap, IL2CPP_MEM_GC_HANDLE);
             handles->bitmap = new_bitmap;
 
             /* resize and copy the entries */
@@ -120,8 +120,8 @@ namespace gc
             {
                 void* *entries;
                 uint16_t *domain_ids;
-                domain_ids = (uint16_t*)IL2CPP_MALLOC_ZERO(sizeof(uint16_t) * new_size);
-                entries = (void**)IL2CPP_MALLOC(sizeof(void*) * new_size);
+                domain_ids = (uint16_t*)IL2CPP_MALLOC_ZERO(sizeof(uint16_t) * new_size, IL2CPP_MEM_GC_HANDLE);
+                entries = (void**)IL2CPP_MALLOC(sizeof(void*) * new_size, IL2CPP_MEM_GC_HANDLE);
                 /* we disable GC because we could lose some disappearing link updates */
                 GarbageCollector::Disable();
                 memcpy(entries, handles->entries, sizeof(void*) * handles->size);
@@ -138,8 +138,8 @@ namespace gc
                         GarbageCollector::AddWeakLink(&(entries[i]), obj, track);
                     }
                 }
-                IL2CPP_FREE(handles->entries);
-                IL2CPP_FREE(handles->domain_ids);
+                IL2CPP_FREE(handles->entries, IL2CPP_MEM_GC_HANDLE);
+                IL2CPP_FREE(handles->domain_ids, IL2CPP_MEM_GC_HANDLE);
                 handles->entries = entries;
                 handles->domain_ids = domain_ids;
                 GarbageCollector::Enable();

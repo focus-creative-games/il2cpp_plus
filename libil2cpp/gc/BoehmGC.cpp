@@ -78,7 +78,13 @@ GC_ms_entry* GC_gcj_vector_proc(GC_word* addr, GC_ms_entry* mark_stack_ptr,
         return mark_stack_ptr;
 
     il2cpp_array_size_t length = a->max_length;
+
+#if !IL2CPP_SLIM_CLASS
     Il2CppClass* array_type = a->vtable->klass;
+#else
+    Il2CppClass* array_type = a->vtable;
+#endif
+
     Il2CppClass* element_type = array_type->element_class;
     GC_descr element_desc = (GC_descr)element_type->gc_desc;
 
@@ -284,8 +290,12 @@ il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
     }
 }
 
+#if ENABLE_HMI_MODE
 void
-il2cpp::gc::GarbageCollector::RegisterThread()
+il2cpp::gc::GarbageCollector::RegisterThread(void *baseptr)
+#else
+void il2cpp::gc::GarbageCollector::RegisterThread()
+#endif
 {
 #if defined(GC_THREADS) && !IL2CPP_TARGET_JAVASCRIPT
     struct GC_stack_base sb;
@@ -294,17 +304,24 @@ il2cpp::gc::GarbageCollector::RegisterThread()
     res = GC_get_stack_base(&sb);
     if (res != GC_SUCCESS)
     {
+#if ENABLE_HMI_MODE
+        sb.mem_base = baseptr;
+#endif
         /* Can't determine the register stack bounds */
         IL2CPP_ASSERT(false && "GC_get_stack_base () failed, aborting.");
         /* Abort we can't scan the stack, so we can't use the GC */
+#if !ENABLE_HMI_MODE
         abort();
+#endif
     }
     res = GC_register_my_thread(&sb);
     if ((res != GC_SUCCESS) && (res != GC_DUPLICATE))
     {
         IL2CPP_ASSERT(false && "GC_register_my_thread () failed.");
         /* Abort we can't use the GC on this thread, so we can't run managed code */
+#if !ENABLE_HMI_MODE
         abort();
+#endif
     }
 #endif
 }

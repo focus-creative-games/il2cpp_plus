@@ -32,7 +32,7 @@ typedef struct Il2CppInteropData
     PInvokeMarshalFromNativeFunc pinvokeMarshalFromNativeFunction;
     PInvokeMarshalCleanupFunc pinvokeMarshalCleanupFunction;
     CreateCCWFunc createCCWFunction;
-    const Il2CppGuid* guid;
+    const Il2CppGuid* guid;//used only for COM
     const Il2CppType* type;
 } Il2CppInteropData;
 

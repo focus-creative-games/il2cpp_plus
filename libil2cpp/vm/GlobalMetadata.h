@@ -18,6 +18,15 @@ struct Il2CppGenericInst;
 struct Il2CppGenericMethod;
 struct Il2CppType;
 struct Il2CppString;
+#if ENABLE_HMI_MODE
+namespace il2cpp
+{
+namespace vm
+{
+    struct Il2CppGenericMethodTableItem;    
+}
+}
+#endif
 
 struct Il2CppMethodDefinition;
 struct Il2CppFieldDefinition;
@@ -71,9 +80,14 @@ namespace vm
         static void InitializeAllMethodMetadata();
         static void* InitializeRuntimeMetadata(uintptr_t* metadataPointer, bool throwOnError);
         static void InitializeStringLiteralTable();
+#if !IL2CPP_TRIM_COM
         static void InitializeWindowsRuntimeTypeNamesTables(WindowsRuntimeTypeNameToClassMap& windowsRuntimeTypeNameToClassMap, ClassToWindowsRuntimeTypeNameMap& classToWindowsRuntimeTypeNameMap);
+#endif
         static void InitializeUnresolvedSignatureTable(Il2CppUnresolvedSignatureMap& unresolvedSignatureMap);
         static void InitializeGenericMethodTable(Il2CppMethodTableMap& methodTableMap);
+#if ENABLE_HMI_MODE
+        static uint32_t InitializeGenericMethodTableFast(Il2CppGenericMethodTableItem** outVector);
+#endif
 
         static void BuildIl2CppImage(Il2CppImage* image, ImageIndex imageIndex, AssemblyIndex* imageAssemblyIndex);
         static void BuildIl2CppAssembly(Il2CppAssembly* assembly, AssemblyIndex assemblyIndex, ImageIndex* assemblyImageIndex);

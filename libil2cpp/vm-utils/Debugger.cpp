@@ -75,12 +75,12 @@ extern "C"
 
     static void* il2cpp_malloc(size_t size)
     {
-        return IL2CPP_MALLOC(size);
+        return IL2CPP_MALLOC(size, IL2CPP_MEM_DEBUGGER);
     }
 
     static void il2cpp_mfree(void* memory)
     {
-        IL2CPP_FREE(memory);
+        IL2CPP_FREE(memory, IL2CPP_MEM_DEBUGGER);
     }
 }
 

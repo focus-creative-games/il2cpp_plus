@@ -74,8 +74,15 @@ static const Il2CppCodeRegistration * s_Il2CppCodeRegistration;
 static const Il2CppMetadataRegistration* s_MetadataCache_Il2CppMetadataRegistration;
 static const Il2CppCodeGenOptions* s_Il2CppCodeGenOptions;
 
+#if !IL2CPP_TRIM_COM
 static il2cpp::vm::WindowsRuntimeTypeNameToClassMap s_WindowsRuntimeTypeNameToClassMap;
 static il2cpp::vm::ClassToWindowsRuntimeTypeNameMap s_ClassToWindowsRuntimeTypeNameMap;
+#endif
+
+#if ENABLE_HMI_MODE
+static il2cpp::vm::Il2CppGenericMethodTableItem* s_GenericMethodTableVector = NULL;
+static uint32_t s_GenericMethodTableVectorSize = 0;
+#endif
 
 struct InteropDataToTypeConverter
 {
@@ -88,6 +95,7 @@ struct InteropDataToTypeConverter
 typedef il2cpp::utils::collections::ArrayValueMap<const Il2CppType*, Il2CppInteropData, InteropDataToTypeConverter, il2cpp::metadata::Il2CppTypeLess, il2cpp::metadata::Il2CppTypeEqualityComparer> InteropDataMap;
 static InteropDataMap s_InteropData;
 
+#if !IL2CPP_TRIM_COM
 struct WindowsRuntimeFactoryTableEntryToTypeConverter
 {
     inline const Il2CppType* operator()(const Il2CppWindowsRuntimeFactoryTableEntry& entry) const
@@ -98,6 +106,8 @@ struct WindowsRuntimeFactoryTableEntryToTypeConverter
 
 typedef il2cpp::utils::collections::ArrayValueMap<const Il2CppType*, Il2CppWindowsRuntimeFactoryTableEntry, WindowsRuntimeFactoryTableEntryToTypeConverter, il2cpp::metadata::Il2CppTypeLess, il2cpp::metadata::Il2CppTypeEqualityComparer> WindowsRuntimeFactoryTable;
 static WindowsRuntimeFactoryTable s_WindowsRuntimeFactories;
+#endif
+
 
 template<typename K, typename V>
 struct PairToKeyConverter
@@ -107,9 +117,10 @@ struct PairToKeyConverter
         return pair.first;
     }
 };
-
+#if !IL2CPP_TRIM_COM
 typedef il2cpp::utils::collections::ArrayValueMap<const Il2CppGuid*, std::pair<const Il2CppGuid*, Il2CppClass*>, PairToKeyConverter<const Il2CppGuid*, Il2CppClass*> > GuidToClassMap;
 static GuidToClassMap s_GuidToNonImportClassMap;
+#endif
 
 static il2cpp::utils::dynamic_array<Il2CppAssembly*> s_cliAssemblies;
 
@@ -171,14 +182,16 @@ bool il2cpp::vm::MetadataCache::Initialize()
     }
 
     s_InteropData.assign_external(s_Il2CppCodeRegistration->interopData, s_Il2CppCodeRegistration->interopDataCount);
+#if !IL2CPP_TRIM_COM
     s_WindowsRuntimeFactories.assign_external(s_Il2CppCodeRegistration->windowsRuntimeFactoryTable, s_Il2CppCodeRegistration->windowsRuntimeFactoryCount);
+#endif
 
     // Pre-allocate these arrays so we don't need to lock when reading later.
     // These arrays hold the runtime metadata representation for metadata explicitly
     // referenced during conversion. There is a corresponding table of same size
     // in the converted metadata, giving a description of runtime metadata to construct.
-    s_ImagesTable = (Il2CppImage*)IL2CPP_CALLOC(s_ImagesCount, sizeof(Il2CppImage));
-    s_AssembliesTable = (Il2CppAssembly*)IL2CPP_CALLOC(s_AssembliesCount, sizeof(Il2CppAssembly));
+    s_ImagesTable = (Il2CppImage*)IL2CPP_CALLOC(s_ImagesCount, sizeof(Il2CppImage), IL2CPP_MEM_METADATA_CACHE);
+    s_AssembliesTable = (Il2CppAssembly*)IL2CPP_CALLOC(s_AssembliesCount, sizeof(Il2CppAssembly), IL2CPP_MEM_METADATA_CACHE);
 
     // setup all the Il2CppImages. There are not many and it avoid locks later on
     for (int32_t imageIndex = 0; imageIndex < s_ImagesCount; imageIndex++)
@@ -191,7 +204,7 @@ bool il2cpp::vm::MetadataCache::Initialize()
         image->assembly = const_cast<Il2CppAssembly*>(GetAssemblyFromIndex(imageAssemblyIndex));
 
         std::string nameNoExt = il2cpp::utils::PathUtils::PathNoExtension(image->name);
-        image->nameNoExt = (char*)IL2CPP_CALLOC(nameNoExt.size() + 1, sizeof(char));
+        image->nameNoExt = (char*)IL2CPP_CALLOC(nameNoExt.size() + 1, sizeof(char), IL2CPP_MEM_STRING);
         strcpy(const_cast<char*>(image->nameNoExt), nameNoExt.c_str());
 
         for (uint32_t codeGenModuleIndex = 0; codeGenModuleIndex < s_Il2CppCodeRegistration->codeGenModulesCount; ++codeGenModuleIndex)
@@ -264,7 +277,7 @@ void ClearGenericMethodTable()
 {
     s_MethodTableMap.clear();
 }
-
+#if !IL2CPP_TRIM_COM
 void ClearWindowsRuntimeTypeNamesTables()
 {
     s_ClassToWindowsRuntimeTypeNameMap.clear();
@@ -290,14 +303,22 @@ void il2cpp::vm::MetadataCache::InitializeGuidToClassTable()
 
     s_GuidToNonImportClassMap.assign(guidToNonImportClassMap);
 }
-
+#endif
 // this is called later in the intialization cycle with more systems setup like GC
 void il2cpp::vm::MetadataCache::InitializeGCSafe()
 {
     il2cpp::vm::GlobalMetadata::InitializeStringLiteralTable();
+#if ENABLE_HMI_MODE
+    assert(s_GenericMethodSet.size() == 0);
+    s_GenericMethodTableVectorSize = il2cpp::vm::GlobalMetadata::InitializeGenericMethodTableFast(&s_GenericMethodTableVector);
+#else
     il2cpp::vm::GlobalMetadata::InitializeGenericMethodTable(s_MethodTableMap);
+#endif
+
+#if !IL2CPP_TRIM_COM
     il2cpp::vm::GlobalMetadata::InitializeWindowsRuntimeTypeNamesTables(s_WindowsRuntimeTypeNameToClassMap, s_ClassToWindowsRuntimeTypeNameMap);
     InitializeGuidToClassTable();
+#endif
 }
 
 void ClearImageNames()
@@ -305,26 +326,27 @@ void ClearImageNames()
     for (int32_t imageIndex = 0; imageIndex < s_ImagesCount; imageIndex++)
     {
         Il2CppImage* image = s_ImagesTable + imageIndex;
-        IL2CPP_FREE((void*)image->nameNoExt);
+        IL2CPP_FREE((void*)image->nameNoExt, IL2CPP_MEM_STRING);
     }
 }
 
 void il2cpp::vm::MetadataCache::Clear()
 {
     ClearGenericMethodTable();
+#if !IL2CPP_TRIM_COM
     ClearWindowsRuntimeTypeNamesTables();
-
+#endif
     delete s_pUnresolvedSignatureMap;
 
     Assembly::ClearAllAssemblies();
 
     ClearImageNames();
 
-    IL2CPP_FREE(s_ImagesTable);
+    IL2CPP_FREE(s_ImagesTable, IL2CPP_MEM_METADATA_CACHE);
     s_ImagesTable = NULL;
     s_ImagesCount = 0;
 
-    IL2CPP_FREE(s_AssembliesTable);
+    IL2CPP_FREE(s_AssembliesTable, IL2CPP_MEM_METADATA_CACHE);
     s_AssembliesTable = NULL;
     s_AssembliesCount = 0;
 
@@ -394,24 +416,30 @@ Il2CppClass* il2cpp::vm::MetadataCache::GetPointerType(Il2CppClass* type)
 
 Il2CppClass* il2cpp::vm::MetadataCache::GetWindowsRuntimeClass(const char* fullName)
 {
+#if !IL2CPP_TRIM_COM
     WindowsRuntimeTypeNameToClassMap::iterator it = s_WindowsRuntimeTypeNameToClassMap.find(fullName);
     if (it != s_WindowsRuntimeTypeNameToClassMap.end())
         return it->second;
-
+#endif
     return NULL;
 }
 
 const char* il2cpp::vm::MetadataCache::GetWindowsRuntimeClassName(const Il2CppClass* klass)
 {
+#if !IL2CPP_TRIM_COM
     ClassToWindowsRuntimeTypeNameMap::iterator it = s_ClassToWindowsRuntimeTypeNameMap.find(klass);
     if (it != s_ClassToWindowsRuntimeTypeNameMap.end())
         return it->second;
-
+#endif
     return NULL;
 }
 
 Il2CppMethodPointer il2cpp::vm::MetadataCache::GetWindowsRuntimeFactoryCreationFunction(const char* fullName)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(MetadataCache::GetWindowsRuntimeFactoryCreationFunction);
+    return NULL;
+#else
     Il2CppClass* klass = GetWindowsRuntimeClass(fullName);
     if (klass == NULL)
         return NULL;
@@ -421,10 +449,15 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetWindowsRuntimeFactoryCreationF
         return NULL;
 
     return factoryEntry->createFactoryFunction;
+#endif
 }
 
 Il2CppClass* il2cpp::vm::MetadataCache::GetClassForGuid(const Il2CppGuid* guid)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(MetadataCache::GetClassForGuid);
+    return NULL;
+#else
     IL2CPP_ASSERT(guid != NULL);
 
     GuidToClassMap::iterator it = s_GuidToNonImportClassMap.find_first(guid);
@@ -432,6 +465,7 @@ Il2CppClass* il2cpp::vm::MetadataCache::GetClassForGuid(const Il2CppGuid* guid)
         return it->second;
 
     return NULL;
+#endif
 }
 
 void il2cpp::vm::MetadataCache::AddPointerTypeLocked(Il2CppClass* type, Il2CppClass* pointerType, const il2cpp::os::FastAutoLock& lock)
@@ -461,9 +495,9 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
         return foundInst;
 
     Il2CppGenericInst* newInst = NULL;
-    newInst  = (Il2CppGenericInst*)MetadataMalloc(sizeof(Il2CppGenericInst));
+    newInst  = (Il2CppGenericInst*)MetadataMalloc(sizeof(Il2CppGenericInst), IL2CPP_MSTAT_GENERIC_INST);
     newInst->type_argc = typeCount;
-    newInst->type_argv = (const Il2CppType**)MetadataMalloc(newInst->type_argc * sizeof(Il2CppType*));
+    newInst->type_argv = (const Il2CppType**)MetadataMalloc(newInst->type_argc * sizeof(Il2CppType*), IL2CPP_MSTAT_TYPE);
 
     int index = 0;
     const Il2CppType* const* typesEnd = types + typeCount;
@@ -486,6 +520,13 @@ const Il2CppGenericMethod* il2cpp::vm::MetadataCache::GetGenericMethod(const Met
     method.context.class_inst = classInst;
     method.context.method_inst = methodInst;
 
+#if ENABLE_HMI_MODE
+    Il2CppGenericMethodTableItem item;
+    item.method = &method;
+    Il2CppGenericMethodTableItem* itemIter = std::lower_bound(s_GenericMethodTableVector, s_GenericMethodTableVector + s_GenericMethodTableVectorSize, item);
+    if (itemIter != s_GenericMethodTableVector + s_GenericMethodTableVectorSize && *itemIter == item)
+        return itemIter->method;
+#endif
     il2cpp::os::FastAutoLock lock(&s_GenericMethodMutex);
     Il2CppGenericMethodSet::const_iterator iter = s_GenericMethodSet.find(&method);
     if (iter != s_GenericMethodSet.end())
@@ -681,26 +722,48 @@ il2cpp::vm::Il2CppGenericMethodPointers il2cpp::vm::MetadataCache::GetGenericMet
     method.context.class_inst = context->class_inst;
     method.context.method_inst = context->method_inst;
 
+#if ENABLE_HMI_MODE
+    Il2CppGenericMethodTableItem item;
+    item.method = &method;
+#endif
+
+#if ENABLE_HMI_MODE
+    Il2CppGenericMethodTableItem* iter = std::lower_bound(s_GenericMethodTableVector, s_GenericMethodTableVector + s_GenericMethodTableVectorSize, item);
+    if (iter != s_GenericMethodTableVector + s_GenericMethodTableVectorSize && *iter == item)
+        return MakeGenericMethodPointers(iter->indices, false);
+#else
     Il2CppMethodTableMapIter iter = s_MethodTableMap.find(&method);
     if (iter != s_MethodTableMap.end())
         return MakeGenericMethodPointers(iter->second, false);
+#endif
 
     // get the shared version if it exists
     method.context.class_inst = GetSharedInst(context->class_inst);
     method.context.method_inst = GetSharedInst(context->method_inst);
 
+#if ENABLE_HMI_MODE
+    iter = std::lower_bound(s_GenericMethodTableVector, s_GenericMethodTableVector + s_GenericMethodTableVectorSize, item);
+    if (iter != s_GenericMethodTableVector + s_GenericMethodTableVectorSize && *iter == item)
+        return MakeGenericMethodPointers(iter->indices, false);
+#else
     iter = s_MethodTableMap.find(&method);
     if (iter != s_MethodTableMap.end())
         return MakeGenericMethodPointers(iter->second, false);
+#endif
 
     // get the fully shared version if it exists
     method.context.class_inst = GetFullySharedInst(methodDefinition->klass->genericContainerHandle, context->class_inst);
     method.context.method_inst = GetFullySharedInst(methodDefinition->genericContainerHandle, context->method_inst);
 
+#if ENABLE_HMI_MODE
+    iter = std::lower_bound(s_GenericMethodTableVector, s_GenericMethodTableVector + s_GenericMethodTableVectorSize, item);
+    if (iter != s_GenericMethodTableVector + s_GenericMethodTableVectorSize && *iter == item)
+        return MakeGenericMethodPointers(iter->indices, true);
+#else
     iter = s_MethodTableMap.find(&method);
     if (iter != s_MethodTableMap.end())
         return MakeGenericMethodPointers(iter->second, true);
-
+#endif
     return { NULL, NULL, NULL };
 }
 
@@ -1353,3 +1416,27 @@ Il2CppClass* il2cpp::vm::MetadataCache::GetTypeInfoFromTypeSourcePair(const Il2C
 {
     return il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeSourcePair(pair);
 }
+
+#if ENABLE_HMI_MODE
+bool il2cpp::vm::Il2CppGenericMethodTableItem::operator<(const Il2CppGenericMethodTableItem& other) const
+{
+    if (method->methodDefinition != other.method->methodDefinition) 
+    {
+        return method->methodDefinition < other.method->methodDefinition;
+    }
+    const Il2CppGenericContext& ctxa = method->context;
+    const Il2CppGenericContext& ctxb = other.method->context;
+    if (ctxa.class_inst != ctxb.class_inst)
+        return ctxa.class_inst < ctxb.class_inst;
+    return ctxa.method_inst < ctxb.method_inst;
+}
+
+bool il2cpp::vm::Il2CppGenericMethodTableItem::operator==(const Il2CppGenericMethodTableItem& other) const
+{
+    if (method->methodDefinition != other.method->methodDefinition) 
+        return false;
+    const Il2CppGenericContext& ctxa = method->context;
+    const Il2CppGenericContext& ctxb = other.method->context;
+    return ctxa.class_inst == ctxb.class_inst && ctxa.method_inst == ctxb.method_inst;
+}
+#endif

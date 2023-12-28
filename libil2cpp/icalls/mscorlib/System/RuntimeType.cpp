@@ -1073,7 +1073,7 @@ namespace System
             return;
 
         vm::Class::Init(klass);
-        const VirtualInvokeData* invokeDataStart;
+        const VirtualInvokeData* invokeDataStart = NULL;
 
         // So this part is tricky. GetInterfaceInvokeDataFromVTable takes an object pointer in order to support
         // COM peculiarities, like being able to return invoke data for an interface only if native side implements it
@@ -1085,6 +1085,7 @@ namespace System
             fakeObject.klass = klass;
             invokeDataStart = &vm::ClassInlines::GetInterfaceInvokeDataFromVTable(&fakeObject, iklass, 0);
         }
+#if !IL2CPP_TRIM_COM
         else
         {
             Il2CppComObject fakeComObject;
@@ -1097,7 +1098,7 @@ namespace System
 
             invokeDataStart = &vm::ClassInlines::GetInterfaceInvokeDataFromVTable(&fakeComObject, iklass, 0);
         }
-
+#endif
         iter = NULL;
         int virtualMethodIndex = 0;
         for (int i = 0; i < numberOfMethods; ++i)

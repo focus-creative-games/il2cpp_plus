@@ -316,3 +316,7 @@ DO_API(void, il2cpp_set_default_thread_affinity, (int64_t affinity_mask));
 
 // Android
 DO_API(void, il2cpp_unity_set_android_network_up_state_func, (Il2CppAndroidUpStateFunc func));
+
+#if ENABLE_HMI_MODE && (IL2CPP_TARGET_ANDROID || PLATFORM_ANDROID)
+DO_API(void, il2cpp_set_android_context, (void* env, void* jobject));
+#endif

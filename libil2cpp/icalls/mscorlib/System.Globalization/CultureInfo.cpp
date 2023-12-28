@@ -37,7 +37,7 @@ static std::string get_current_locale_name(void)
     if ((p = strchr(locale, '.')) != NULL)
     {
         /* assume new locale can't be larger than old one? */
-        corrected = (char*)IL2CPP_MALLOC(strlen(locale));
+        corrected = (char*)IL2CPP_MALLOC(strlen(locale), IL2CPP_MEM_STRING);
         strncpy(corrected, locale, p - locale);
         corrected[p - locale] = 0;
 
@@ -57,7 +57,7 @@ static std::string get_current_locale_name(void)
 
         if (corrected == NULL)
         {
-            corrected = (char*)IL2CPP_MALLOC(strlen(locale));
+            corrected = (char*)IL2CPP_MALLOC(strlen(locale), IL2CPP_MEM_STRING);
             strncpy(corrected, locale, p - locale);
             corrected[p - locale] = 0;
         }
@@ -66,14 +66,14 @@ static std::string get_current_locale_name(void)
     if (corrected == NULL)
         corrected = locale;
     else
-        IL2CPP_FREE(locale);
+        IL2CPP_FREE(locale, IL2CPP_MEM_STRING);
 
     char* c;
     if ((c = strchr(corrected, '_')) != NULL)
         *c = '-';
 
     std::string result(corrected);
-    IL2CPP_FREE(corrected);
+    IL2CPP_FREE(corrected, IL2CPP_MEM_STRING);
 
     std::transform(result.begin(), result.end(), result.begin(), ::tolower);
 

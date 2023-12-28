@@ -31,7 +31,7 @@ UnityPalWaitStatus UnityPalGetHostByName(const char* host, char** name, int32_t*
         *address_size = palAddressSize;
 
     for (size_t i = 0; i < palAddressList.size(); ++i)
-        il2cpp::utils::Memory::Free(palAddressList[i]);
+        il2cpp::utils::Memory::Free(palAddressList[i], IL2CPP_MEM_STRING);
 
     return result;
 }

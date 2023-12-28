@@ -17,6 +17,7 @@ namespace utils
         static void* Map(os::FileHandle* file, int64_t length, int64_t offset, int32_t access);
         static bool Unmap(void* address);
         static bool Unmap(void* address, int64_t length);
+        static int64_t MapSize(void* address);
     };
 }
 }

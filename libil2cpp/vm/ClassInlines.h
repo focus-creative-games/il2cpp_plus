@@ -35,49 +35,21 @@ namespace vm
         static IL2CPP_NO_INLINE Il2CppClass* InitFromCodegenSlow(Il2CppClass *klass, bool throwOnError);
         static IL2CPP_NO_INLINE const MethodInfo* InitRgctxFromCodegenSlow(const MethodInfo* method);
 
+        static IL2CPP_NO_INLINE const VirtualInvokeData& GetVirtualInvokeData(Il2CppMethodSlot slot, const Il2CppObject* obj);
+
         //internal
-        static IL2CPP_FORCE_INLINE const VirtualInvokeData& GetInterfaceInvokeDataFromVTable(Il2CppObject* obj, const Il2CppClass* itf, Il2CppMethodSlot slot)
+        static IL2CPP_FORCE_INLINE const VirtualInvokeData& GetInterfaceInvokeDataFromVTable(Il2CppObject* obj,const Il2CppClass* itf, Il2CppMethodSlot slot)
         {
-            const Il2CppClass* klass = obj->klass;
-            IL2CPP_ASSERT(klass->initialized);
-            IL2CPP_ASSERT(slot < itf->method_count);
-
-            for (uint16_t i = 0; i < klass->interface_offsets_count; i++)
-            {
-                if (klass->interfaceOffsets[i].interfaceType == itf)
-                {
-                    int32_t offset = klass->interfaceOffsets[i].offset;
-                    IL2CPP_ASSERT(offset != -1);
-                    IL2CPP_ASSERT(offset + slot < klass->vtable_count);
-                    return klass->vtable[offset + slot];
-                }
-            }
-
-            return GetInterfaceInvokeDataFromVTableSlowPath(obj, itf, slot);
+            return *GetInterfaceInvokeDataFromVTable(obj->klass,itf,slot);
         }
 
-        static IL2CPP_FORCE_INLINE const VirtualInvokeData* GetInterfaceInvokeDataFromVTable(const Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot)
-        {
-            IL2CPP_ASSERT(klass->is_vtable_initialized);
-            IL2CPP_ASSERT(slot < itf->method_count);
-
-            for (uint16_t i = 0; i < klass->interface_offsets_count; i++)
-            {
-                if (klass->interfaceOffsets[i].interfaceType == itf)
-                {
-                    int32_t offset = klass->interfaceOffsets[i].offset;
-                    IL2CPP_ASSERT(offset != -1);
-                    IL2CPP_ASSERT(offset + slot < klass->vtable_count);
-                    return &klass->vtable[offset + slot];
-                }
-            }
-
-            return GetInterfaceInvokeDataFromVTableSlowPath(klass, itf, slot);
-        }
+        static IL2CPP_NO_INLINE const VirtualInvokeData* GetInterfaceInvokeDataFromVTable(Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot);
 
         // we don't want this method to get inlined because that makes GetInterfaceInvokeDataFromVTable method itself very large and performance suffers
         static IL2CPP_NO_INLINE const VirtualInvokeData& GetInterfaceInvokeDataFromVTableSlowPath(Il2CppObject* obj, const Il2CppClass* itf, Il2CppMethodSlot slot);
         static IL2CPP_NO_INLINE const VirtualInvokeData* GetInterfaceInvokeDataFromVTableSlowPath(const Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot);
+
+        static IL2CPP_NO_INLINE bool HasParent(const Il2CppClass* klass, const Il2CppClass* parent);
     };
 }
 }

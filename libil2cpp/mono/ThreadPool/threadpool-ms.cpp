@@ -194,8 +194,8 @@ static void initialize(void* arg)
 	hc->elapsed_since_last_change = 0;
 	hc->accumulated_completion_count = 0;
 	hc->accumulated_sample_duration = 0;
-	hc->samples = (double*)IL2CPP_MALLOC_ZERO (sizeof(double) * hc->samples_to_measure);
-	hc->thread_counts = (double*)IL2CPP_MALLOC_ZERO(sizeof(double) * hc->samples_to_measure);
+	hc->samples = (double*)IL2CPP_MALLOC_ZERO (sizeof(double) * hc->samples_to_measure, IL2CPP_MEM_THREAD);
+	hc->thread_counts = (double*)IL2CPP_MALLOC_ZERO(sizeof(double) * hc->samples_to_measure, IL2CPP_MEM_THREAD);
 	hc->random_interval_generator = il2cpp::vm::Random::Create ();
 	hc->current_sample_interval = il2cpp::vm::Random::Next (&hc->random_interval_generator, hc->sample_interval_low, hc->sample_interval_high);
 

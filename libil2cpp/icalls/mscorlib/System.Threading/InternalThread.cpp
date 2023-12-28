@@ -19,10 +19,10 @@ namespace Threading
         delete _this->longlived->synch_cs;
         _this->longlived->synch_cs = NULL;
 
-        IL2CPP_FREE(_this->longlived);
+        IL2CPP_FREE(_this->longlived, IL2CPP_MEM_THREAD);
         _this->longlived = NULL;
 
-        IL2CPP_FREE(_this->name.chars);
+        IL2CPP_FREE(_this->name.chars, IL2CPP_MEM_THREAD);
         _this->name.chars = NULL;
 
         delete reinterpret_cast<il2cpp::os::Thread*>(_this->handle);

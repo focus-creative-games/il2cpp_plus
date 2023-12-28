@@ -182,7 +182,13 @@ namespace vm
         static void SetupTypeHierarchy(Il2CppClass *klass);
         static void SetupInterfaces(Il2CppClass *klass);
 
+        //[WL]
+        static void SetupVTable(Il2CppClass* klass);
+        static const MethodInfo* GetOrSetupOneMethod(Il2CppClass* klass, MethodIndex index);
+        static const VirtualInvokeData* GetOrSetupOneVTableSlot(Il2CppClass* klass, const Il2CppClass* itf, VTableIndex index);
+        static const void SetupInterfaceOffsets(Il2CppClass* klass);
         static const il2cpp::utils::dynamic_array<Il2CppClass*>& GetStaticFieldData();
+        static const PropertyInfo* GetOrSetupOneProperty(Il2CppClass* klass, TypePropertyIndex index);
 
         static size_t GetBitmapSize(const Il2CppClass* klass);
         static void GetBitmap(Il2CppClass* klass, size_t* bitmap, size_t& maxSetBit);

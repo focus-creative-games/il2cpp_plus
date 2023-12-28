@@ -6,6 +6,7 @@
 #include "vm/Image.h"
 #include "vm/Runtime.h"
 #include "vm/Type.h"
+#include "vm/MetadataLock.h"
 #include "metadata/GenericMetadata.h"
 #include "metadata/GenericMethod.h"
 #include "metadata/Il2CppGenericClassHash.h"
@@ -41,9 +42,15 @@ namespace il2cpp
 {
 namespace metadata
 {
+    struct RGCTXContextCollectData {
+        const Il2CppGenericContext* context;
+        RGCTXCollection collection;
+    };
+    static Il2CppHashMap<const Il2CppRGCTXData* , RGCTXContextCollectData> s_RGCTXDataToClassMap;
+
     const Il2CppType** GenericMetadata::InflateParameters(const Il2CppType** parameters, uint8_t parameterCount, const Il2CppGenericContext* context, bool inflateMethodVars)
     {
-        const Il2CppType** inflatedParameters = (const Il2CppType**)MetadataCalloc(parameterCount, sizeof(Il2CppType*));
+        const Il2CppType** inflatedParameters = (const Il2CppType**)MetadataCalloc(parameterCount, sizeof(Il2CppType*), IL2CPP_MSTAT_TYPE);
 
         for (uint8_t j = 0; j < parameterCount; j++)
         {
@@ -64,7 +71,7 @@ namespace metadata
         if (genericArgument->attrs == type->attrs && genericArgument->byref == type->byref)
             return genericArgument;
 
-        Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
+        Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType), IL2CPP_MSTAT_TYPE);
         memcpy(inflatedType,  genericArgument, sizeof(Il2CppType));
         inflatedType->byref = type->byref;
         inflatedType->attrs = type->attrs;
@@ -91,10 +98,10 @@ namespace metadata
                 const Il2CppType* inflatedElementType = InflateIfNeeded(type->data.array->etype, context, inflateMethodVars);
                 if (!Il2CppTypeEqualityComparer::AreEqual(inflatedElementType, type->data.array->etype))
                 {
-                    Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
+                    Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType), IL2CPP_MSTAT_TYPE);
                     memcpy(inflatedType, type, sizeof(Il2CppType));
 
-                    Il2CppArrayType* arrayType = (Il2CppArrayType*)MetadataMalloc(sizeof(Il2CppArrayType));
+                    Il2CppArrayType* arrayType = (Il2CppArrayType*)MetadataMalloc(sizeof(Il2CppArrayType), IL2CPP_MSTAT_TYPE);
                     memcpy(arrayType, type->data.array, sizeof(Il2CppArrayType));
                     arrayType->etype = inflatedElementType;
                     inflatedType->data.array = arrayType;
@@ -111,7 +118,7 @@ namespace metadata
                 const Il2CppType* inflatedElementType = InflateIfNeeded(type->data.type, context, inflateMethodVars);
                 if (!Il2CppTypeEqualityComparer::AreEqual(inflatedElementType, type->data.type))
                 {
-                    Il2CppType* arrayType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
+                    Il2CppType* arrayType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType), IL2CPP_MSTAT_TYPE);
                     memcpy(arrayType, type, sizeof(Il2CppType));
                     arrayType->data.type = inflatedElementType;
 
@@ -131,7 +138,7 @@ namespace metadata
                 Il2CppGenericClass* genericClass = GenericMetadata::GetGenericClass(type->data.generic_class->type, inflatedInst);
                 if (genericClass != type->data.generic_class)
                 {
-                    Il2CppType* genericType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
+                    Il2CppType* genericType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType), IL2CPP_MSTAT_TYPE);
                     memcpy(genericType, type, sizeof(Il2CppType));
                     genericType->data.generic_class = genericClass;
 
@@ -262,7 +269,13 @@ namespace metadata
         if (collection.count == 0)
             return NULL;
 
-        Il2CppRGCTXData* dataValues = (Il2CppRGCTXData*)MetadataCalloc(collection.count, sizeof(Il2CppRGCTXData));
+        Il2CppRGCTXData* dataValues = (Il2CppRGCTXData*)MetadataCalloc(collection.count, sizeof(Il2CppRGCTXData), IL2CPP_MSTAT_RGCTX);
+
+        RGCTXContextCollectData data = { context,collection };
+        s_RGCTXDataToClassMap.add(dataValues, data);
+        
+        //[WL]remove here because we will do lazy init.
+        /*
         for (RGCTXIndex rgctxIndex = 0; rgctxIndex < collection.count; rgctxIndex++)
         {
             const Il2CppRGCTXDefinition* definitionData = collection.items + rgctxIndex;
@@ -273,7 +286,6 @@ namespace metadata
                     break;
                 case IL2CPP_RGCTX_DATA_CLASS:
                     dataValues[rgctxIndex].klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true));
-                    Class::InitSizeAndFieldLayoutLocked(dataValues[rgctxIndex].klass, lock);
                     break;
                 case IL2CPP_RGCTX_DATA_METHOD:
                     dataValues[rgctxIndex].method = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromRgctxDefinition(definitionData), context));
@@ -292,6 +304,8 @@ namespace metadata
                     {
                         Il2CppClass* inflatedClass = Class::FromIl2CppType(inflatedType);
                         Class::InitLocked(inflatedClass, lock);
+                        //[WL]
+                        Class::SetupVTable(inflatedClass);
                         Class::InitLocked(method->klass, lock);
                         method = Class::GetVirtualMethod(inflatedClass, method);
                     }
@@ -303,8 +317,75 @@ namespace metadata
                     IL2CPP_ASSERT(0);
             }
         }
-
+        */
         return dataValues;
+    }
+
+    void GenericMetadata::InflateRGCTXClass(const Il2CppRGCTXData* rgctxVar, RGCTXIndex index) 
+    {
+        FastAutoLock lock(&g_MetadataLock);
+
+        RGCTXContextCollectData& data = s_RGCTXDataToClassMap[rgctxVar];
+        const Il2CppRGCTXDefinition* definitionData = data.collection.items + index;
+        IL2CPP_ASSERT(definitionData->type == IL2CPP_RGCTX_DATA_CLASS);
+
+        Il2CppRGCTXData* rgctx = const_cast<Il2CppRGCTXData*>(rgctxVar);
+        rgctx[index].klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), data.context, true));
+        Class::InitSizeAndFieldLayoutLocked(rgctx[index].klass, lock);
+    }
+
+    void GenericMetadata::InflateRGCTXType(const Il2CppRGCTXData* rgctxVar, RGCTXIndex index)
+    {
+        FastAutoLock lock(&g_MetadataLock);
+
+        RGCTXContextCollectData& data = s_RGCTXDataToClassMap[rgctxVar];
+        const Il2CppRGCTXDefinition* definitionData = data.collection.items + index;
+        IL2CPP_ASSERT(definitionData->type == IL2CPP_RGCTX_DATA_TYPE);
+
+        Il2CppRGCTXData* rgctx = const_cast<Il2CppRGCTXData*>(rgctxVar);
+        rgctx[index].type = GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), data.context, true);
+    }
+
+    void GenericMetadata::InflateRGCTXMethod(const Il2CppRGCTXData* rgctxVar, RGCTXIndex index)
+    {
+        FastAutoLock lock(&g_MetadataLock);
+
+        RGCTXContextCollectData& data = s_RGCTXDataToClassMap[rgctxVar];
+        const Il2CppRGCTXDefinition* definitionData = data.collection.items + index;
+        const MethodInfo* retMethod = NULL;
+        switch (definitionData->type)
+        {
+        case IL2CPP_RGCTX_DATA_METHOD:
+            retMethod = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromRgctxDefinition(definitionData), data.context));
+            break;
+        case IL2CPP_RGCTX_DATA_CONSTRAINED:
+        {
+            const Il2CppType* type;
+            const MethodInfo* method;
+            std::tie(type, method) = MetadataCache::GetConstrainedCallFromRgctxDefinition(definitionData);
+
+            const Il2CppType* inflatedType = GenericMetadata::InflateIfNeeded(type, data.context, true);
+            if (method->is_inflated)
+                method = GenericMethod::GetMethod(Inflate(method->genericMethod, data.context));
+
+            if (inflatedType->valuetype)
+            {
+                Il2CppClass* inflatedClass = Class::FromIl2CppType(inflatedType);
+                Class::InitLocked(inflatedClass, lock);
+                Class::SetupVTable(inflatedClass);
+                Class::InitLocked(method->klass, lock);
+                method = Class::GetVirtualMethod(inflatedClass, method);
+            }
+
+            retMethod = method;
+        }
+        break;
+        default:
+            IL2CPP_ASSERT(0);
+        }
+
+        Il2CppRGCTXData* rgctx = const_cast<Il2CppRGCTXData*>(rgctxVar);
+        rgctx[index].method = retMethod;
     }
 
 // temporary while we generate generics

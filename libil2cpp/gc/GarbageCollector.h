@@ -83,7 +83,11 @@ namespace gc
         static void* AllocateFixed(size_t size, void *descr);
         static void FreeFixed(void* addr);
 
+#if ENABLE_HMI_MODE
+        static void RegisterThread(void *baseptr);
+#else
         static void RegisterThread();
+#endif
         static bool UnregisterThread();
 
 #if !RUNTIME_TINY

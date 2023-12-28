@@ -42,9 +42,9 @@ namespace
             return false;
 
         // dli_name can have different values depending on Android OS:
-        // Google Pixel 2 Android 10, dli_name will be "/data/app/com.unity.stopaskingforpackagename-uRHSDLXYA4cnHxyTNT30-g==/lib/arm/libunity.so"
-        // Samsung GT-I9505 Android 5, dli_name will be "libunity.so"
-        return info.dli_fname != NULL && strstr(info.dli_fname, "libunity.so") != NULL;
+        // Google Pixel 2 Android 10, dli_name will be "/data/app/com.unity.stopaskingforpackagename-uRHSDLXYA4cnHxyTNT30-g==/lib/arm/libtuanjie.so"
+        // Samsung GT-I9505 Android 5, dli_name will be "libtuanjie.so"
+        return info.dli_fname != NULL && strstr(info.dli_fname, "libtuanjie.so") != NULL;
     }
 
     struct AndroidStackTrace

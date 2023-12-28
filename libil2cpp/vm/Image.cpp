@@ -158,7 +158,7 @@ namespace vm
         std::pair<const char*, const char*> namespaceAndName = MetadataCache::GetTypeNamespaceAndName(handle);
 
         std::string name = parentName + "/" + namespaceAndName.second;
-        char* pName = (char*)IL2CPP_CALLOC(name.size() + 1, sizeof(char));
+        char *pName = (char*)IL2CPP_CALLOC(name.size() + 1, sizeof(char), IL2CPP_MEM_STRING);
         strcpy(pName, name.c_str());
 
         hashTable->insert(std::make_pair(std::make_pair(namespaze, (const char*)pName), handle));

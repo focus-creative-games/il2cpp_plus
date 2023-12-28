@@ -58,7 +58,7 @@ Mono.Security.Cryptography.KeyPairPersistence::_ProtectMachine(System.Char*) msc
 Mono.Security.Cryptography.KeyPairPersistence::_ProtectUser(System.Char*) mscorlib::Mono::Security::Cryptography::KeyPairPersistence::_ProtectUser
 
 // Mono.Unity.UnityTls
->icalls/mscorlib/Mono.Unity/UnityTls.h
+>icalls/mscorlib/Mono.Tuanjie/TuanjieTls.h
 Mono.Unity.UnityTls::GetUnityTlsInterface() mscorlib::Mono::Unity::UnityTls::GetUnityTlsInterface
 
 // System.Buffer

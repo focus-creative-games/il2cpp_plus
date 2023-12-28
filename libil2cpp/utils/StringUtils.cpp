@@ -156,7 +156,7 @@ namespace utils
 
         size_t length = strlen(strSource) + 1;
 
-        if ((result = (char*)IL2CPP_MALLOC(length)))
+        if ((result = (char*)IL2CPP_MALLOC(length, IL2CPP_MEM_STRING)))
 #if IL2CPP_COMPILER_MSVC
             strcpy_s(result, length, strSource);
 #elif IL2CPP_TARGET_LINUX
@@ -171,7 +171,7 @@ namespace utils
     Il2CppChar* StringUtils::StringDuplicate(const Il2CppChar* strSource, size_t length)
     {
         size_t byteLengthWithNullTerminator = sizeof(Il2CppChar) * (length + 1);
-        Il2CppChar* utf16name = (Il2CppChar*)IL2CPP_MALLOC(byteLengthWithNullTerminator);
+        Il2CppChar* utf16name = (Il2CppChar*)IL2CPP_MALLOC(byteLengthWithNullTerminator, IL2CPP_MEM_STRING);
         memcpy(utf16name, strSource, byteLengthWithNullTerminator);
 
         return utf16name;
@@ -179,7 +179,7 @@ namespace utils
 
     void StringUtils::StringDelete(const char* str)
     {
-        IL2CPP_FREE((void*)str);
+        IL2CPP_FREE((void*)str, IL2CPP_MEM_STRING);
     }
 
     bool StringUtils::EndsWith(const std::string& string, const std::string& suffix)

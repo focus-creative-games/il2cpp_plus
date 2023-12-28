@@ -422,7 +422,11 @@ namespace vm
 
     static bool IsAssembly(Il2CppObject *obj)
     {
+#if IL2CPP_SLIM_CLASS
+        return obj->klass == s_System_Reflection_Assembly;
+#else
         return obj->klass == s_System_Reflection_Assembly->klass;
+#endif
     }
 
     static std::tuple<uint32_t, const Il2CppImage*> GetMetadataTokenFromReflectionType(Il2CppObject* obj, bool throwOnError = true)

@@ -23,6 +23,10 @@ namespace vm
         IL2CPP_ASSERT(method);
 
         s_InternalCalls[name] = method;
+
+#if IL2CPP_ENABLE_MEM_STATS
+        il2cpp_mem_stats.interal_calls_total = s_InternalCalls.size();
+#endif
     }
 
     Il2CppMethodPointer InternalCalls::Resolve(const char* name)
@@ -34,7 +38,12 @@ namespace vm
         ICallMap::iterator res = s_InternalCalls.find(name);
 
         if (res != s_InternalCalls.end())
+        {
+#if IL2CPP_ENABLE_MEM_STATS
+            ++il2cpp_mem_stats.interal_calls_resolved;
+#endif
             return res->second;
+        }
 
         std::string shortName(name);
         size_t index = shortName.find('(');
@@ -45,10 +54,20 @@ namespace vm
             res = s_InternalCalls.find(shortName);
 
             if (res != s_InternalCalls.end())
+            {
+#if IL2CPP_ENABLE_MEM_STATS
+                ++il2cpp_mem_stats.interal_calls_resolved;
+#endif
                 return res->second;
+            }
         }
 
         return NULL;
     }
+#if IL2CPP_ENABLE_MEM_STATS
+    size_t InternalCalls::GetInternalCallsCount() {
+        return s_InternalCalls.size();
+    }
+#endif //#if IL2CPP_ENABLE_MEM_STATS
 } /* namespace vm */
 } /* namespace il2cpp */

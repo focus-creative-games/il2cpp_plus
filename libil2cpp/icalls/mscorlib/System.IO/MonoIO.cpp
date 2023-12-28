@@ -93,7 +93,7 @@ namespace IO
         int32_t result = findHandle->CloseOSHandle();
 
         findHandle->~FindHandle();
-        utils::Memory::Free(findHandle);
+        utils::Memory::Free(findHandle, IL2CPP_MEM_FindHandle);
 
         return result;
     }
@@ -306,7 +306,7 @@ namespace IO
     intptr_t MonoIO::FindFirstFile(Il2CppChar* pathWithPattern, Il2CppString** fileName, int32_t* fileAttr, int32_t* error)
     {
         DECLARE_IL2CPP_CHAR_PTR_AS_STRING_VIEW_OF_NATIVE_CHARS(pathWithPatternNative, pathWithPattern);
-        os::Directory::FindHandle* findHandle = new(utils::Memory::Malloc(sizeof(os::Directory::FindHandle))) os::Directory::FindHandle(pathWithPatternNative);
+        os::Directory::FindHandle* findHandle = new(utils::Memory::Malloc(sizeof(os::Directory::FindHandle), IL2CPP_MEM_FindHandle)) os::Directory::FindHandle(pathWithPatternNative);
 
         Il2CppNativeString fileNameNative;
         os::ErrorCode findError = os::Directory::FindFirstFile(findHandle, pathWithPatternNative, &fileNameNative, fileAttr);

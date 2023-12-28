@@ -297,14 +297,14 @@ struct Il2CppMonoMethodSignatureWrapper
     {
         // We need the size of Il2CppMonoMethodSignature plus one pointer for each parameter of the method.
         size_t methodSignatureSize =  sizeof(Il2CppMonoMethodSignature) + (sizeof(Il2CppType*) * il2cpp::vm::Method::GetParamCount(method));
-        signature = (Il2CppMonoMethodSignature*)IL2CPP_CALLOC(1, methodSignatureSize);
+        signature = (Il2CppMonoMethodSignature*)IL2CPP_CALLOC(1, methodSignatureSize, IL2CPP_MEM_MonoMethodSignature);
 
         initialize_il2cpp_mono_method_signature(signature, method);
     }
 
     ~Il2CppMonoMethodSignatureWrapper()
     {
-        IL2CPP_FREE(signature);
+        IL2CPP_FREE(signature, IL2CPP_MEM_MonoMethodSignature);
     }
 
     Il2CppMonoMethodSignature* signature;
@@ -581,7 +581,7 @@ static int32_t method_nonpublic(MethodInfo* method, int32_t start_klass)
 
 static Il2CppGPtrArray* il2cpp_g_ptr_array_new()
 {
-    Il2CppGPtrArrayPriv* array = (Il2CppGPtrArrayPriv*)IL2CPP_CALLOC(1, sizeof(Il2CppGPtrArrayPriv));
+    Il2CppGPtrArrayPriv* array = (Il2CppGPtrArrayPriv*)IL2CPP_CALLOC(1, sizeof(Il2CppGPtrArrayPriv), IL2CPP_MEM_GPtrArray);
 
     array->pdata = NULL;
     array->len = 0;
@@ -605,7 +605,7 @@ static void il2cpp_g_ptr_array_grow(Il2CppGPtrArrayPriv* array, uint32_t length)
         array->size <<= 1;
 
     array->size = std::max(array->size, 16U);
-    array->pdata = (void**)IL2CPP_REALLOC(array->pdata, array->size * sizeof(void*));
+    array->pdata = (void**)IL2CPP_REALLOC(array->pdata, array->size * sizeof(void*), IL2CPP_MEM_GPtrArray);
 }
 
 static void il2cpp_g_ptr_array_add(Il2CppGPtrArray* array, void* data)
@@ -624,14 +624,14 @@ GPtrArray* il2cpp_g_ptr_array_free(GPtrArray *_array, bool free_seg)
 
     if (free_seg)
     {
-        IL2CPP_FREE(array->pdata);
+        IL2CPP_FREE(array->pdata, IL2CPP_MEM_GPtrArray);
     }
     else
     {
         data = array->pdata;
     }
 
-    IL2CPP_FREE(array);
+    IL2CPP_FREE(array, IL2CPP_MEM_GPtrArray);
 
     return (GPtrArray*)data;
 }
@@ -904,24 +904,24 @@ MonoDebugLocalsInfo* mono_debug_lookup_locals(MonoMethod *method)
     const Il2CppMethodScope *scopes;
     il2cpp::utils::Debugger::GetMethodExecutionContextInfo((const MethodInfo*)method, &executionContextInfoCount, &executionContextInfo, &headerInfo, &scopes);
 
-    Il2CppMonoDebugLocalsInfo* locals = (Il2CppMonoDebugLocalsInfo*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoDebugLocalsInfo));
+    Il2CppMonoDebugLocalsInfo* locals = (Il2CppMonoDebugLocalsInfo*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoDebugLocalsInfo), IL2CPP_MEM_MonoDebugLocalsInfo);
     locals->num_locals = executionContextInfoCount;
 
-    locals->locals = (Il2CppMonoDebugLocalVar*)IL2CPP_CALLOC(executionContextInfoCount, sizeof(Il2CppMonoDebugLocalVar));
+    locals->locals = (Il2CppMonoDebugLocalVar*)IL2CPP_CALLOC(executionContextInfoCount, sizeof(Il2CppMonoDebugLocalVar), IL2CPP_MEM_MonoDebugLocalsInfo);
     for (int i = 0; i < locals->num_locals; ++i)
     {
         locals->locals[i].name = (char*)il2cpp::utils::Debugger::GetLocalName((const MethodInfo*)method, executionContextInfo[i].nameIndex);
         locals->locals[i].index = i;
 
         /* hack we should point to blocks allocated below? */
-        locals->locals[i].block = (Il2CppMonoDebugCodeBlock*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoDebugCodeBlock));
+        locals->locals[i].block = (Il2CppMonoDebugCodeBlock*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoDebugCodeBlock), IL2CPP_MEM_MonoDebugLocalsInfo);
         const Il2CppMethodScope* scope = il2cpp::utils::Debugger::GetLocalScope((const MethodInfo*)method, executionContextInfo[i].scopeIndex);
         locals->locals[i].block->start_offset = scope->startOffset;
         locals->locals[i].block->end_offset = scope->endOffset;
     }
 
     locals->num_blocks = headerInfo->numScopes;
-    locals->code_blocks = (Il2CppMonoDebugCodeBlock*)IL2CPP_CALLOC(headerInfo->numScopes, sizeof(Il2CppMonoDebugCodeBlock));
+    locals->code_blocks = (Il2CppMonoDebugCodeBlock*)IL2CPP_CALLOC(headerInfo->numScopes, sizeof(Il2CppMonoDebugCodeBlock), IL2CPP_MEM_MonoDebugLocalsInfo);
 
     for (int i = 0; i < headerInfo->numScopes; ++i)
     {
@@ -941,18 +941,18 @@ void mono_debug_free_locals(MonoDebugLocalsInfo *info)
     Il2CppMonoDebugLocalsInfo* locals = (Il2CppMonoDebugLocalsInfo*)info;
     for (int i = 0; i < locals->num_locals; ++i)
     {
-        IL2CPP_FREE(locals->locals[i].block);
+        IL2CPP_FREE(locals->locals[i].block, IL2CPP_MEM_MonoDebugLocalsInfo);
     }
-    IL2CPP_FREE(locals->locals);
-    IL2CPP_FREE(locals->code_blocks);
-    IL2CPP_FREE(locals);
+    IL2CPP_FREE(locals->locals, IL2CPP_MEM_MonoDebugLocalsInfo);
+    IL2CPP_FREE(locals->code_blocks, IL2CPP_MEM_MonoDebugLocalsInfo);
+    IL2CPP_FREE(locals, IL2CPP_MEM_MonoDebugLocalsInfo);
 #endif
 }
 
 MonoDebugMethodJitInfo* mono_debug_find_method(MonoMethod *method, MonoDomain *domain)
 {
 #if IL2CPP_MONO_DEBUGGER
-    Il2CppMonoDebugMethodJitInfo* jit = (Il2CppMonoDebugMethodJitInfo*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoDebugMethodJitInfo));
+    Il2CppMonoDebugMethodJitInfo* jit = (Il2CppMonoDebugMethodJitInfo*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoDebugMethodJitInfo), IL2CPP_MEM_MonoMethodSignature);
     Il2CppMonoDebugLocalsInfo* locals_info = (Il2CppMonoDebugLocalsInfo*)mono_debug_lookup_locals(method);
     jit->num_locals = locals_info->num_locals;
 
@@ -997,7 +997,7 @@ MonoMethodHeader* mono_method_get_header_checked(MonoMethod *method, MonoError *
 
     il2cpp::utils::Debugger::GetMethodExecutionContextInfo((const MethodInfo*)method, &executionContextInfoCount, &executionContextInfo, &headerInfo, &scopes);
 
-    Il2CppMonoMethodHeader* header = (Il2CppMonoMethodHeader*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoMethodHeader) + (executionContextInfoCount * sizeof(Il2CppType*)));
+    Il2CppMonoMethodHeader* header = (Il2CppMonoMethodHeader*)IL2CPP_CALLOC(1, sizeof(Il2CppMonoMethodHeader) + (executionContextInfoCount * sizeof(Il2CppType*)), IL2CPP_MEM_MonoMethodHeader);
     header->code_size = headerInfo->code_size;
     header->num_locals = executionContextInfoCount;
     for (uint32_t i = 0; i < executionContextInfoCount; i++)
@@ -1011,7 +1011,7 @@ MonoMethodHeader* mono_method_get_header_checked(MonoMethod *method, MonoError *
 
 void mono_metadata_free_mh(MonoMethodHeader *mh)
 {
-    IL2CPP_FREE(mh);
+    IL2CPP_FREE(mh, IL2CPP_MEM_MonoMethodHeader);
 }
 
 char* mono_method_full_name(MonoMethod* method, int32_t signature)

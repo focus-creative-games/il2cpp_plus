@@ -9,7 +9,7 @@
 
 il2cpp_hresult_t il2cpp::vm::WeakReference::Create(Il2CppObject* managedObject, Il2CppIWeakReference** result)
 {
-    void* memory = utils::Memory::Malloc(sizeof(WeakReference));
+    void* memory = utils::Memory::Malloc(sizeof(WeakReference), IL2CPP_MEM_WeakReference);
     if (memory == NULL)
         return IL2CPP_E_OUTOFMEMORY;
 
@@ -49,7 +49,7 @@ uint32_t STDCALL il2cpp::vm::WeakReference::Release()
     if (refCount == 0)
     {
         this->~WeakReference();
-        utils::Memory::Free(this);
+        utils::Memory::Free(this, IL2CPP_MEM_WeakReference);
     }
 
     return refCount;

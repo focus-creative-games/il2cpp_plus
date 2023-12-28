@@ -1789,7 +1789,10 @@ namespace os
         kErrorSxsUntranslatableHresult = 14077,
         kErrorSxsProtectionCatalogFileMissing = 14078,
         kErrorSxsMissingAssemblyIdentityAttribute = 14079,
-        kErrorSxsInvalidAssemblyIdentityAttributeName = 14080
+        kErrorSxsInvalidAssemblyIdentityAttributeName = 14080,
+#if ENABLE_HMI_MODE && IL2CPP_TARGET_ANDROID
+        kErrorAssetManagerError = 14081
+#endif
     };
 }
 }

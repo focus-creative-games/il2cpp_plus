@@ -61,7 +61,8 @@ namespace vm
                 if (Class::IsGenericClassAssignableFromVariance(itf, pair->interfaceType, klass))
                 {
                     IL2CPP_ASSERT(pair->offset + slot < klass->vtable_count);
-                    return &klass->vtable[pair->offset + slot];
+                    //return &klass->vtable[pair->offset + slot];
+                    return Class::GetOrSetupOneVTableSlot(const_cast<Il2CppClass*>(klass), NULL, pair->offset + slot);
                 }
             }
         }
@@ -77,7 +78,7 @@ namespace vm
         data = GetInterfaceInvokeDataFromVTableSlowPath(klass, itf, slot);
         if (data)
             return *data;
-
+#if !IL2CPP_TRIM_COM
         if (klass->is_import_or_windows_runtime)
         {
             Il2CppComObject* rcw = static_cast<Il2CppComObject*>(obj);
@@ -94,9 +95,52 @@ namespace vm
                 }
             }
         }
-
+#endif
         RaiseExceptionForNotFoundInterface(klass, itf, slot);
         IL2CPP_UNREACHABLE;
+    }
+
+    const VirtualInvokeData& ClassInlines::GetVirtualInvokeData(Il2CppMethodSlot slot, const Il2CppObject* obj)
+    {
+        Assert(slot != kInvalidIl2CppMethodSlot && "MethodSlot is invalid!");
+
+        //quick pass
+        Il2CppClass* klass = obj->klass;
+        if(slot < klass->vtable_count && klass->vtable[slot].method != NULL)
+            return klass->vtable[slot];
+
+        return *Class::GetOrSetupOneVTableSlot(obj->klass, NULL, slot);
+    }
+
+    bool ClassInlines::HasParent(const Il2CppClass* klass, const Il2CppClass* parent) 
+    { 
+        return Class::HasParent(const_cast<Il2CppClass*>(klass), const_cast<Il2CppClass*>(parent));
+    }
+
+    const VirtualInvokeData* ClassInlines::GetInterfaceInvokeDataFromVTable(Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot)
+    {
+        IL2CPP_ASSERT(slot < itf->method_count);
+
+        //quick pass
+        if (klass->interfaceOffsets != NULL) {
+            for (uint16_t i = 0; i < klass->interface_offsets_count; i++)
+            {
+                if (klass->interfaceOffsets[i].interfaceType == itf)
+                {
+                    int32_t offset = klass->interfaceOffsets[i].offset;
+                    IL2CPP_ASSERT(offset != -1);
+                    IL2CPP_ASSERT(offset + slot < klass->vtable_count);
+                    if (klass->vtable[offset + slot].method != NULL)
+                        return &(klass->vtable[offset + slot]);
+                }
+            }
+        }
+
+        const VirtualInvokeData* data = Class::GetOrSetupOneVTableSlot(klass, itf, slot);
+        if (data)
+            return data;
+
+        return GetInterfaceInvokeDataFromVTableSlowPath(klass, itf, slot);
     }
 }
 }

@@ -71,7 +71,7 @@ namespace MemoryInformation
 
         const std::map<Il2CppClass*, uint32_t>& allTypes = gatherMetadataContext.allTypes;
         metadata.typeCount = static_cast<uint32_t>(allTypes.size());
-        metadata.types = static_cast<Il2CppMetadataType*>(IL2CPP_CALLOC(metadata.typeCount, sizeof(Il2CppMetadataType)));
+        metadata.types = static_cast<Il2CppMetadataType*>(IL2CPP_CALLOC(metadata.typeCount, sizeof(Il2CppMetadataType), IL2CPP_MEM_GatherMetadata));
 
         for (std::map<Il2CppClass*, uint32_t>::const_iterator it = allTypes.begin(); it != allTypes.end(); it++)
         {
@@ -92,7 +92,7 @@ namespace MemoryInformation
 
                 if (typeInfo->field_count > 0)
                 {
-                    type.fields = static_cast<Il2CppMetadataField*>(IL2CPP_CALLOC(typeInfo->field_count, sizeof(Il2CppMetadataField)));
+                    type.fields = static_cast<Il2CppMetadataField*>(IL2CPP_CALLOC(typeInfo->field_count, sizeof(Il2CppMetadataField), IL2CPP_MEM_GatherMetadata));
 
                     for (int i = 0; i < typeInfo->field_count; i++)
                     {
@@ -120,7 +120,7 @@ namespace MemoryInformation
 
                 if (type.staticsSize > 0 && typeInfo->static_fields != NULL)
                 {
-                    type.statics = static_cast<uint8_t*>(IL2CPP_MALLOC(type.staticsSize));
+                    type.statics = static_cast<uint8_t*>(IL2CPP_MALLOC(type.staticsSize, IL2CPP_MEM_GatherMetadata));
                     memcpy(type.statics, typeInfo->static_fields, type.staticsSize);
                 }
 
@@ -131,7 +131,7 @@ namespace MemoryInformation
             type.assemblyName = typeInfo->image->assembly->aname.name;
 
             std::string typeName = Type::GetName(&typeInfo->byval_arg, IL2CPP_TYPE_NAME_FORMAT_IL);
-            type.name = static_cast<char*>(IL2CPP_CALLOC(typeName.length() + 1, sizeof(char)));
+            type.name = static_cast<char*>(IL2CPP_CALLOC(typeName.length() + 1, sizeof(char), IL2CPP_MEM_GatherMetadata));
             memcpy(type.name, typeName.c_str(), typeName.length() + 1);
 
             type.typeInfoAddress = reinterpret_cast<uint64_t>(typeInfo);
@@ -157,7 +157,7 @@ namespace MemoryInformation
             IL2CPP_ASSERT(sectionSize <= static_cast<ptrdiff_t>(std::numeric_limits<uint32_t>::max()));
 
         section.sectionSize = static_cast<uint32_t>(sectionSize);
-        section.sectionBytes = static_cast<uint8_t*>(IL2CPP_MALLOC(section.sectionSize));
+        section.sectionBytes = static_cast<uint8_t*>(IL2CPP_MALLOC(section.sectionSize, IL2CPP_MEM_GatherMetadata));
 
         ctx->currentSection++;
     }
@@ -179,7 +179,7 @@ namespace MemoryInformation
         Il2CppManagedHeap& heap = *(Il2CppManagedHeap*)voidManagedHeap;
 
         heap.sectionCount = static_cast<uint32_t>(il2cpp::gc::GarbageCollector::GetSectionCount());
-        heap.sections = static_cast<Il2CppManagedMemorySection*>(IL2CPP_CALLOC(heap.sectionCount, sizeof(Il2CppManagedMemorySection)));
+        heap.sections = static_cast<Il2CppManagedMemorySection*>(IL2CPP_CALLOC(heap.sectionCount, sizeof(Il2CppManagedMemorySection), IL2CPP_MEM_GatherMetadata));
 
         SectionIterationContext iterationContext = { heap.sections };
         il2cpp::gc::GarbageCollector::ForEachHeapSection(&iterationContext, AllocateMemoryForSection);
@@ -191,10 +191,10 @@ namespace MemoryInformation
     {
         for (uint32_t i = 0; i < heap.sectionCount; i++)
         {
-            IL2CPP_FREE(heap.sections[i].sectionBytes);
+            IL2CPP_FREE(heap.sections[i].sectionBytes, IL2CPP_MEM_GatherMetadata);
         }
 
-        IL2CPP_FREE(heap.sections);
+        IL2CPP_FREE(heap.sections, IL2CPP_MEM_GatherMetadata);
     }
 
     struct VerifyHeapSectionStillValidIterationContext
@@ -276,7 +276,7 @@ namespace MemoryInformation
 
         const std::vector<Il2CppObject*>& trackedObjects = gcHandleTargetIterationContext.managedObjects;
         gcHandles.trackedObjectCount = static_cast<uint32_t>(trackedObjects.size());
-        gcHandles.pointersToObjects = static_cast<uint64_t*>(IL2CPP_CALLOC(gcHandles.trackedObjectCount, sizeof(uint64_t)));
+        gcHandles.pointersToObjects = static_cast<uint64_t*>(IL2CPP_CALLOC(gcHandles.trackedObjectCount, sizeof(uint64_t), IL2CPP_MEM_GatherMetadata));
 
         for (uint32_t i = 0; i < gcHandles.trackedObjectCount; i++)
             gcHandles.pointersToObjects[i] = reinterpret_cast<uint64_t>(trackedObjects[i]);
@@ -338,7 +338,7 @@ namespace MemoryInformation
 
     Il2CppManagedMemorySnapshot* CaptureManagedMemorySnapshot()
     {
-        Il2CppManagedMemorySnapshot* snapshot = static_cast<Il2CppManagedMemorySnapshot*>(IL2CPP_MALLOC_ZERO(sizeof(Il2CppManagedMemorySnapshot)));
+        Il2CppManagedMemorySnapshot* snapshot = static_cast<Il2CppManagedMemorySnapshot*>(IL2CPP_MALLOC_ZERO(sizeof(Il2CppManagedMemorySnapshot), IL2CPP_MEM_GatherMetadata));
 
         GatherMetadata(snapshot->metadata);
         CaptureManagedHeap(snapshot->heap);
@@ -352,7 +352,7 @@ namespace MemoryInformation
     {
         FreeIL2CppManagedHeap(snapshot->heap);
 
-        IL2CPP_FREE(snapshot->gcHandles.pointersToObjects);
+        IL2CPP_FREE(snapshot->gcHandles.pointersToObjects, IL2CPP_MEM_GatherMetadata);
 
         Il2CppMetadataSnapshot& metadata = snapshot->metadata;
 
@@ -360,15 +360,15 @@ namespace MemoryInformation
         {
             if ((metadata.types[i].flags & kArray) == 0)
             {
-                IL2CPP_FREE(metadata.types[i].fields);
-                IL2CPP_FREE(metadata.types[i].statics);
+                IL2CPP_FREE(metadata.types[i].fields, IL2CPP_MEM_GatherMetadata);
+                IL2CPP_FREE(metadata.types[i].statics, IL2CPP_MEM_GatherMetadata);
             }
 
-            IL2CPP_FREE(metadata.types[i].name);
+            IL2CPP_FREE(metadata.types[i].name, IL2CPP_MEM_GatherMetadata);
         }
 
-        IL2CPP_FREE(metadata.types);
-        IL2CPP_FREE(snapshot);
+        IL2CPP_FREE(metadata.types, IL2CPP_MEM_GatherMetadata);
+        IL2CPP_FREE(snapshot, IL2CPP_MEM_GatherMetadata);
     }
 } // namespace MemoryInformation
 } // namespace vm

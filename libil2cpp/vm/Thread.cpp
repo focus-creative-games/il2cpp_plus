@@ -142,7 +142,12 @@ namespace vm
         if (managedThread != NULL)
             return managedThread;
 
+#if ENABLE_HMI_MODE
+        int temp = 0;
+        gc::GarbageCollector::RegisterThread(&temp);
+#else
         gc::GarbageCollector::RegisterThread();
+#endif
 
         StackTrace::InitializeStackTracesForCurrentThread();
 
@@ -171,7 +176,7 @@ namespace vm
 
         // The synch_cs object is deallocated in the InternalThread::Thread_free_internal icall, which
         // is called from the managed thread finalizer.
-        internalManagedThread->longlived = (Il2CppLongLivedThreadData*)IL2CPP_MALLOC(sizeof(Il2CppLongLivedThreadData));
+        internalManagedThread->longlived = (Il2CppLongLivedThreadData*)IL2CPP_MALLOC(sizeof(Il2CppLongLivedThreadData), IL2CPP_MEM_THREAD);
         internalManagedThread->longlived->synch_cs = new baselib::ReentrantLock;
 
         internalManagedThread->apartment_state = il2cpp::os::kApartmentStateUnknown;
@@ -458,7 +463,7 @@ namespace vm
     static void AllocThreadDataSlot(ThreadStaticData* staticData, ThreadStaticOffset offset, int32_t size)
     {
         if (staticData->slots[offset.slot] == NULL)
-            staticData->slots[offset.slot] = (ThreadStaticDataSlot*)IL2CPP_CALLOC(1, sizeof(ThreadStaticDataSlot));
+            staticData->slots[offset.slot] = (ThreadStaticDataSlot*)IL2CPP_CALLOC(1, sizeof(ThreadStaticDataSlot), IL2CPP_MEM_THREAD);
 
         if (staticData->slots[offset.slot]->data[offset.index] == NULL)
             staticData->slots[offset.slot]->data[offset.index] = gc::GarbageCollector::AllocateFixed(size, NULL);
@@ -470,7 +475,7 @@ namespace vm
         int32_t index = 0;
 
         // Alloc the slotData along with the first slots at once
-        ThreadStaticData* staticData = (ThreadStaticData*)IL2CPP_CALLOC(1, sizeof(ThreadStaticData) + sizeof(ThreadStaticDataSlot));
+        ThreadStaticData* staticData = (ThreadStaticData*)IL2CPP_CALLOC(1, sizeof(ThreadStaticData) + sizeof(ThreadStaticDataSlot), IL2CPP_MEM_THREAD);
         staticData->slots[0] = (ThreadStaticDataSlot*)(staticData + 1);
 
         Il2CppThread* thread = Current();
@@ -553,10 +558,10 @@ namespace vm
 
             // Don't free the first slot because we allocate the first slot along with the root slots
             if (slot > 0)
-                IL2CPP_FREE(staticData->slots[slot]);
+                IL2CPP_FREE(staticData->slots[slot], IL2CPP_MEM_THREAD);
         }
 
-        IL2CPP_FREE(staticData);
+        IL2CPP_FREE(staticData, IL2CPP_MEM_THREAD);
     }
 
     void* Thread::GetThreadStaticData(int32_t offset)
@@ -787,7 +792,12 @@ namespace vm
         startData->m_Semaphore->Wait();
 
         {
+#if ENABLE_HMI_MODE
+            int temp = 0;
+            gc::GarbageCollector::RegisterThread(&temp);
+#else
             gc::GarbageCollector::RegisterThread();
+#endif
 
             il2cpp::vm::StackTrace::InitializeStackTracesForCurrentThread();
 

@@ -354,20 +354,20 @@ namespace utils
 
         T *allocate(size_t size)
         {
-            return static_cast<T *>(IL2CPP_MALLOC_ALIGNED(size * sizeof(T), align));
+            return static_cast<T *>(IL2CPP_MALLOC_ALIGNED(size * sizeof(T), align, IL2CPP_MEM_DYNAMIC_ARRAY));
         }
 
         T *deallocate(T *data)
         {
             Assert(owns_data());
-            IL2CPP_FREE_ALIGNED(data);
+            IL2CPP_FREE_ALIGNED(data, IL2CPP_MEM_DYNAMIC_ARRAY);
             return NULL;
         }
 
         T *reallocate(T *data, size_t size)
         {
             Assert(owns_data());
-            return static_cast<T *>(IL2CPP_REALLOC_ALIGNED(data, size * sizeof(T), align));
+            return static_cast<T *>(IL2CPP_REALLOC_ALIGNED(data, size * sizeof(T), align, IL2CPP_MEM_DYNAMIC_ARRAY));
         }
 
         T *m_data;

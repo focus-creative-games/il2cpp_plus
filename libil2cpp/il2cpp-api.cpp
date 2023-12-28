@@ -37,6 +37,8 @@
 #include "utils/Environment.h"
 #include "vm-utils/Debugger.h"
 #include "vm-utils/NativeSymbol.h"
+#include "vm/MetadataAlloc.h"
+#include "utils/MemoryPool.h"
 
 #include "gc/GarbageCollector.h"
 #include "gc/GCHandle.h"
@@ -45,6 +47,10 @@
 #include <locale.h>
 #include <fstream>
 #include <string>
+
+#if IL2CPP_TARGET_JAVASCRIPT
+#include <iostream> //for cout
+#endif
 
 using namespace il2cpp::vm;
 using il2cpp::utils::Memory;
@@ -165,12 +171,12 @@ Il2CppMethodPointer il2cpp_resolve_icall(const char* name)
 
 void* il2cpp_alloc(size_t size)
 {
-    return IL2CPP_MALLOC(size);
+    return IL2CPP_MALLOC(size, IL2CPP_MEM_il2cpp_alloc);
 }
 
 void il2cpp_free(void* ptr)
 {
-    IL2CPP_FREE(ptr);
+    IL2CPP_FREE(ptr, IL2CPP_MEM_il2cpp_alloc);
 }
 
 // array
@@ -461,21 +467,120 @@ extern Il2CppRuntimeStats il2cpp_runtime_stats;
 
 bool il2cpp_stats_dump_to_file(const char *path)
 {
+#if IL2CPP_TARGET_JAVASCRIPT
+    std::ostream& fs = std::cout;
+#else
     std::fstream fs;
 
     fs.open(path, std::fstream::out | std::fstream::trunc);
-
-    fs << "New object count: " << il2cpp_stats_get_value(IL2CPP_STAT_NEW_OBJECT_COUNT) << "\n";
-    fs << "Method count: " << il2cpp_stats_get_value(IL2CPP_STAT_METHOD_COUNT) << "\n";
-    fs << "Class static data size: " << il2cpp_stats_get_value(IL2CPP_STAT_CLASS_STATIC_DATA_SIZE) << "\n";
-    fs << "Inflated method count: " << il2cpp_stats_get_value(IL2CPP_STAT_INFLATED_METHOD_COUNT) << "\n";
-    fs << "Inflated type count: " << il2cpp_stats_get_value(IL2CPP_STAT_INFLATED_TYPE_COUNT) << "\n";
+#endif
+    fs << "=================Object statistics=================\n";
+    fs << "New object count:        " << il2cpp_stats_get_value(IL2CPP_STAT_NEW_OBJECT_COUNT) << "\n";
+    fs << "Method count:            " << il2cpp_stats_get_value(IL2CPP_STAT_METHOD_COUNT) << "\n";
+    fs << "Class static data size:  " << il2cpp_stats_get_value(IL2CPP_STAT_CLASS_STATIC_DATA_SIZE) << "\n";
+    fs << "Inflated method count:   " << il2cpp_stats_get_value(IL2CPP_STAT_INFLATED_METHOD_COUNT) << "\n";
+    fs << "Inflated type count:     " << il2cpp_stats_get_value(IL2CPP_STAT_INFLATED_TYPE_COUNT) << "\n";
     fs << "Initialized class count: " << il2cpp_stats_get_value(IL2CPP_STAT_INITIALIZED_CLASS_COUNT) << "\n";
-    fs << "Generic instance count: " << il2cpp_stats_get_value(IL2CPP_STAT_GENERIC_INSTANCE_COUNT) << "\n";
-    fs << "Generic class count: " << il2cpp_stats_get_value(IL2CPP_STAT_GENERIC_CLASS_COUNT) << "\n";
+    fs << "Generic instance count:  " << il2cpp_stats_get_value(IL2CPP_STAT_GENERIC_INSTANCE_COUNT) << "\n";
+    fs << "Generic class count:     " << il2cpp_stats_get_value(IL2CPP_STAT_GENERIC_CLASS_COUNT) << "\n";
+    fs << "metadata mem:            " << il2cpp_stats_get_value(IL2CPP_STAT_META_MEM) << "\n";
+    fs << "hash table mem:          " << il2cpp_stats_get_value(IL2CPP_STAT_HASHTABLE_MEM) << "\n";
+    fs << "global-metadata.dat size:" << il2cpp_stats_get_value(IL2CPP_STAT_GLOBAL_METADATA_FILE_SIZE) << "\n";
 
+#if IL2CPP_ENABLE_MEM_STATS
+
+    size_t realUsage = il2cpp_mem_stats.meta.meta_total - il2cpp_mem_stats.meta.meta_wasted - mem_stats_get_metadata_free();
+    realUsage -= il2cpp::utils::MemoryPool::RegionSize() * il2cpp_mem_stats.meta.meta_region_count;
+
+    size_t total = il2cpp_mem_stats.il2cpp_malloc;
+
+#if !IL2CPP_TARGET_JAVASCRIPT
+    total += il2cpp_mem_stats.hash_table + il2cpp_mem_stats.globalMetadataMapfile;
+#endif
+
+    fs.precision(2);//set float precision
+    fs << "\n";
+    fs << "=================Memory Usage statistics=================\n";
+    fs << "Total usage " << total << "\n";
+    fs << "\n";
+    fs << "1: Metadata usage " << il2cpp_mem_stats.meta.meta_total << " (" << double(il2cpp_mem_stats.meta.meta_total) / double(total) << ")\n";
+    fs << " Real usage " << realUsage << " , wasted " << il2cpp_mem_stats.meta.meta_wasted << " (rate: " << double(il2cpp_mem_stats.meta.meta_wasted) / double(il2cpp_mem_stats.meta.meta_total) << ")\n";
+    fs << "\n";
+    fs << "Metadata Type            usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_TYPE] << "\n";
+    fs << "Metadata Class           usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_CLASS] << "\n";
+    fs << "Metadata Method          usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_METHOD] << "\n";
+    fs << "Metadata Field           usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_FIELD] << "\n";
+    fs << "Metadata Event           usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_EVENT] << "\n";
+    fs << "Metadata Property        usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_PROPERTY] << "\n";
+    fs << "Metadata GenericInst     usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_GENERIC_INST] << "\n";
+    fs << "Metadata Interface       usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_INTERFACE] << "\n";
+    fs << "Metadata RGCTX           usage " << il2cpp_mem_stats.meta.sizes[IL2CPP_MSTAT_RGCTX] << "\n";
+    fs << "Metadata GenericClass    usage " << il2cpp_mem_stats.meta.generic_class_size << " count " << il2cpp_mem_stats.meta.generic_class_count << "\n";
+    fs << "Metadata GenericMethod   usage " << il2cpp_mem_stats.meta.generic_method_size << " count " << il2cpp_mem_stats.meta.generic_method_count << "\n";
+
+    size_t sum = il2cpp_mem_stats.meta.generic_class_size;
+    sum += il2cpp_mem_stats.meta.generic_method_size;
+
+    for (int i = 0; i < IL2CPP_MSTAT_COUNT; ++i) {
+        sum += il2cpp_mem_stats.meta.sizes[i];
+    }
+
+    fs << "Sum: " << sum << "\n";
+    fs << "\n";
+
+ #if IL2CPP_USE_SPARSEHASH
+    fs << "2: HashTable(sparse) usage ";
+#else
+    fs << "2: HashTable(dense) usage ";
+#endif
+    fs << il2cpp_mem_stats.hash_table << " (" << double(il2cpp_mem_stats.hash_table) / double(total) << ")\n";
+
+    size_t other = total - il2cpp_mem_stats.meta.meta_total - il2cpp_mem_stats.hash_table - il2cpp_mem_stats.globalMetadataMapfile;
+    fs << "\n";
+    fs << "3: Mapped global-metadata.dat size: " << il2cpp_mem_stats.globalMetadataMapfile << " (" << double(il2cpp_mem_stats.globalMetadataMapfile) / double(total) << ")\n";
+    fs << "\n";
+    fs << "4: Other usage " << other << " (" << double(other) / double(total) <<")\n";
+    fs << "\n";
+
+    sum = 0;
+    for (int i = 0; i < IL2CPP_MEM_LABLE_COUNT; ++i) {
+        if (i == IL2CPP_MEM_META_POOL 
+            || i == IL2CPP_MEM_HASH_TABLE
+            || i == IL2CPP_MEM_MEMORY_MAP)
+            continue;
+
+        sum += il2cpp_mem_stats.lableSizes[i];
+        if(i == IL2CPP_MEM_FromTypeDefinition)
+            fs << g_Il2CppMemLabelName[i] <<" usage " << il2cpp_mem_stats.lableSizes[i] << " count " << il2cpp_mem_stats.classFromTypeDef_count << "\n";
+        else
+            fs << g_Il2CppMemLabelName[i] <<" usage " << il2cpp_mem_stats.lableSizes[i] << "\n";
+    }
+    
+    fs << "Sum: " << sum << "\n";
+
+    fs << "\n";
+    fs << "Uncounted:\n";
+    fs << "InternalCalls total: " << il2cpp_mem_stats.interal_calls_total << "\n";
+    fs << "InternalCalls resolved: " << il2cpp_mem_stats.interal_calls_resolved << "\n";
+
+    fs << "\n";
+    fs << "sizeof(Il2CppType)           = " << sizeof(Il2CppType) << "\n";
+    fs << "sizeof(Il2CppClass)          = " << sizeof(Il2CppClass) << "\n";
+    fs << "sizeof(MethodInfo)           = " << sizeof(MethodInfo) << "\n";
+    fs << "sizeof(FieldInfo)            = " << sizeof(FieldInfo) << "\n";
+    fs << "sizeof(EventInfo)            = " << sizeof(EventInfo) << "\n";
+    fs << "sizeof(PropertyInfo)         = " << sizeof(PropertyInfo) << "\n";
+    fs << "sizeof(Il2CppGenericInst)    = " << sizeof(Il2CppGenericInst) << "\n";
+    fs << "sizeof(Il2CppRGCTXData)      = " << sizeof(Il2CppRGCTXData) << "\n";
+    fs << "sizeof(Il2CppGenericClass)   = " << sizeof(Il2CppGenericClass) << "\n";
+    fs << "sizeof(Il2CppGenericMethod)  = " << sizeof(Il2CppGenericMethod) << "\n";
+    fs << "\n";
+    
+#endif //IL2CPP_ENABLE_MEM_STATS
+
+#if !IL2CPP_TARGET_JAVASCRIPT
     fs.close();
-
+#endif
 
     return true;
 }
@@ -531,6 +636,12 @@ uint64_t il2cpp_stats_get_value(Il2CppStat stat)
 
             case IL2CPP_STAT_MAJOR_GC_TIME_USECS:
                 return il2cpp_runtime_stats.major_gc_time_usecs;*/
+        case IL2CPP_STAT_META_MEM:
+            return MetadataTotalMemSize();
+        case IL2CPP_STAT_HASHTABLE_MEM:
+            return il2cpp_runtime_stats.hashtable_mem;
+        case IL2CPP_STAT_GLOBAL_METADATA_FILE_SIZE:
+            return il2cpp_runtime_stats.global_metadata_file_size;
     }
 
     return 0;
@@ -1491,3 +1602,11 @@ void il2cpp_unity_set_android_network_up_state_func(Il2CppAndroidUpStateFunc fun
 {
     AndroidRuntime::SetNetworkUpStateFunc(func);
 }
+
+#if ENABLE_HMI_MODE && (IL2CPP_TARGET_ANDROID || PLATFORM_ANDROID)
+#include "os/Android/Context.h"
+void il2cpp_set_android_context(void* env, void* context)
+{
+    AndroidSetContext((JNIEnv*)env, *((jobject*)context));
+}
+#endif

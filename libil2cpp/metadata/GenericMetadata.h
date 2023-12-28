@@ -47,6 +47,9 @@ namespace metadata
         static int GetGenericVirtualIterations();
         static void SetGenericVirtualIterations(int iterations);
 
+        static void InflateRGCTXClass(const Il2CppRGCTXData* rgctx, RGCTXIndex index);
+        static void InflateRGCTXType(const Il2CppRGCTXData* rgctx, RGCTXIndex index);
+        static void InflateRGCTXMethod(const Il2CppRGCTXData* rgctx, RGCTXIndex index);
 
         static void Clear();
     };

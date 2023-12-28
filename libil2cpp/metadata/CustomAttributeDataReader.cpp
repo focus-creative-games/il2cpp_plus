@@ -310,7 +310,7 @@ namespace metadata
             IL2CPP_ASSERT(iter->dataBuffer <= bufferEnd);
             IL2CPP_ASSERT(propertyIndex < klass->property_count);
 
-            propArg.prop = &klass->properties[propertyIndex];
+            propArg.prop = il2cpp::vm::Class::GetOrSetupOneProperty(const_cast<Il2CppClass*>(klass), propertyIndex);
             visitor->VisitProperty(propArg, i);
         }
 

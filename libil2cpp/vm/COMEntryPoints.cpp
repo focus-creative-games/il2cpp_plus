@@ -61,8 +61,11 @@ private:
     Il2CppHString m_Name;
 };
 
+#if !IL2CPP_TRIM_COM
 typedef std::map<Il2CppHString, ActivationFactoryWrapper, HStringLess> FactoryCache;
 static FactoryCache s_FactoryCache;
+#endif
+
 static baselib::ReentrantLock s_FactoryCacheMutex;
 static bool s_InitializedIl2CppFromWindowsRuntime;
 
@@ -74,6 +77,10 @@ typedef Il2CppIActivationFactory* (*FactoryCreationFunction)();
 //    IL2CPP_REGDB_E_CLASSNOTREG - if class was not found
 extern "C" IL2CPP_EXPORT il2cpp_hresult_t STDCALL DllGetActivationFactory(Il2CppHString className, Il2CppIActivationFactory** factory)
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(DllGetActivationFactory);
+    return 0;
+#else
     if (className == nullptr || factory == nullptr)
         return IL2CPP_E_INVALIDARG;
 
@@ -117,20 +124,31 @@ extern "C" IL2CPP_EXPORT il2cpp_hresult_t STDCALL DllGetActivationFactory(Il2Cpp
     createdFactory->AddRef();
     *factory = createdFactory;
     return IL2CPP_S_OK;
+#endif
 }
 
 extern "C" IL2CPP_EXPORT long STDCALL DllCanUnloadNow()
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(DllCanUnloadNow);
+    return 0;
+#else
     if (!s_InitializedIl2CppFromWindowsRuntime)
         return IL2CPP_S_OK;
 
     // TO DO: we need to track all instantiated COM objects in order to implement this correctly
     return IL2CPP_S_FALSE;
+#endif
 }
 
 void il2cpp::vm::COMEntryPoints::FreeCachedData()
 {
+#if IL2CPP_TRIM_COM
+    IL2CPP_NOT_IMPLEMENTED(COMEntryPoints::FreeCachedData);
+    return;
+#else
     s_FactoryCache.clear();
+#endif
 }
 
 // Prevent function name mangling on Windows/x86

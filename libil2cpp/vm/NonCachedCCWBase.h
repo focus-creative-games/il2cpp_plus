@@ -53,7 +53,7 @@ namespace vm
 
         IL2CPP_FORCE_INLINE static TDerived* __CreateInstance(Il2CppObject* obj)
         {
-            void* memory = utils::Memory::Malloc(sizeof(TDerived));
+            void* memory = utils::Memory::Malloc(sizeof(TDerived), IL2CPP_MEM_ActivationFactory);
             if (memory == NULL)
                 Exception::RaiseOutOfMemoryException();
             return new(memory) TDerived(obj);
@@ -65,7 +65,7 @@ namespace vm
 
             TDerived* instance = static_cast<TDerived*>(this);
             instance->~TDerived();
-            utils::Memory::Free(instance);
+            utils::Memory::Free(instance, IL2CPP_MEM_ActivationFactory);
         }
     };
 }

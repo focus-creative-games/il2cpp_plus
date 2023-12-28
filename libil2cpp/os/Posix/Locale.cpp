@@ -52,7 +52,7 @@ namespace os
                         len += bytes_converted + 1;
                     }
 
-                    darwin_locale = (char *)IL2CPP_MALLOC(len + 1);
+                    darwin_locale = (char *)IL2CPP_MALLOC(len + 1, IL2CPP_MEM_STRING);
                     CFStringGetBytes(locale_language, CFRangeMake(0, CFStringGetLength(locale_language)), kCFStringEncodingMacRoman, 0, FALSE, (UInt8 *)darwin_locale, len, &bytes_converted);
 
                     darwin_locale[bytes_converted] = '-';
@@ -75,10 +75,10 @@ namespace os
                 if (locale_cfstr)
                 {
                     len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(locale_cfstr), kCFStringEncodingMacRoman) + 1;
-                    darwin_locale = (char *)IL2CPP_MALLOC(len);
+                    darwin_locale = (char *)IL2CPP_MALLOC(len, IL2CPP_MEM_STRING);
                     if (!CFStringGetCString(locale_cfstr, darwin_locale, len, kCFStringEncodingMacRoman))
                     {
-                        IL2CPP_FREE(darwin_locale);
+                        IL2CPP_FREE(darwin_locale, IL2CPP_MEM_STRING);
                         CFRelease(locale);
                         return std::string();
                     }
@@ -93,7 +93,7 @@ namespace os
         }
 
         std::string result(darwin_locale);
-        IL2CPP_FREE(darwin_locale);
+        IL2CPP_FREE(darwin_locale, IL2CPP_MEM_STRING);
 
         return result;
     }

@@ -150,18 +150,21 @@ typedef struct Il2CppDefaults
     MethodInfo *threadpool_perform_wait_callback_method;
     Il2CppClass *mono_method_message_class;
 
+#if !IL2CPP_TRIM_COM
     // Windows.Foundation.IReference`1<T>
     Il2CppClass* ireference_class;
     // Windows.Foundation.IReferenceArray`1<T>
     Il2CppClass* ireferencearray_class;
     // Windows.Foundation.Collections.IKeyValuePair`2<K, V>
     Il2CppClass* ikey_value_pair_class;
-    // System.Collections.Generic.KeyValuePair`2<K, V>
-    Il2CppClass* key_value_pair_class;
     // Windows.Foundation.Uri
     Il2CppClass* windows_foundation_uri_class;
     // Windows.Foundation.IUriRuntimeClass
     Il2CppClass* windows_foundation_iuri_runtime_class_class;
+#endif
+    // System.Collections.Generic.KeyValuePair`2<K, V>
+    Il2CppClass* key_value_pair_class;
+
     // System.Uri
     Il2CppClass* system_uri_class;
     // System.Guid
@@ -392,13 +395,15 @@ typedef struct Il2CppClass
     Il2CppGenericClass *generic_class;
     Il2CppMetadataTypeHandle typeMetadataHandle; // non-NULL for Il2CppClass's constructed from type defintions
     const Il2CppInteropData* interopData;
+#if !IL2CPP_SLIM_CLASS
     Il2CppClass* klass; // hack to pretend we are a MonoVTable. Points to ourself
+#endif
     // End always valid fields
 
     // The following fields need initialized before access. This can be done per field or as an aggregate via a call to Class::Init
     FieldInfo* fields; // Initialized in SetupFields
     const EventInfo* events; // Initialized in SetupEvents
-    const PropertyInfo* properties; // Initialized in SetupProperties
+    const PropertyInfo** properties; // Initialized in SetupProperties
     const MethodInfo** methods; // Initialized in SetupMethods
     Il2CppClass** nestedTypes; // Initialized in SetupNestedTypes
     Il2CppClass** implementedInterfaces; // Initialized in SetupInterfaces
@@ -412,11 +417,11 @@ typedef struct Il2CppClass
     void *unity_user_data;
 
     uint32_t initializationExceptionGCHandle;
-
+#if !IL2CPP_SLIM_CLASS
     uint32_t cctor_started;
     uint32_t cctor_finished_or_no_cctor;
     ALIGN_TYPE(8) size_t cctor_thread;
-
+#endif //IL2CPP_SLIM_CLASS
     // Remaining fields are always valid except where noted
     Il2CppMetadataGenericContainerHandle genericContainerHandle;
     uint32_t instance_size; // valid when size_inited is true
@@ -463,6 +468,9 @@ typedef struct Il2CppClass
     uint8_t is_import_or_windows_runtime : 1;
     uint8_t is_vtable_initialized : 1;
     uint8_t is_byref_like : 1;
+#if IL2CPP_SLIM_CLASS
+    uint8_t cctor_finished_or_no_cctor : 1;
+#endif
     VirtualInvokeData vtable[IL2CPP_ZERO_LEN_ARRAY];
 } Il2CppClass;
 

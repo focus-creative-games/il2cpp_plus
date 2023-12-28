@@ -35,8 +35,11 @@ namespace System
         IL2CPP_ASSERT(fields);
 
         uint32_t fieldsArrayLength = vm::Array::GetLength(fields);
-
+#if !IL2CPP_SLIM_CLASS
         Il2CppClass* klass = target->vtable->klass;
+#else
+        Il2CppClass* klass = target->vtable;
+#endif
 
         uint8_t* value = NULL;
         const Il2CppType *ftype = NULL;
