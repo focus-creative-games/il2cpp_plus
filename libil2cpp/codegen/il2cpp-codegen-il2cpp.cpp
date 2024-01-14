@@ -974,6 +974,7 @@ void il2cpp_codegen_runtime_constrained_call(RuntimeClass* type, const RuntimeMe
     // For value types, the constrained RGCTX does our lookup for us
     else if (type == constrainedMethod->klass)
     {
+        il2cpp_codegen_runtime_class_init_inline(type);
         // If the value type overrode the method, do a direct call wiht the pointer to the struct
         constrainedMethod->invoker_method(constrainedMethod->methodPointer, constrainedMethod, objBuffer, args, retVal);
     }

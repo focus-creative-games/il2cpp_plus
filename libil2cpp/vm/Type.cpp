@@ -11,6 +11,7 @@
 #include "vm/Assembly.h"
 #include "vm/AssemblyName.h"
 #include "vm/Class.h"
+#include "vm/Field.h"
 #include "vm/GenericClass.h"
 #include "vm/GenericContainer.h"
 #include "vm/MetadataCache.h"
@@ -1174,6 +1175,8 @@ namespace vm
 
     bool Type::HasVariableRuntimeSizeWhenFullyShared(const Il2CppType* type)
     {
+        // This needs to align with TypeRuntimeStoage::RuntimeFieldLayout
+
         // Anything passed by ref is pointer sized
         if (type->byref)
             return false;
@@ -1190,10 +1193,13 @@ namespace vm
         if (!GenericInstIsValuetype(type))
             return false;
 
-        // Otherwise we're a generic value type - e.g. Struct<T> and we need to examine our generic parameters
-        for (uint32_t i = 0; i < type->data.generic_class->context.class_inst->type_argc; i++)
+        Il2CppClass* klass = Class::FromIl2CppType(type);
+        Il2CppClass* typeDef = GenericClass::GetTypeDefinition(klass->generic_class);
+        FieldInfo* field;
+        void* iter = NULL;
+        while ((field = Class::GetFields(typeDef, &iter)))
         {
-            if (HasVariableRuntimeSizeWhenFullyShared(type->data.generic_class->context.class_inst->type_argv[i]))
+            if (Field::IsInstance(field) && HasVariableRuntimeSizeWhenFullyShared(Field::GetType(field)))
                 return true;
         }
 

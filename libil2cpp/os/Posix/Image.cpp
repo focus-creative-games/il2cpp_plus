@@ -77,13 +77,26 @@ namespace Image
         ElfW(Ehdr) * ehdr = (ElfW(Ehdr) *)imageBase;
         ElfW(Phdr) * phdr = (ElfW(Phdr) *)(imageBase + ehdr->e_phoff);
 
+        // Bug fix requires the lowest PT_LOAD address, not the lowest PT_LOAD offset
+        // https://unix.stackexchange.com/questions/669237/how-to-tell-whether-the-p-vaddr-in-elf-program-header-is-the-real-memory-address
+        ElfW(Addr) pt_load_low = SIZE_MAX;          // Set the max value, if it's not changed, assume a zero offset
+        for (int i = 0; i < ehdr->e_phnum; i++)
+        {
+            if (phdr[i].p_type == PT_LOAD && phdr[i].p_vaddr < pt_load_low)
+            {
+                pt_load_low = phdr[i].p_vaddr;
+            }
+        }
+        pt_load_low = (pt_load_low == SIZE_MAX) ? 0 : pt_load_low;
+
         for (int i = 0; i < ehdr->e_phnum; i++)
         {
             if (phdr[i].p_type == PT_NOTE)
             {
-                size_t nhdr_ptr = phdr[i].p_offset + imageBase;
+                size_t nhdr_ptr = phdr[i].p_vaddr + imageBase - pt_load_low;
+                size_t nhdr_end = nhdr_ptr + phdr[i].p_memsz;
                 int j = 0;
-                while (nhdr_ptr < imageBase + phdr[i].p_offset + phdr[i].p_memsz)
+                while (nhdr_ptr < nhdr_end)
                 {
                     ElfW(Nhdr) * nhdr = (ElfW(Nhdr) *)nhdr_ptr;
                     if (nhdr->n_type == NT_GNU_BUILD_ID)
