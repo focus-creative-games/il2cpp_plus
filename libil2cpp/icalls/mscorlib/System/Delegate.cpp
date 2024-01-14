@@ -54,8 +54,6 @@ namespace System
 
         Il2CppMulticastDelegate *ret = (Il2CppMulticastDelegate*)il2cpp::vm::Object::New(d->object.klass);
 
-        ret->delegate.method = d->method;
-        IL2CPP_OBJECT_SETREF((&ret->delegate), target, d->target);
         IL2CPP_OBJECT_SETREF((&ret->delegate), invoke_impl_this, (Il2CppObject*)ret);
 
         // extra_arg stores the multicast_invoke_impl
