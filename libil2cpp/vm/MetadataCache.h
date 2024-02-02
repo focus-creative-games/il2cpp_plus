@@ -118,6 +118,7 @@ namespace vm
         static Il2CppMetadataGenericParameterHandle GetGenericParameterFromIndex(Il2CppMetadataGenericContainerHandle handle, GenericContainerParameterIndex index);
         static Il2CppClass* GetContainerDeclaringType(Il2CppMetadataGenericContainerHandle handle);
         static Il2CppClass* GetParameterDeclaringType(Il2CppMetadataGenericParameterHandle handle);
+        static const MethodInfo* GetParameterDeclaringMethod(Il2CppMetadataGenericParameterHandle handle);
 
         static const Il2CppType* GetGenericParameterConstraintFromIndex(Il2CppMetadataGenericParameterHandle handle, GenericParameterConstraintIndex index);
         static Il2CppClass* GetNestedTypeFromOffset(const Il2CppClass* klass, TypeNestedTypeIndex offset);

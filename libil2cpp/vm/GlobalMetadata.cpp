@@ -1198,6 +1198,18 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetParameterDeclaringType(Il2CppMetadat
     return GetTypeInfoFromTypeDefinitionIndex(genericContainer->ownerIndex);
 }
 
+const MethodInfo* il2cpp::vm::GlobalMetadata::GetParameterDeclaringMethod(Il2CppMetadataGenericParameterHandle handle)
+{
+    const Il2CppGenericParameter* genericParameter = reinterpret_cast<const Il2CppGenericParameter*>(handle);
+
+    const Il2CppGenericContainer* genericContainer =  GetGenericContainerFromIndexInternal(genericParameter->ownerIndex);
+
+    if (genericContainer->is_method)
+        return GetMethodInfoFromMethodDefinitionIndex(genericContainer->ownerIndex);
+
+    return NULL;
+}
+
 Il2CppMetadataGenericParameterHandle il2cpp::vm::GlobalMetadata::GetGenericParameterFromIndex(Il2CppMetadataGenericContainerHandle handle, GenericContainerParameterIndex index)
 {
     const Il2CppGenericContainer* genericContainer = reinterpret_cast<const Il2CppGenericContainer*>(handle);

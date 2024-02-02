@@ -54,7 +54,7 @@ namespace System
         static intptr_t GetPropertiesByName_native(Il2CppReflectionRuntimeType* thisPtr, intptr_t name, int32_t bindingAttr, int32_t listType);
         static Il2CppObject* CreateInstanceInternal(Il2CppReflectionType* type);
         static Il2CppObject* GetCorrespondingInflatedConstructor(Il2CppReflectionRuntimeType* thisPtr, Il2CppObject* generic);
-        static Il2CppObject* get_DeclaringMethod(Il2CppReflectionRuntimeType* thisPtr);
+        static Il2CppReflectionMethod* get_DeclaringMethod(Il2CppReflectionRuntimeType* thisPtr);
         static Il2CppObject* GetCorrespondingInflatedMethod(Il2CppReflectionRuntimeType* thisPtr, Il2CppObject* generic);
         static Il2CppString* get_Name(Il2CppReflectionRuntimeType* thisPtr);
         static Il2CppString* get_Namespace(Il2CppReflectionRuntimeType* thisPtr);

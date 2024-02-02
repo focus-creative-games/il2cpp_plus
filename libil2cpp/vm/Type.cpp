@@ -1059,22 +1059,29 @@ namespace vm
         return type->type == IL2CPP_TYPE_VAR || type->type == IL2CPP_TYPE_MVAR;
     }
 
-    Il2CppReflectionType* Type::GetDeclaringType(const Il2CppType* type)
+    Il2CppClass* Type::GetDeclaringType(const Il2CppType* type)
     {
         Il2CppClass *typeInfo = NULL;
 
         if (type->byref)
             return NULL;
         if (type->type == IL2CPP_TYPE_VAR || type->type == IL2CPP_TYPE_MVAR)
+            return MetadataCache::GetParameterDeclaringType(GetGenericParameterHandle(type));
+        return Class::GetDeclaringType(Class::FromIl2CppType(type));
+    }
+
+    const MethodInfo* Type::GetDeclaringMethod(const Il2CppType* type)
+    {
+        if (type->byref)
+            return NULL;
+
+        if (type->type == IL2CPP_TYPE_MVAR)
         {
-            typeInfo = MetadataCache::GetParameterDeclaringType(GetGenericParameterHandle(type));
-        }
-        else
-        {
-            typeInfo = Class::GetDeclaringType(Class::FromIl2CppType(type));
+            const MethodInfo* methodInfo = MetadataCache::GetParameterDeclaringMethod(GetGenericParameterHandle(type));
+            return methodInfo;
         }
 
-        return typeInfo ? Reflection::GetTypeObject(&typeInfo->byval_arg) : NULL;
+        return NULL;
     }
 
     Il2CppArray* Type::GetGenericArgumentsInternal(Il2CppReflectionType* type, bool runtimeArray)
