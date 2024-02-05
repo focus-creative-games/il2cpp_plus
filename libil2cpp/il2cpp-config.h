@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string.h>
+
+#define UNITY_ENGINE_TUANJIE 1
+
 #include "hybridclr/generated/UnityVersion.h"
 
 /* first setup platform defines*/
