@@ -377,7 +377,7 @@ namespace metadata
 
         bool isAotImplByInterp = hybridclr::metadata::MetadataModule::IsImplementedByInterpreter(newMethod);
         bool isAdjustorThunkMethod = IS_CLASS_VALUE_TYPE(newMethod->klass) && hybridclr::metadata::IsInstanceMethod(newMethod);
-        if (isInterpMethod || (isAotImplByInterp && (methodPointers.methodPointer == nullptr || indirectCallViaInvokers)))
+        if (isInterpMethod || (isAotImplByInterp && (methodPointers.methodPointer == nullptr || newMethod->methodPointer == AnUnresolvedCallStubWasNotFound || newMethod->methodPointer == (Il2CppMethodPointer)AnUnresolvedCallStubWasNotFoundValueType)))
         {
             newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
             newMethod->methodPointer = newMethod->methodPointerCallByInterp = hybridclr::interpreter::InterpreterModule::GetMethodPointer(newMethod);
@@ -400,10 +400,10 @@ namespace metadata
             newMethod->initInterpCallMethodPointer = true;
             newMethod->isInterpterImpl = true;
         }
-        else if (!indirectCallViaInvokers)
+        else if (newMethod->methodPointer != AnUnresolvedCallStubWasNotFound && newMethod->methodPointer != (Il2CppMethodPointer)AnUnresolvedCallStubWasNotFoundValueType)
         {
-            //newMethod->methodPointerCallByInterp = newMethod->methodPointer;
-            //newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
+            newMethod->methodPointerCallByInterp = newMethod->methodPointer;
+            newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
         }
         // IL2CPP_ASSERT(!indirectCallViaInvokers || !isAdjustorThunkMethod || newMethod->methodPointerCallByInterp != newMethod->virtualMethodPointerCallByInterp);
 
