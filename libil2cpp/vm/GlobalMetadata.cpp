@@ -1474,6 +1474,12 @@ const Il2CppType* il2cpp::vm::GlobalMetadata::GetGenericParameterConstraintFromI
 
     index = genericParameter->constraintsStart + index;
 
+    if (hybridclr::metadata::IsInterpreterIndex(genericParameter->ownerIndex))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(hybridclr::metadata::DecodeImageIndex(genericParameter->ownerIndex))
+            ->GetGenericParameterConstraintFromIndex(index);
+    }
+
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->genericParameterConstraintsSize / sizeof(TypeIndex));
     const TypeIndex* constraintIndices = (const TypeIndex*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->genericParameterConstraintsOffset);
 
