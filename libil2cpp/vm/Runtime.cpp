@@ -377,10 +377,10 @@ namespace vm
             utils::Environment::SetMainArgs(mainArgs, 1);
         }
 
+        hybridclr::Runtime::Initialize();
         vm::MetadataCache::ExecuteEagerStaticClassConstructors();
         vm::MetadataCache::ExecuteModuleInitializers();
 
-        hybridclr::Runtime::Initialize();
         return true;
     }
 
