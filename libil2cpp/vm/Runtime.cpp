@@ -394,6 +394,7 @@ namespace vm
             utils::Environment::SetMainArgs(mainArgs, 1);
         }
 
+        hybridclr::Runtime::Initialize();
         vm::MetadataCache::ExecuteEagerStaticClassConstructors();
         vm::MetadataCache::ExecuteModuleInitializers();
 
@@ -401,7 +402,6 @@ namespace vm
         il2cpp::utils::DebugSymbolReader::LoadDebugSymbols();
 #endif
 
-        hybridclr::Runtime::Initialize();
         return true;
     }
 
