@@ -401,10 +401,10 @@ namespace vm
             utils::Environment::SetMainArgs(mainArgs, 1);
         }
 
-        vm::MetadataCache::ExecuteEagerStaticClassConstructors();
-        vm::MetadataCache::ExecuteModuleInitializers();
 
         hybridclr::Runtime::Initialize();
+        vm::MetadataCache::ExecuteEagerStaticClassConstructors();
+        vm::MetadataCache::ExecuteModuleInitializers();
         return true;
     }
 
