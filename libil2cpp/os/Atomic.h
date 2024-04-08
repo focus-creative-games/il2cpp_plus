@@ -52,7 +52,7 @@ namespace os
         }
 
         template<typename T>
-        static inline T* ExchangePointer(T** dest, T* newValue)
+        static inline T* ExchangePointer(T** dest, const T* newValue)
         {
             return (T*)Baselib_atomic_exchange_ptr_seq_cst((intptr_t*)dest, (intptr_t)newValue);
         }
@@ -81,11 +81,14 @@ namespace os
         template<typename T>
         static inline T* ReadPointer(T** pointer)
         {
-        #if IL2CPP_SIZEOF_VOID_P == 4
-            return reinterpret_cast<T*>(Add(reinterpret_cast<int32_t*>(pointer), 0));
-        #else
-            return reinterpret_cast<T*>(Read64(reinterpret_cast<int64_t*>(pointer)));
-        #endif
+            return (T*)Baselib_atomic_load_ptr_relaxed((intptr_t*)pointer);
+        }
+
+        template<typename T>
+        static inline void PublishPointer(T** pointer, T* value)
+        {
+            Baselib_atomic_thread_fence_release();
+            Baselib_atomic_store_ptr_relaxed((intptr_t*)pointer, (intptr_t)value);
         }
 
         static inline int32_t Increment(int32_t* value)
@@ -154,6 +157,11 @@ namespace os
         static inline uint64_t CompareExchange64(uint64_t* value, uint64_t newValue, uint64_t oldValue)
         {
             return (uint64_t)CompareExchange64((int64_t*)value, newValue, oldValue);
+        }
+
+        static inline bool Exchange(bool* dest, bool exchange)
+        {
+            return (bool)Baselib_atomic_exchange_8_seq_cst((int8_t*)dest, exchange);
         }
 
         static inline int32_t Exchange(int32_t* dest, int32_t exchange)

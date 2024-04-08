@@ -719,6 +719,27 @@ namespace vm
 
     void Reflection::ClearStatics()
     {
+        delete s_AssemblyMap;
+        s_AssemblyMap = NULL;
+        delete s_FieldMap;
+        s_FieldMap = NULL;
+        delete s_PropertyMap;
+        s_PropertyMap = NULL;
+        delete s_EventMap;
+        s_EventMap = NULL;
+        delete s_MethodMap;
+        s_MethodMap = NULL;
+        delete s_ModuleMap;
+        s_ModuleMap = NULL;
+        delete s_ParametersMap;
+        s_ParametersMap = NULL;
+        delete s_TypeMap;
+        s_TypeMap = NULL;
+        delete s_MonoGenericParamterMap;
+        s_MonoGenericParamterMap = NULL;
+        delete s_MonoAssemblyNameMap;
+        s_MonoAssemblyNameMap = NULL;
+
         s_System_Reflection_Assembly = NULL;
         s_System_Reflection_RuntimeFieldInfoKlass = NULL;
         s_System_Reflection_Module = NULL;

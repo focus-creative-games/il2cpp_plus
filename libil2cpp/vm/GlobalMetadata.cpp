@@ -31,6 +31,7 @@
 #include "utils/HashUtils.h"
 #include "utils/Il2CppHashMap.h"
 #include "utils/Il2CppHashSet.h"
+#include "utils/InitOnce.h"
 #include "utils/Memory.h"
 #include "utils/StringUtils.h"
 #include "utils/PathUtils.h"
@@ -130,16 +131,14 @@ const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionI
 {
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) <= s_GlobalMetadataHeader->methodsSize / sizeof(Il2CppMethodDefinition));
 
-    if (!s_MethodInfoDefinitionTable[index])
+    return utils::InitOnce(&s_MethodInfoDefinitionTable[index], &g_MetadataLock, [index](il2cpp::os::FastAutoLock& _)
     {
         const Il2CppMethodDefinition* methodDefinition = GetMethodDefinitionFromIndex(index);
         Il2CppClass* typeInfo = GetTypeInfoFromTypeDefinitionIndex(methodDefinition->declaringType);
         il2cpp::vm::Class::SetupMethods(typeInfo);
         const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(typeInfo->typeMetadataHandle);
-        s_MethodInfoDefinitionTable[index] = typeInfo->methods[index - typeDefinition->methodStart];
-    }
-
-    return s_MethodInfoDefinitionTable[index];
+        return typeInfo->methods[index - typeDefinition->methodStart];
+    });
 }
 
 static const Il2CppEventDefinition* GetEventDefinitionFromIndex(const Il2CppImage* image, EventIndex index)
@@ -166,26 +165,25 @@ static const Il2CppParameterDefinition* GetParameterDefinitionFromIndex(const Il
 static const Il2CppGenericMethod* GetGenericMethodFromIndex(GenericMethodIndex index)
 {
     IL2CPP_ASSERT(index < s_Il2CppMetadataRegistration->methodSpecsCount);
-    if (s_GenericMethodTable[index])
-        return s_GenericMethodTable[index];
 
-    const Il2CppMethodSpec* methodSpec = s_Il2CppMetadataRegistration->methodSpecs + index;
-    const MethodInfo* methodDefinition = il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(methodSpec->methodDefinitionIndex);
-    const Il2CppGenericInst* classInst = NULL;
-    const Il2CppGenericInst* methodInst = NULL;
-    if (methodSpec->classIndexIndex != -1)
+    return il2cpp::utils::InitOnce(&s_GenericMethodTable[index], &il2cpp::vm::g_MetadataLock, [index](il2cpp::os::FastAutoLock& _)
     {
-        IL2CPP_ASSERT(methodSpec->classIndexIndex < s_Il2CppMetadataRegistration->genericInstsCount);
-        classInst = s_Il2CppMetadataRegistration->genericInsts[methodSpec->classIndexIndex];
-    }
-    if (methodSpec->methodIndexIndex != -1)
-    {
-        IL2CPP_ASSERT(methodSpec->methodIndexIndex < s_Il2CppMetadataRegistration->genericInstsCount);
-        methodInst = s_Il2CppMetadataRegistration->genericInsts[methodSpec->methodIndexIndex];
-    }
-    s_GenericMethodTable[index] = il2cpp::vm::MetadataCache::GetGenericMethod(methodDefinition, classInst, methodInst);
-
-    return s_GenericMethodTable[index];
+        const Il2CppMethodSpec* methodSpec = s_Il2CppMetadataRegistration->methodSpecs + index;
+        const MethodInfo* methodDefinition = il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(methodSpec->methodDefinitionIndex);
+        const Il2CppGenericInst* classInst = NULL;
+        const Il2CppGenericInst* methodInst = NULL;
+        if (methodSpec->classIndexIndex != -1)
+        {
+            IL2CPP_ASSERT(methodSpec->classIndexIndex < s_Il2CppMetadataRegistration->genericInstsCount);
+            classInst = s_Il2CppMetadataRegistration->genericInsts[methodSpec->classIndexIndex];
+        }
+        if (methodSpec->methodIndexIndex != -1)
+        {
+            IL2CPP_ASSERT(methodSpec->methodIndexIndex < s_Il2CppMetadataRegistration->genericInstsCount);
+            methodInst = s_Il2CppMetadataRegistration->genericInsts[methodSpec->methodIndexIndex];
+        }
+        return il2cpp::vm::MetadataCache::GetGenericMethod(methodDefinition, classInst, methodInst);
+    });
 }
 
 static const MethodInfo* GetMethodInfoFromEncodedIndex(EncodedMethodIndex methodIndex)
@@ -424,7 +422,10 @@ void* il2cpp::vm::GlobalMetadata::InitializeRuntimeMetadata(uintptr_t* metadataP
     IL2CPP_ASSERT(IsRuntimeMetadataInitialized(initialized) && "ERROR: The low bit of the metadata item is still set, alignment issue");
 
     if (initialized != NULL)
-        *metadataPointer = (uintptr_t)initialized;
+    {
+        // Set the metadata pointer last, with a barrier, so it is the last item written
+        il2cpp::os::Atomic::PublishPointer((void**)metadataPointer, initialized);
+    }
 
     return initialized;
 }
@@ -658,16 +659,7 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(Type
 
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) < s_GlobalMetadataHeader->typeDefinitionsSize / sizeof(Il2CppTypeDefinition));
 
-    if (!s_TypeInfoDefinitionTable[index])
-    {
-        // we need to use the metadata lock, since we may need to retrieve other Il2CppClass's when setting. Our parent may be a generic instance for example
-        il2cpp::os::FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
-        // double checked locking
-        if (!s_TypeInfoDefinitionTable[index])
-            s_TypeInfoDefinitionTable[index] = FromTypeDefinition(index);
-    }
-
-    return s_TypeInfoDefinitionTable[index];
+    return utils::InitOnce(&s_TypeInfoDefinitionTable[index], &il2cpp::vm::g_MetadataLock, [index](il2cpp::os::FastAutoLock& _) { return FromTypeDefinition(index); });
 }
 
 Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromHandle(Il2CppMetadataTypeHandle handle)
@@ -1483,17 +1475,15 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(TypeIndex inde
 
     IL2CPP_ASSERT(index < s_Il2CppMetadataRegistration->typesCount && "Invalid type index ");
 
-    if (s_TypeInfoTable[index])
-        return s_TypeInfoTable[index];
-
-    const Il2CppType* type = s_Il2CppMetadataRegistration->types[index];
-
-    Il2CppClass *klass = Class::FromIl2CppType(type, throwOnError);
-    if (klass != NULL)
+    return utils::InitOnce(&s_TypeInfoTable[index], &g_MetadataLock, [index, throwOnError](il2cpp::os::FastAutoLock& _)
     {
-        s_TypeInfoTable[index] = ClassInlines::InitFromCodegenSlow(klass, throwOnError);
-    }
-    return s_TypeInfoTable[index];
+        const Il2CppType* type = s_Il2CppMetadataRegistration->types[index];
+
+        Il2CppClass *klass = Class::FromIl2CppType(type, throwOnError);
+        if (klass != NULL)
+            ClassInlines::InitFromCodegenSlow(klass, throwOnError);
+        return klass;
+    });
 }
 
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle)

@@ -193,7 +193,7 @@ namespace vm
         static const MethodInfo* GetVirtualMethod(Il2CppClass* klass, const MethodInfo* virtualMethod);
 
         static void SetClassInitializationError(Il2CppClass* klass, Il2CppException* error);
-        static void UpdateInitializedAndNoError(Il2CppClass *klass);
+        static void PublishInitialized(Il2CppClass* klass);
 
         static IL2CPP_FORCE_INLINE bool IsGenericClassAssignableFrom(const Il2CppClass* klass, const Il2CppClass* oklass, const Il2CppClass* implementingClass = il2cpp_defaults.missing_class)
         {

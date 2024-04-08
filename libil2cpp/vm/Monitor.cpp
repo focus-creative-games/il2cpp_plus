@@ -156,7 +156,12 @@ struct MonitorData : public il2cpp::utils::ThreadSafeFreeListNode
     void Unacquire()
     {
         IL2CPP_ASSERT(owningThreadId == il2cpp::os::Thread::CurrentThreadId());
-        owningThreadId = kCanBeAcquiredByOtherThread;
+        // Use `exchange` rather than `store` to ensure this is a read-modify-write
+        // operation and all threads observe modifications in the same order,
+        // i.e. changes within the `lock` block occur before the acquisition
+        // of the monitor by another thread.
+        // See: https://en.cppreference.com/w/cpp/atomic/memory_order
+        owningThreadId.exchange(kCanBeAcquiredByOtherThread);
     }
 
     /// Mark current thread as being blocked in Monitor.Enter(), i.e. as "ready to acquire monitor

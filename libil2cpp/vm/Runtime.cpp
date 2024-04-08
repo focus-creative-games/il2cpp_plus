@@ -482,6 +482,9 @@ namespace vm
         MetadataCache::Clear();
 #endif
 
+        // We need to do this before UninitializeGC because it uses (fixed) GC memory
+        Reflection::ClearStatics();
+
         // We need to do this after thread shut down because it is freeing GC fixed memory
         il2cpp::gc::GarbageCollector::UninitializeGC();
 
@@ -496,7 +499,6 @@ namespace vm
         os::Locale::UnInitialize();
         os::Uninitialize();
 
-        Reflection::ClearStatics();
 
 #if IL2CPP_ENABLE_RELOAD
         if (g_ClearMethodMetadataInitializedFlags != NULL)
@@ -1047,6 +1049,77 @@ namespace vm
     InvokerMethod Runtime::GetMissingMethodInvoker()
     {
         return MissingMethodInvoker;
+    }
+
+    static int32_t IndexFromIndicesArgs(Il2CppArray* array, void** args)
+    {
+        int32_t rank = array->klass->rank;
+        int32_t* indices = (int32_t*)alloca(sizeof(int32_t) * rank);
+        for (auto i = 0; i < rank; ++i)
+            indices[i] = *(int32_t*)args[i];
+        return ARRAY_LENGTH_AS_INT32(vm::Array::IndexFromIndices(array, indices));
+    }
+
+    static void SetInvokerMethod(Il2CppMethodPointer methodPtr, const MethodInfo* method, void* obj, void** args, void* returnAddress)
+    {
+        int32_t rank = method->klass->rank;
+        // Arrays are limited to 32 dimensions. Given this limit, we can use a stack allocated array to store the indices.
+        // https://learn.microsoft.com/en-us/dotnet/api/system.array
+        IL2CPP_ASSERT(rank <= 32);
+        IL2CPP_ASSERT(method->parameters_count == (rank + 1));
+
+        int32_t index = IndexFromIndicesArgs((Il2CppArray*)obj, args);
+        Il2CppClass* elementClass = method->klass->element_class;
+        void* value = args[rank];
+        if (Class::IsValuetype(elementClass))
+        {
+            // In the case of Nullable<T>, the 'value' is the Nullable<T> instance not T.
+            // This allows us to treat Nullable<T> as a normal value type for the purposes
+            // of array element setting.
+            int elementSize = vm::Class::GetArrayElementSize(elementClass);
+            il2cpp_array_setrefwithsize((Il2CppArray*)obj, elementSize, index, value);
+        }
+        else
+        {
+            il2cpp_array_setref((Il2CppArray*)obj, index, value);
+        }
+    }
+
+    InvokerMethod Runtime::GetArraySetInvoker()
+    {
+        return &SetInvokerMethod;
+    }
+
+    static void ArrayGetInvoker(Il2CppMethodPointer methodPtr, const MethodInfo* method, void* obj, void** args, void* returnAddress)
+    {
+        int32_t rank = method->klass->rank;
+        // Arrays are limited to 32 dimensions. Given this limit, we can use a stack allocated array to store the indices.
+        // https://learn.microsoft.com/en-us/dotnet/api/system.array
+        IL2CPP_ASSERT(rank <= 32);
+        IL2CPP_ASSERT(method->parameters_count == rank);
+
+
+        int32_t index = IndexFromIndicesArgs((Il2CppArray*)obj, args);
+        Il2CppClass* elementClass = method->klass->element_class;
+        void* addr = il2cpp_array_addr_with_size((Il2CppArray*)obj, vm::Class::GetArrayElementSize(elementClass), index);
+        if (Class::IsValuetype(elementClass))
+        {
+            // In the case of Nullable<T>, the 'value' is the Nullable<T> instance not T.
+            // This allows us to treat Nullable<T> as a normal value type for the purposes
+            // of array element setting.
+            int elementSize = vm::Class::GetArrayElementSize(elementClass);
+            memcpy(returnAddress, addr, elementSize);
+            gc::GarbageCollector::SetWriteBarrier((void**)returnAddress, elementSize);
+        }
+        else
+        {
+            gc::WriteBarrier::GenericStore((void**)returnAddress, *(void**)addr);
+        }
+    }
+
+    InvokerMethod Runtime::GetArrayGetInvoker()
+    {
+        return &ArrayGetInvoker;
     }
 
     void Runtime::AlwaysRaiseExecutionEngineException(const MethodInfo* method)

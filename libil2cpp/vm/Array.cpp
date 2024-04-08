@@ -271,6 +271,21 @@ namespace vm
     {
         return reinterpret_cast<char*>(array) + kIl2CppSizeOfArray;
     }
+
+    il2cpp_array_size_t Array::IndexFromIndices(Il2CppArray* thisPtr, int32_t const * indices)
+    {
+        int32_t i;
+        il2cpp_array_size_t pos;
+        Il2CppClass* ac;
+        ac = thisPtr->klass;
+
+        pos = indices[0] - thisPtr->bounds[0].lower_bound;
+        for (i = 1; i < ac->rank; i++)
+            pos = pos * thisPtr->bounds[i].length + indices[i] -
+                thisPtr->bounds[i].lower_bound;
+
+        return pos;
+    }
 } /* namespace vm */
 } /* namespace il2cpp */
 

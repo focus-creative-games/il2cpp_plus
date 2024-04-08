@@ -438,7 +438,7 @@ typedef struct Il2CppClass
     uint8_t packingSize;
 
     // this is critical for performance of Class::InitFromCodegen. Equals to initialized && !initializationExceptionGCHandle at all times.
-    // Use Class::UpdateInitializedAndNoError to update
+    // Use Class::PublishInitialized to update
     uint8_t initialized_and_no_error : 1;
 
     uint8_t initialized : 1;

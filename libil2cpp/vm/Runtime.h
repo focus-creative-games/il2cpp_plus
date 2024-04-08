@@ -73,6 +73,8 @@ namespace vm
         static void SetExitCode(int32_t value);
 
         static InvokerMethod GetMissingMethodInvoker();
+        static InvokerMethod GetArraySetInvoker();
+        static InvokerMethod GetArrayGetInvoker();
         static void RaiseAmbiguousImplementationException(const MethodInfo* method);
         static void RaiseExecutionEngineException(const MethodInfo* method, bool virtualCall);
         static void RaiseExecutionEngineException(const MethodInfo* method, const char* methodFullName, bool virtualCall);

@@ -344,9 +344,10 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #define IL2CPP_USE_GENERIC_SOCKET_BRIDGE !IL2CPP_TARGET_JAVASCRIPT
 #endif
 
-/* set by platforms that require special handling of SIGPIPE signalling during socket sends */
+/* Set by platforms that require special handling of SIGPIPE signalling during socket sends. */
+/* Is redefined by platform specific headers. Enabled for common Linux desktop platforms. */
 #ifndef IL2CPP_USE_SEND_NOSIGNAL
-    #define IL2CPP_USE_SEND_NOSIGNAL 0
+    #define IL2CPP_USE_SEND_NOSIGNAL IL2CPP_TARGET_LINUX
 #endif
 
 #ifndef IL2CPP_USE_GENERIC_ENVIRONMENT
