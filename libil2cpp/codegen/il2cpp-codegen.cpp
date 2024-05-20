@@ -6,10 +6,9 @@
 
 #include "utils/Exception.h"
 
-#if !RUNTIME_TINY
-
 #include "os/Atomic.h"
 #include "metadata/GenericMethod.h"
+#include "gc/GarbageCollector.h"
 #include "gc/WriteBarrier.h"
 #include "vm/Array.h"
 #include "vm/CCW.h"
@@ -35,6 +34,77 @@
 #include "vm/Type.h"
 #include "vm/WindowsRuntime.h"
 #include "vm-utils/VmThreadUtils.h"
+#include "utils/Runtime.h"
+
+#if IL2CPP_ENABLE_WRITE_BARRIERS
+void Il2CppCodeGenWriteBarrier(void** targetAddress, void* object)
+{
+    il2cpp::gc::GarbageCollector::SetWriteBarrier(targetAddress);
+}
+
+#endif
+
+// This function exists to help with generation of callstacks for exceptions
+// on iOS and MacOS x64 with clang 6.0 (newer versions of clang don't have this
+// problem on x64). There we call the backtrace function, which does not play nicely
+// with NORETURN, since the compiler eliminates the method prologue code setting up
+// the address of the return frame (which makes sense). So on iOS we need to make
+// the NORETURN define do nothing, then we use this dummy method which has the
+// attribute for clang on iOS defined to prevent clang compiler errors for
+// method that end by throwing a managed exception.
+REAL_NORETURN IL2CPP_NO_INLINE void il2cpp_codegen_no_return()
+{
+    IL2CPP_UNREACHABLE;
+}
+
+REAL_NORETURN void il2cpp_codegen_abort()
+{
+    il2cpp::utils::Runtime::Abort();
+    il2cpp_codegen_no_return();
+}
+
+#if IL2CPP_ENABLE_WRITE_BARRIERS
+void Il2CppCodeGenWriteBarrierForType(const Il2CppType* type, void** targetAddress, void* object)
+{
+#if IL2CPP_ENABLE_STRICT_WRITE_BARRIERS
+    if (il2cpp::vm::Type::IsPointerType(type))
+        return;
+
+    if (il2cpp::vm::Type::IsStruct(type))
+    {
+        Il2CppClass* klass = il2cpp::vm::Class::FromIl2CppType(type);
+
+        FieldInfo* field;
+        void* iter = NULL;
+        while ((field = il2cpp::vm::Class::GetFields(klass, &iter)))
+        {
+            if (il2cpp::vm::Field::GetFlags(field) & FIELD_ATTRIBUTE_STATIC)
+                continue;
+
+            void* fieldTargetAddress = il2cpp::vm::Field::GetInstanceFieldDataPointer((void*)targetAddress, field);
+            Il2CppCodeGenWriteBarrierForType(field->type, (void**)fieldTargetAddress, NULL);
+        }
+    }
+    else
+    {
+        il2cpp::gc::GarbageCollector::SetWriteBarrier(targetAddress);
+    }
+#else
+    il2cpp::gc::GarbageCollector::SetWriteBarrier(targetAddress);
+#endif
+}
+
+void Il2CppCodeGenWriteBarrierForClass(Il2CppClass* klass, void** targetAddress, void* object)
+{
+#if IL2CPP_ENABLE_STRICT_WRITE_BARRIERS
+    Il2CppCodeGenWriteBarrierForType(il2cpp::vm::Class::GetType(klass), targetAddress, object);
+#else
+    il2cpp::gc::GarbageCollector::SetWriteBarrier(targetAddress);
+#endif
+}
+
+#endif // IL2CPP_ENABLE_WRITE_BARRIERS
+
 
 void* il2cpp_codegen_atomic_compare_exchange_pointer(void** dest, void* exchange, void* comparand)
 {
@@ -368,10 +438,8 @@ void il2cpp_codegen_profiler_method_exit(const RuntimeMethod* method)
 NORETURN void il2cpp_codegen_raise_exception(Exception_t *ex, MethodInfo* lastManagedFrame)
 {
     RuntimeException* exc = (RuntimeException*)ex;
-#if !IL2CPP_TINY
     IL2CPP_OBJECT_SETREF_NULL(exc, trace_ips);
     IL2CPP_OBJECT_SETREF_NULL(exc, stack_trace);
-#endif
     il2cpp::vm::Exception::Raise(exc, lastManagedFrame);
 }
 
@@ -405,9 +473,15 @@ NORETURN void il2cpp_codegen_raise_index_out_of_range_exception()
     il2cpp::vm::Exception::RaiseIndexOutOfRangeException();
 }
 
-NORETURN void il2cpp_codegen_raise_overflow_exception(const RuntimeMethod* method)
+NORETURN void il2cpp_codegen_raise_index_out_of_range_exception(const RuntimeMethod* method)
 {
     IL2CPP_RAISE_MANAGED_EXCEPTION(il2cpp_codegen_get_overflow_exception(), method);
+}
+
+NORETURN void il2cpp_codegen_raise_invalid_unmanaged_callers_usage(const RuntimeMethod* method, const char* msg)
+{
+    std::string fullName = il2cpp::vm::Method::GetFullName(method);
+    IL2CPP_RAISE_MANAGED_EXCEPTION(il2cpp::vm::Exception::GetExecutionEngineException((fullName + ": " +  msg).c_str()), method);
 }
 
 Exception_t* il2cpp_codegen_get_argument_exception(const char* param, const char* msg)
@@ -1047,75 +1121,3 @@ bool il2cpp_codegen_is_unmanaged(const RuntimeMethod* method)
 {
     return !il2cpp_codegen_is_reference_or_contains_references(method);
 }
-
-#endif // !RUNTIME_TINY
-
-#if IL2CPP_TINY_DEBUGGER
-
-#include "vm/Image.h"
-#include "gc/WriteBarrier.h"
-
-MulticastDelegate_t* il2cpp_codegen_create_combined_delegate(Type_t* type, Il2CppArray* delegates, int delegateCount)
-{
-    Il2CppClass* klass = il2cpp::vm::Class::FromSystemType((Il2CppReflectionType*)type);
-    Il2CppMulticastDelegate* result = reinterpret_cast<Il2CppMulticastDelegate*>(il2cpp_codegen_object_new(klass));
-    il2cpp::gc::WriteBarrier::GenericStore(&result->delegates, delegates);
-    il2cpp::gc::WriteBarrier::GenericStore(&result->delegate.m_target, (Il2CppObject*)result);
-    result->delegateCount = delegateCount;
-    result->delegate.invoke_impl = il2cpp_array_get(delegates, Il2CppDelegate*, 0)->multicast_invoke_impl;
-    result->delegate.multicast_invoke_impl = result->delegate.invoke_impl;
-    return reinterpret_cast<MulticastDelegate_t*>(result);
-}
-
-Type_t* il2cpp_codegen_get_type(Il2CppObject* obj)
-{
-    return (Type_t*)il2cpp::vm::Reflection::GetTypeObject(&obj->klass->byval_arg);
-}
-
-Type_t* il2cpp_codegen_get_base_type(const Type_t* t)
-{
-    Il2CppClass* klass = il2cpp::vm::Class::FromSystemType((Il2CppReflectionType*)t);
-    if (klass->parent == NULL)
-        return NULL;
-    return (Type_t*)il2cpp::vm::Reflection::GetTypeObject(&klass->parent->byval_arg);
-}
-
-bool il2cpp_codegen_is_assignable_from(Type_t* left, Type_t* right)
-{
-    return il2cpp::vm::Class::IsAssignableFrom((Il2CppReflectionType*)left, (Il2CppReflectionType*)right);
-}
-
-void il2cpp_codegen_no_reverse_pinvoke_wrapper(const char* methodName, const char* reason)
-{
-    std::string message = "No reverse pinvoke wrapper exists for method: '";
-    message += methodName;
-    message += "' because ";
-    message += reason;
-    il2cpp_codegen_raise_exception(il2cpp_codegen_get_invalid_operation_exception(message.c_str()));
-}
-
-bool il2cpp_codegen_type_is_interface(Type_t* t)
-{
-    Il2CppClass* klass = il2cpp::vm::Class::FromSystemType((Il2CppReflectionType*)t);
-    return il2cpp::vm::Class::IsInterface(klass);
-}
-
-bool il2cpp_codegen_type_is_abstract(Type_t* t)
-{
-    Il2CppClass* klass = il2cpp::vm::Class::FromSystemType((Il2CppReflectionType*)t);
-    return il2cpp::vm::Class::IsAbstract(klass);
-}
-
-bool il2cpp_codegen_type_is_pointer(Type_t* t)
-{
-    Il2CppClass* klass = il2cpp::vm::Class::FromSystemType((Il2CppReflectionType*)t);
-    return il2cpp::vm::Class::GetType(klass)->type == IL2CPP_TYPE_PTR;
-}
-
-NORETURN void il2cpp_codegen_raise_exception(const char* message)
-{
-    il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::FromNameMsg(il2cpp::vm::Image::GetCorlib(), "System", "Exception", message));
-    IL2CPP_UNREACHABLE;
-}
-
-#endif

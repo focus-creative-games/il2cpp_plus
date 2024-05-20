@@ -413,10 +413,16 @@ namespace os
 
     void SocketImpl::Startup()
     {
+#if IL2CPP_TARGET_SWITCH
+        Switch::NetworkInterface::Get().TryInitialize();
+#endif
     }
 
     void SocketImpl::Cleanup()
     {
+#if IL2CPP_TARGET_SWITCH
+        Switch::NetworkInterface::Get().Finalize();
+#endif
     }
 
 #if IL2CPP_SUPPORT_IPV6

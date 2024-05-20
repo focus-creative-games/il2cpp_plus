@@ -1,7 +1,5 @@
 #include "os/c-api/il2cpp-config-platforms.h"
 
-#if !RUNTIME_TINY
-
 #include "os/Path.h"
 #include "utils/PathUtils.h"
 #include "Allocator.h"
@@ -21,5 +19,3 @@ extern "C"
         return il2cpp::os::Path::IsAbsolute(path_string);
     }
 }
-
-#endif

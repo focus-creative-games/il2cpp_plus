@@ -1,5 +1,5 @@
 #include "os/c-api/il2cpp-config-platforms.h"
-#if IL2CPP_THREADS_PTHREAD && !RUNTIME_TINY
+#if IL2CPP_THREADS_PTHREAD
 
 #include "os/Posix/MutexImpl.h"
 #include "ConditionVariableImpl.h"

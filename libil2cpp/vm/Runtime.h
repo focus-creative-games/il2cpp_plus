@@ -79,10 +79,6 @@ namespace vm
         static void RaiseExecutionEngineException(const MethodInfo* method, bool virtualCall);
         static void RaiseExecutionEngineException(const MethodInfo* method, const char* methodFullName, bool virtualCall);
 
-#if IL2CPP_TINY
-        static void FailFast(const std::string& message);
-#endif
-
     private:
         static void CallUnhandledExceptionDelegate(Il2CppDomain* domain, Il2CppDelegate* delegate, Il2CppException* exc);
         static Il2CppObject* CreateUnhandledExceptionEventArgs(Il2CppException* exc);

@@ -30,11 +30,9 @@ using il2cpp::vm::Profiler;
 static void on_heap_resize(GC_word newSize);
 #endif
 
-#if !RUNTIME_TINY
 static GC_push_other_roots_proc default_push_other_roots;
 typedef Il2CppHashMap<char*, char*, il2cpp::utils::PassThroughHash<char*> > RootMap;
 static RootMap s_Roots;
-
 static void push_other_roots(void);
 
 typedef struct ephemeron_node ephemeron_node;
@@ -45,6 +43,11 @@ clear_ephemerons(void);
 
 static GC_ms_entry*
 push_ephemerons(GC_ms_entry* mark_stack_ptr, GC_ms_entry* mark_stack_limit);
+
+static unsigned push_roots_proc_index;
+
+static GC_ms_entry*
+push_roots(GC_word* addr, GC_ms_entry* mark_stack_ptr, GC_ms_entry* mark_stack_limit, GC_word env);
 
 #if !IL2CPP_ENABLE_WRITE_BARRIER_VALIDATION
 #define ELEMENT_CHUNK_SIZE 256
@@ -95,8 +98,6 @@ GC_ms_entry* GC_gcj_vector_proc(GC_word* addr, GC_ms_entry* mark_stack_ptr,
 
 #endif // !IL2CPP_ENABLE_WRITE_BARRIER_VALIDATION
 
-#endif // !RUNTIME_TINY
-
 void
 il2cpp::gc::GarbageCollector::Initialize()
 {
@@ -123,11 +124,10 @@ il2cpp::gc::GarbageCollector::Initialize()
 #endif
 #endif
 
-#if !RUNTIME_TINY
+    push_roots_proc_index = GC_new_proc(push_roots);
     default_push_other_roots = GC_get_push_other_roots();
     GC_set_push_other_roots(push_other_roots);
     GC_set_mark_stack_empty(push_ephemerons);
-#endif // !RUNTIME_TINY
 
     GC_set_on_collection_event(&on_gc_event);
 #if IL2CPP_ENABLE_PROFILER
@@ -135,11 +135,12 @@ il2cpp::gc::GarbageCollector::Initialize()
 #endif
 
     GC_INIT();
-#if defined(GC_THREADS)
+    // Always manually trigger finalizers. This is done by the notifier callback registered
+    // below on the majority of platforms. On the Web platform we trigger finalizers if needed
+    // in CollectALittle which is called at top of each frame.
     GC_set_finalize_on_demand(1);
-#if !RUNTIME_TINY
+#if defined(GC_THREADS)
     GC_set_finalizer_notifier(&il2cpp::gc::GarbageCollector::NotifyFinalizers);
-#endif
     // We need to call this if we want to manually register threads, i.e. GC_register_my_thread
     #if !IL2CPP_TARGET_JAVASCRIPT
     GC_allow_register_threads();
@@ -149,7 +150,7 @@ il2cpp::gc::GarbageCollector::Initialize()
     GC_init_gcj_malloc(0, NULL);
 #endif
 
-#if !RUNTIME_TINY && !IL2CPP_ENABLE_WRITE_BARRIER_VALIDATION
+#if !IL2CPP_ENABLE_WRITE_BARRIER_VALIDATION
     GC_init_gcj_vector(VECTOR_PROC_INDEX, (void*)GC_gcj_vector_proc);
 #endif
     s_GCInitialized = true;
@@ -194,16 +195,28 @@ int32_t
 il2cpp::gc::GarbageCollector::CollectALittle()
 {
 #if IL2CPP_ENABLE_DEFERRED_GC
+    // This should only be called from Unity at the top of stack
+    // with the GC enabled.
+
+    IL2CPP_ASSERT(!GC_is_disabled());
+    int32_t ret = 0;
     if (s_PendingGC)
     {
         s_PendingGC = false;
         GC_gcollect();
-        return 0; // no more work to do
+        ret = 0; // no more work to do
     }
     else
     {
-        return GC_collect_a_little();
+        ret = GC_collect_a_little();
     }
+
+    // Disable the GC to run finalizers, as they may allocate and interact with managed memory.
+    GC_disable();
+    // this checks and only runs finalizers if there is work to do
+    GarbageCollector::WaitForPendingFinalizers();
+    GC_enable();
+    return ret;
 #else
     return GC_collect_a_little();
 #endif
@@ -255,6 +268,7 @@ il2cpp::gc::GarbageCollector::IsDisabled()
 }
 
 static baselib::ReentrantLock s_GCSetModeLock;
+static Il2CppGCMode s_CurrentGCMode = IL2CPP_GC_MODE_ENABLED;
 
 void
 il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
@@ -263,22 +277,24 @@ il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
     switch (mode)
     {
         case IL2CPP_GC_MODE_ENABLED:
-            if (GC_is_disabled())
+            if (s_CurrentGCMode == IL2CPP_GC_MODE_DISABLED)
                 GC_enable();
             GC_set_disable_automatic_collection(false);
             break;
 
         case IL2CPP_GC_MODE_DISABLED:
-            if (!GC_is_disabled())
+            if (s_CurrentGCMode != IL2CPP_GC_MODE_DISABLED)
                 GC_disable();
             break;
 
         case IL2CPP_GC_MODE_MANUAL:
-            if (GC_is_disabled())
+            if (s_CurrentGCMode == IL2CPP_GC_MODE_DISABLED)
                 GC_enable();
             GC_set_disable_automatic_collection(true);
             break;
     }
+
+    s_CurrentGCMode = mode;
 }
 
 void
@@ -408,25 +424,6 @@ void il2cpp::gc::GarbageCollector::StartWorld()
     GC_start_world_external();
 }
 
-#if RUNTIME_TINY
-void*
-il2cpp::gc::GarbageCollector::Allocate(size_t size)
-{
-    return GC_MALLOC(size);
-}
-
-void*
-il2cpp::gc::GarbageCollector::AllocateObject(size_t size, void* type)
-{
-#if IL2CPP_ENABLE_WRITE_BARRIER_VALIDATION
-    return GC_gcj_malloc(size, type);
-#else
-    return GC_MALLOC(size);
-#endif
-}
-
-#endif
-
 void*
 il2cpp::gc::GarbageCollector::AllocateFixed(size_t size, void *descr)
 {
@@ -450,15 +447,10 @@ il2cpp::gc::GarbageCollector::FreeFixed(void* addr)
     GC_FREE(addr);
 }
 
-#if !RUNTIME_TINY
 int32_t
 il2cpp::gc::GarbageCollector::InvokeFinalizers()
 {
-#if IL2CPP_TINY
-    return 0; // The Tiny profile does not have finalizers
-#else
     return (int32_t)GC_invoke_finalizers();
-#endif
 }
 
 bool
@@ -466,8 +458,6 @@ il2cpp::gc::GarbageCollector::HasPendingFinalizers()
 {
     return GC_should_invoke_finalizers() != 0;
 }
-
-#endif
 
 int64_t
 il2cpp::gc::GarbageCollector::GetMaxTimeSliceNs()
@@ -489,12 +479,10 @@ il2cpp::gc::GarbageCollector::IsIncremental()
 
 void on_gc_event(GC_EventType eventType)
 {
-#if !RUNTIME_TINY
     if (eventType == GC_EVENT_RECLAIM_START)
     {
         clear_ephemerons();
     }
-#endif
 #if IL2CPP_ENABLE_PROFILER
     Profiler::GCEvent((Il2CppGCEvent)eventType);
 #endif
@@ -509,14 +497,35 @@ void on_heap_resize(GC_word newSize)
 
 #endif // IL2CPP_ENABLE_PROFILER
 
+typedef struct
+{
+    void* user_data;
+    il2cpp::gc::GarbageCollector::HeapSectionCallback callback;
+} HeapSectionExecutionContext;
+
+static void HeapSectionAdaptor(void* userData, GC_PTR chunk_start, GC_PTR chunk_end, GC_heap_section_type type)
+{
+    HeapSectionExecutionContext* ctx = (HeapSectionExecutionContext*)userData;
+    ctx->callback(ctx->user_data, chunk_start, chunk_end);
+}
+
 void il2cpp::gc::GarbageCollector::ForEachHeapSection(void* user_data, HeapSectionCallback callback)
 {
-    GC_foreach_heap_section(user_data, callback);
+    HeapSectionExecutionContext ctx {user_data, callback};
+    GC_foreach_heap_section(&ctx, HeapSectionAdaptor);
+}
+
+static void HeapSectionCountIncrementer(void* userData, GC_PTR start, GC_PTR end, GC_heap_section_type type)
+{
+    size_t* countPtr = (size_t*)userData;
+    (*countPtr)++;
 }
 
 size_t il2cpp::gc::GarbageCollector::GetSectionCount()
 {
-    return GC_get_heap_section_count();
+    size_t counter = 0;
+    GC_foreach_heap_section(&counter, HeapSectionCountIncrementer);
+    return counter;
 }
 
 void* il2cpp::gc::GarbageCollector::CallWithAllocLockHeld(GCCallWithAllocLockCallback callback, void* user_data)
@@ -530,7 +539,6 @@ typedef struct
     char *end;
 } RootData;
 
-#if !RUNTIME_TINY
 
 static void*
 register_root(void* arg)
@@ -561,11 +569,47 @@ void il2cpp::gc::GarbageCollector::UnregisterRoot(char* start)
     GC_call_with_alloc_lock(deregister_root, start);
 }
 
+static GC_ms_entry*
+push_roots(GC_word* addr, GC_ms_entry* mark_stack_ptr, GC_ms_entry* mark_stack_limit, GC_word env)
+{
+    auto size = s_Roots.size();
+
+    GC_word capacity = (GC_word)(mark_stack_limit - mark_stack_ptr) - 1;
+    GC_word start_index = (GC_word)(intptr_t)addr;
+    GC_word remaining = size - start_index;
+    GC_word skip = start_index;
+
+    /* if we have more items than capacity, push remaining immediately. This allows pushed
+     * items to be processed on top of stack before we process remainder. If we push remainder
+     * at top, we have no mark stack space.
+     */
+    if (remaining > capacity)
+    {
+        capacity--;
+        mark_stack_ptr = GC_custom_push_proc(GC_MAKE_PROC(push_roots_proc_index, (start_index + capacity)), (void*)(start_index + capacity), mark_stack_ptr, mark_stack_limit);
+    }
+
+    for (RootMap::const_iterator iter = s_Roots.begin(); iter != s_Roots.end() && capacity > 0; ++iter)
+    {
+        if (skip)
+        {
+            skip--;
+            continue;
+        }
+
+        mark_stack_ptr = GC_custom_push_range(iter->first, iter->second, mark_stack_ptr, mark_stack_limit);
+
+        capacity--;
+    }
+    return mark_stack_ptr;
+}
+
 static void
 push_other_roots(void)
 {
-    for (RootMap::iterator iter = s_Roots.begin(); iter != s_Roots.end(); ++iter)
-        GC_push_all(iter->first, iter->second);
+    if (push_roots_proc_index)
+        GC_push_proc(GC_MAKE_PROC(push_roots_proc_index, 0), NULL);
+
     GC_push_all(&ephemeron_list, &ephemeron_list + 1);
     if (default_push_other_roots)
         default_push_other_roots();
@@ -697,7 +741,5 @@ bool il2cpp::gc::GarbageCollector::EphemeronArrayAdd(Il2CppObject* obj)
     GC_call_with_alloc_lock(ephemeron_array_add, item);
     return true;
 }
-
-#endif // !RUNTIME_TINY
 
 #endif

@@ -44,6 +44,7 @@ namespace vm
         static Il2CppReflectionAssembly* GetAssemblyObject(const Il2CppAssembly *assembly);
         static Il2CppReflectionAssemblyName* GetAssemblyNameObject(const Il2CppAssemblyName *assemblyName);
         static Il2CppReflectionField* GetFieldObject(Il2CppClass *klass, FieldInfo *field);
+        static const FieldInfo* GetField(const Il2CppReflectionField* field);
         static Il2CppReflectionProperty* GetPropertyObject(Il2CppClass *klass, const PropertyInfo *property);
         static Il2CppReflectionEvent* GetEventObject(Il2CppClass *klass, const EventInfo *event);
         static Il2CppReflectionMethod* GetMethodObject(const MethodInfo *method, Il2CppClass *refclass);

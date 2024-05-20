@@ -27,22 +27,19 @@ typedef struct Il2CppCodeGenModule Il2CppCodeGenModule;
 typedef struct Il2CppMetadataRegistration Il2CppMetadataRegistration;
 typedef struct Il2CppCodeRegistration Il2CppCodeRegistration;
 
-#if RUNTIME_TINY
-typedef Il2CppMethodPointer VirtualInvokeData;
-#else
 typedef struct VirtualInvokeData
 {
     Il2CppMethodPointer methodPtr;
     const MethodInfo* method;
 } VirtualInvokeData;
-#endif
 
 typedef enum Il2CppTypeNameFormat
 {
     IL2CPP_TYPE_NAME_FORMAT_IL,
     IL2CPP_TYPE_NAME_FORMAT_REFLECTION,
     IL2CPP_TYPE_NAME_FORMAT_FULL_NAME,
-    IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED
+    IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED,
+    IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED
 } Il2CppTypeNameFormat;
 
 
@@ -352,6 +349,7 @@ typedef struct MethodInfo
     uint8_t is_inflated : 1; /* true if declaring_type is a generic instance or if method is a generic instance*/
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t has_full_generic_sharing_signature : 1;
+    uint8_t is_unmanaged_callers_only : 1;
 } MethodInfo;
 
 typedef struct Il2CppRuntimeInterfaceOffsetPair
@@ -403,7 +401,7 @@ typedef struct Il2CppClass
 
     void *unity_user_data;
 
-    uint32_t initializationExceptionGCHandle;
+    Il2CppGCHandle initializationExceptionGCHandle;
 
     uint32_t cctor_started;
     uint32_t cctor_finished_or_no_cctor;

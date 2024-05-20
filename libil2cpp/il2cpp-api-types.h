@@ -22,6 +22,7 @@ typedef struct Il2CppImage Il2CppImage;
 typedef struct Il2CppException Il2CppException;
 typedef struct Il2CppProfiler Il2CppProfiler;
 typedef struct Il2CppObject Il2CppObject;
+typedef struct Il2CppReflectionField Il2CppReflectionField;
 typedef struct Il2CppReflectionMethod Il2CppReflectionMethod;
 typedef struct Il2CppReflectionType Il2CppReflectionType;
 typedef struct Il2CppString Il2CppString;
@@ -191,5 +192,7 @@ struct Il2CppManagedMemorySnapshot;
 
 typedef uintptr_t il2cpp_array_size_t;
 #define ARRAY_LENGTH_AS_INT32(a) ((int32_t)a)
+
+typedef void* Il2CppGCHandle;
 
 typedef uint8_t (*Il2CppAndroidUpStateFunc)(const char* ifName, uint8_t* is_up);

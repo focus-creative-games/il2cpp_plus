@@ -1,5 +1,5 @@
 #include "os/c-api/il2cpp-config-platforms.h"
-#if IL2CPP_THREADS_WIN32 && !RUNTIME_TINY
+#if IL2CPP_THREADS_WIN32
 
 #include "WindowsHeaders.h"
 #include "os/Win32/MutexImpl.h"

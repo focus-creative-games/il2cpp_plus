@@ -617,6 +617,7 @@ static const Il2CppGenericInst* GetSharedInst(const Il2CppGenericInst* inst)
                             type = &il2cpp_defaults.byte_shared_enum->byval_arg;
                             break;
                         case IL2CPP_TYPE_U2:
+                        case IL2CPP_TYPE_CHAR:
                             type = &il2cpp_defaults.uint16_shared_enum->byval_arg;
                             break;
                         case IL2CPP_TYPE_U4:
@@ -624,6 +625,9 @@ static const Il2CppGenericInst* GetSharedInst(const Il2CppGenericInst* inst)
                             break;
                         case IL2CPP_TYPE_U8:
                             type = &il2cpp_defaults.uint64_shared_enum->byval_arg;
+                            break;
+                        case IL2CPP_TYPE_I:
+                        case IL2CPP_TYPE_U:
                             break;
                         default:
                             IL2CPP_ASSERT(0 && "Invalid enum underlying type");
@@ -650,7 +654,7 @@ static const Il2CppGenericInst* GetSharedInst(const Il2CppGenericInst* inst)
 
 static il2cpp::vm::Il2CppGenericMethodPointers MakeGenericMethodPointers(const Il2CppGenericMethodIndices* methodIndicies, bool isFullyShared)
 {
-    IL2CPP_ASSERT(methodIndicies->methodIndex >= 0 && methodIndicies->invokerIndex >= 0);
+    IL2CPP_ASSERT(methodIndicies->methodIndex >= 0 && (methodIndicies->invokerIndex >= 0 || methodIndicies->invokerIndex == kMethodIndexInvalid));
     if (static_cast<uint32_t>(methodIndicies->methodIndex) < s_Il2CppCodeRegistration->genericMethodPointersCount && static_cast<uint32_t>(methodIndicies->invokerIndex) < s_Il2CppCodeRegistration->invokerPointersCount)
     {
         Il2CppMethodPointer virtualMethod;
@@ -664,7 +668,14 @@ static il2cpp::vm::Il2CppGenericMethodPointers MakeGenericMethodPointers(const I
         {
             virtualMethod = method;
         }
-        return { method, virtualMethod, s_Il2CppCodeRegistration->invokerPointers[methodIndicies->invokerIndex], isFullyShared };
+
+        InvokerMethod invokerMethod;
+        if (methodIndicies->invokerIndex == kMethodIndexInvalid)
+            invokerMethod = il2cpp::vm::Runtime::GetMissingMethodInvoker();
+        else
+            invokerMethod = s_Il2CppCodeRegistration->invokerPointers[methodIndicies->invokerIndex];
+
+        return { method, virtualMethod, invokerMethod, isFullyShared };
     }
     return { NULL, NULL, NULL, false };
 }
@@ -768,7 +779,7 @@ InvokerMethod il2cpp::vm::MetadataCache::GetMethodInvoker(const Il2CppImage* ima
 
     int32_t index = image->codeGenModule->invokerIndices[rid - 1];
 
-    if (index == kMethodIndexInvalid)
+    if (index == (uint32_t)kMethodIndexInvalid)
         return Runtime::GetMissingMethodInvoker();
 
     IL2CPP_ASSERT(index >= 0 && static_cast<uint32_t>(index) < s_Il2CppCodeRegistration->invokerPointersCount);
@@ -894,7 +905,7 @@ static const Il2CppType* GetReducedType(const Il2CppType* type)
         case IL2CPP_TYPE_SZARRAY:
             return &il2cpp_defaults.object_class->byval_arg;
         case IL2CPP_TYPE_GENERICINST:
-            if (il2cpp::vm::Type::GenericInstIsValuetype(type))
+            if (il2cpp::vm::Type::IsValueType(type))
             {
                 // We can't inflate a generic instance that contains generic arguments
                 if (il2cpp::metadata::GenericMetadata::ContainsGenericParameters(type))

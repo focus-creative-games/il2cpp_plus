@@ -1,8 +1,6 @@
 #include "il2cpp-config.h"
 #include "os/c-api/il2cpp-config-platforms.h"
 
-#if !RUNTIME_TINY
-
 #include "os/Locale.h"
 #include "Allocator.h"
 
@@ -20,5 +18,3 @@ extern "C"
         return Allocator::CopyToAllocatedStringBuffer(il2cpp::os::Locale::GetLocale());
     }
 }
-
-#endif

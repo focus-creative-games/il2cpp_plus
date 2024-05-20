@@ -1,6 +1,6 @@
 #pragma once
 
-#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_PTHREAD && !RUNTIME_TINY
+#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_PTHREAD
 
 #include <pthread.h>
 #include <vector>
@@ -40,6 +40,10 @@ namespace os
 
         ThreadImpl();
         ~ThreadImpl();
+
+        static void AllocateStaticData();
+        static void FreeStaticData();
+
 
         uint64_t Id();
         ErrorCode Run(Thread::StartFunc func, void* arg, int64_t affinityMask);

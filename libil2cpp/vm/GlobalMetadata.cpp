@@ -1045,6 +1045,8 @@ Il2CppMetadataFieldInfo il2cpp::vm::GlobalMetadata::GetFieldInfo(const Il2CppCla
 
 Il2CppMetadataMethodInfo il2cpp::vm::GlobalMetadata::GetMethodInfo(const Il2CppClass* klass, TypeMethodIndex index)
 {
+    const uint16_t kFlagIsUnmanagedCallersOnly = 0xF000;
+
     const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(typeDefinition != NULL);
@@ -1059,9 +1061,10 @@ Il2CppMetadataMethodInfo il2cpp::vm::GlobalMetadata::GetMethodInfo(const Il2CppC
             GetIl2CppTypeFromIndex(methodDefinition->returnType),
             methodDefinition->token,
             methodDefinition->flags,
-            methodDefinition->iflags,
+            (uint16_t)(methodDefinition->iflags & ~kFlagIsUnmanagedCallersOnly),
             methodDefinition->slot,
             methodDefinition->parameterCount,
+            (bool)(methodDefinition->iflags & kFlagIsUnmanagedCallersOnly),
     };
 }
 

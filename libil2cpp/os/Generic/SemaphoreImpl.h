@@ -1,6 +1,6 @@
 #pragma once
 
-#if (IL2CPP_THREADS_PTHREAD || IL2CPP_THREADS_WIN32) && !RUNTIME_TINY
+#if (IL2CPP_THREADS_PTHREAD || IL2CPP_THREADS_WIN32)
 
 #include "os/Generic/WaitObject.h"
 #include "os/ErrorCodes.h"

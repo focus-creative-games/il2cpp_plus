@@ -45,6 +45,8 @@ namespace vm
 
             case IL2CPP_TYPE_U8:
             case IL2CPP_TYPE_I8:
+            case IL2CPP_TYPE_U:
+            case IL2CPP_TYPE_I:
                 return utils::Read64(ptr);
 
             default:

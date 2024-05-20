@@ -6,8 +6,6 @@
 
 extern "C"
 {
-#if !RUNTIME_TINY
-
     char* UnityPalGetOsUserName()
     {
         return Allocator::CopyToAllocatedStringBuffer(il2cpp::os::Environment::GetOsUserName());
@@ -36,8 +34,6 @@ extern "C"
             return NULL;
         return Allocator::CopyToAllocatedStringBuffer(home_directory);
     }
-
-#endif
 
     int32_t UnityPalGetProcessorCount()
     {

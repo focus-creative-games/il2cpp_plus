@@ -106,8 +106,10 @@ DO_API(void, il2cpp_native_stack_trace, (const Il2CppException * ex, uintptr_t**
 
 // field
 DO_API(int, il2cpp_field_get_flags, (FieldInfo * field));
+DO_API(const FieldInfo*, il2cpp_field_get_from_reflection, (const Il2CppReflectionField * field));
 DO_API(const char*, il2cpp_field_get_name, (FieldInfo * field));
 DO_API(Il2CppClass*, il2cpp_field_get_parent, (FieldInfo * field));
+DO_API(Il2CppReflectionField*, il2cpp_field_get_object, (FieldInfo * field, Il2CppClass * refclass));
 DO_API(size_t, il2cpp_field_get_offset, (FieldInfo * field));
 DO_API(const Il2CppType*, il2cpp_field_get_type, (FieldInfo * field));
 DO_API(void, il2cpp_field_get_value, (Il2CppObject * obj, FieldInfo * field, void *value));
@@ -141,10 +143,10 @@ DO_API(void, il2cpp_start_gc_world, ());
 DO_API(void*, il2cpp_gc_alloc_fixed, (size_t size));
 DO_API(void, il2cpp_gc_free_fixed, (void* address));
 // gchandle
-DO_API(uint32_t, il2cpp_gchandle_new, (Il2CppObject * obj, bool pinned));
-DO_API(uint32_t, il2cpp_gchandle_new_weakref, (Il2CppObject * obj, bool track_resurrection));
-DO_API(Il2CppObject*, il2cpp_gchandle_get_target , (uint32_t gchandle));
-DO_API(void, il2cpp_gchandle_free, (uint32_t gchandle));
+DO_API(Il2CppGCHandle, il2cpp_gchandle_new, (Il2CppObject * obj, bool pinned));
+DO_API(Il2CppGCHandle, il2cpp_gchandle_new_weakref, (Il2CppObject * obj, bool track_resurrection));
+DO_API(Il2CppObject*, il2cpp_gchandle_get_target , (Il2CppGCHandle gchandle));
+DO_API(void, il2cpp_gchandle_free, (Il2CppGCHandle gchandle));
 DO_API(void , il2cpp_gchandle_foreach_get_target, (void(*func)(void* data, void* userData), void* userData));
 
 // vm runtime info
@@ -241,7 +243,6 @@ DO_API(Il2CppThread*, il2cpp_thread_current, ());
 DO_API(Il2CppThread*, il2cpp_thread_attach, (Il2CppDomain * domain));
 DO_API(void, il2cpp_thread_detach, (Il2CppThread * thread));
 
-DO_API(Il2CppThread**, il2cpp_thread_get_all_attached_threads, (size_t * size));
 DO_API(bool, il2cpp_is_vm_thread, (Il2CppThread * thread));
 
 // stacktrace

@@ -53,7 +53,7 @@ using namespace il2cpp::gc;
 #if IL2CPP_API_DYNAMIC_NO_DLSYM
 #include <map>
 
-struct SymbolCompare : public std::binary_function<char*, char*, bool>
+struct SymbolCompare
 {
     bool operator()(const char* lhs, const char* rhs) const
     {
@@ -72,10 +72,8 @@ static void RegisterAPIFunction(const char* name, void* symbol)
 void il2cpp_api_register_symbols(void)
 {
     #define DO_API(r, n, p) RegisterAPIFunction(#n, (void*)n);
-    #define DO_API_NO_RETURN(r, n, p) DO_API(r, n, p)
     #include "il2cpp-api-functions.h"
     #undef DO_API
-    #undef DO_API_NO_RETURN
 }
 
 void* il2cpp_api_lookup_symbol(const char* name)
@@ -588,7 +586,7 @@ void il2cpp_unhandled_exception(Il2CppException* exc)
 
 void il2cpp_native_stack_trace(const Il2CppException * ex, uintptr_t** addresses, int* numFrames, char** imageUUID, char** imageName)
 {
-#if IL2CPP_ENABLE_NATIVE_INSTRUCTION_POINTER_EMISSION && !IL2CPP_TINY
+#if IL2CPP_ENABLE_NATIVE_INSTRUCTION_POINTER_EMISSION
     if (ex == NULL || ex->native_trace_ips == NULL)
     {
         *numFrames = 0;
@@ -633,9 +631,19 @@ int il2cpp_field_get_flags(FieldInfo *field)
     return Field::GetFlags(field);
 }
 
+const FieldInfo* il2cpp_field_get_from_reflection(const Il2CppReflectionField * field)
+{
+    return Reflection::GetField(field);
+}
+
 Il2CppClass* il2cpp_field_get_parent(FieldInfo *field)
 {
     return Field::GetParent(field);
+}
+
+Il2CppReflectionField* il2cpp_field_get_object(FieldInfo *field, Il2CppClass *refclass)
+{
+    return Reflection::GetFieldObject(refclass, field);
 }
 
 size_t il2cpp_field_get_offset(FieldInfo *field)
@@ -779,18 +787,18 @@ void il2cpp_gc_free_fixed(void* address)
 
 // gchandle
 
-uint32_t il2cpp_gchandle_new(Il2CppObject *obj, bool pinned)
+Il2CppGCHandle il2cpp_gchandle_new(Il2CppObject *obj, bool pinned)
 {
     return GCHandle::New(obj, pinned);
 }
 
-uint32_t il2cpp_gchandle_new_weakref(Il2CppObject *obj, bool track_resurrection)
+Il2CppGCHandle il2cpp_gchandle_new_weakref(Il2CppObject *obj, bool track_resurrection)
 {
     // Note that the call to Get will assert if an error occurred.
     return GCHandle::NewWeakref(obj, track_resurrection).Get();
 }
 
-Il2CppObject* il2cpp_gchandle_get_target(uint32_t gchandle)
+Il2CppObject* il2cpp_gchandle_get_target(Il2CppGCHandle gchandle)
 {
     return GCHandle::GetTarget(gchandle);
 }
@@ -831,7 +839,7 @@ void il2cpp_gc_set_external_wbarrier_tracker(void(*func)(void**))
 #endif
 }
 
-void il2cpp_gchandle_free(uint32_t gchandle)
+void il2cpp_gchandle_free(Il2CppGCHandle gchandle)
 {
     GCHandle::Free(gchandle);
 }
@@ -1207,11 +1215,6 @@ void il2cpp_thread_detach(Il2CppThread *thread)
     Thread::Detach(thread);
 }
 
-Il2CppThread **il2cpp_thread_get_all_attached_threads(size_t *size)
-{
-    return Thread::GetAllAttachedThreads(*size);
-}
-
 bool il2cpp_is_vm_thread(Il2CppThread *thread)
 {
     return Thread::IsVmThread(thread);
@@ -1310,7 +1313,7 @@ char* il2cpp_type_get_assembly_qualified_name(const Il2CppType * type)
 
 char* il2cpp_type_get_reflection_name(const Il2CppType *type)
 {
-    std::string name = Type::GetName(type, IL2CPP_TYPE_NAME_FORMAT_REFLECTION);
+    std::string name = Type::GetName(type, IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED);
     char* buffer = static_cast<char*>(il2cpp_alloc(name.length() + 1));
     memcpy(buffer, name.c_str(), name.length() + 1);
 

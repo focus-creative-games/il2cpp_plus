@@ -44,7 +44,6 @@ namespace os
         return count;
     }
 
-#if !RUNTIME_TINY
     std::string Environment::GetMachineName()
     {
         const int n = 512;
@@ -148,14 +147,11 @@ namespace os
         exit(result);
     }
 
-#endif // !RUNTIME_TINY
-
     NORETURN void Environment::Abort()
     {
         abort();
     }
 
-#if !RUNTIME_TINY
     utils::Expected<std::string> Environment::GetWindowsFolderPath(int folder)
     {
         // This should only be called on Windows.
@@ -173,8 +169,6 @@ namespace os
 
         return false;
     }
-
-#endif // !RUNTIME_TINY
 }
 }
 #endif

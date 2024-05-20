@@ -89,6 +89,9 @@ namespace utils
     class Debugger
     {
     public:
+        static void AllocateStaticData();
+        static void FreeStaticData();
+
         static void RegisterMetadata(const Il2CppDebuggerMetadataRegistration *data);
         static void SetAgentOptions(const char* options);
         static void RegisterTransport(const Il2CppDebuggerTransport* transport);

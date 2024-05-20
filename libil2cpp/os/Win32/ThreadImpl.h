@@ -1,6 +1,6 @@
 #pragma once
 
-#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_WIN32 && !RUNTIME_TINY
+#if !IL2CPP_THREADS_STD && IL2CPP_THREADS_WIN32
 
 #include "os/ErrorCodes.h"
 #include "os/Thread.h"
@@ -24,6 +24,9 @@ namespace os
     public:
         ThreadImpl();
         ~ThreadImpl();
+
+        static void AllocateStaticData();
+        static void FreeStaticData();
 
         size_t Id();
         ErrorCode Run(Thread::StartFunc func, void* arg, int64_t affinityMask);

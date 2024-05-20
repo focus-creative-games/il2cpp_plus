@@ -1,7 +1,5 @@
 #include "os/c-api/il2cpp-config-platforms.h"
 
-#if !RUNTIME_TINY
-
 #include "os/Error.h"
 #include "os/c-api/Error-c-api.h"
 
@@ -12,5 +10,3 @@ extern "C"
         return (int32_t)(code == il2cpp::os::kErrorCodeSuccess);
     }
 }
-
-#endif

@@ -131,13 +131,11 @@ namespace vm
             memset((char*)o + sizeof(Il2CppObject), 0, byte_len - sizeof(Il2CppObject));
 #endif
         }
-#if !RUNTIME_TINY
         else if (klass->element_class->byval_arg.valuetype &&
                  ((GC_descr)klass->element_class->gc_desc & GC_DS_TAGS) == GC_DS_BITMAP)
         {
             o = (Il2CppObject*)GC_gcj_vector_malloc(byte_len, klass);
         }
-#endif
 #if IL2CPP_HAS_GC_DESCRIPTORS
         else if (klass->gc_desc != GC_NO_DESCRIPTOR)
         {

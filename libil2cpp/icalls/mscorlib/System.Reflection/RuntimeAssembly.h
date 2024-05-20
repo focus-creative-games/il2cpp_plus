@@ -15,6 +15,8 @@ namespace Reflection
     class LIBIL2CPP_CODEGEN_API RuntimeAssembly
     {
     public:
+        static void AllocateStaticData();
+        static void FreeStaticData();
         static bool get_global_assembly_cache(Il2CppObject* thisPtr);
         static bool get_ReflectionOnly(Il2CppObject* thisPtr);
         static bool GetAotIdInternal(Il2CppArray* aotid);

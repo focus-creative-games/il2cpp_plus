@@ -28,6 +28,19 @@ namespace System
 {
 namespace Reflection
 {
+    static os::Mutex* s_ResourceDataMutex = nullptr;
+
+    void RuntimeAssembly::AllocateStaticData()
+    {
+        s_ResourceDataMutex = new os::Mutex();
+    }
+
+    void RuntimeAssembly::FreeStaticData()
+    {
+        delete s_ResourceDataMutex;
+        s_ResourceDataMutex = nullptr;
+    }
+
     bool RuntimeAssembly::get_global_assembly_cache(Il2CppObject* thisPtr)
     {
         return false;
@@ -71,11 +84,9 @@ namespace Reflection
         return fileBuffer;
     }
 
-    static os::Mutex s_ResourceDataMutex;
-
     static void* LoadResourceData(Il2CppReflectionAssembly* assembly, vm::EmbeddedResourceRecord record)
     {
-        os::AutoLock lock(&s_ResourceDataMutex);
+        os::AutoLock lock(s_ResourceDataMutex);
 
         void* resourceData = vm::Image::GetCachedResourceData(record.image, record.name);
         if (resourceData != NULL)

@@ -1,5 +1,5 @@
 #pragma once
-#if IL2CPP_THREADS_WIN32 && !RUNTIME_TINY
+#if IL2CPP_THREADS_WIN32
 
 #include <stdint.h>
 #include "utils/NonCopyable.h"

@@ -19,25 +19,25 @@ namespace Runtime
 {
 namespace InteropServices
 {
-    bool GCHandle::CheckCurrentDomain(int32_t handle)
+    bool GCHandle::CheckCurrentDomain(intptr_t handle)
     {
         return true; // il2cpp doesn't support multiple domains
     }
 
-    void GCHandle::FreeHandle(int32_t handle)
+    void GCHandle::FreeHandle(intptr_t handle)
     {
-        gc::GCHandle::Free(handle);
+        gc::GCHandle::Free((Il2CppGCHandle)handle);
     }
 
 // Returns -2 if gchandle is not pinned
-    intptr_t GCHandle::GetAddrOfPinnedObject(int32_t handle)
+    intptr_t GCHandle::GetAddrOfPinnedObject(intptr_t handle)
     {
-        gc::GCHandleType type = gc::GCHandle::GetHandleType(handle);
+        gc::GCHandleType type = gc::GCHandle::GetHandleType((Il2CppGCHandle)handle);
 
         if (type != gc::HANDLE_PINNED)
             return reinterpret_cast<intptr_t>(reinterpret_cast<uint8_t*>(-2)); // mscorlib on managed land expects us to return "-2" as IntPtr if this condition occurs
 
-        Il2CppObject* obj = gc::GCHandle::GetTarget(handle);
+        Il2CppObject* obj = gc::GCHandle::GetTarget((Il2CppGCHandle)handle);
         if (obj == NULL)
             return 0;
 
@@ -62,9 +62,9 @@ namespace InteropServices
         return reinterpret_cast<intptr_t>((reinterpret_cast<uint8_t*>(obj) + offset));
     }
 
-    Il2CppObject* GCHandle::GetTarget(int32_t handle)
+    Il2CppObject* GCHandle::GetTarget(intptr_t handle)
     {
-        return gc::GCHandle::GetTarget(handle);
+        return gc::GCHandle::GetTarget((Il2CppGCHandle)handle);
     }
 
     static bool IsTypePinnable(Il2CppClass* klass)
@@ -83,7 +83,7 @@ namespace InteropServices
         return IsTypePinnable(obj->klass);
     }
 
-    int32_t GCHandle::GetTargetHandle(Il2CppObject* obj, int32_t handle, int32_t type)
+    intptr_t GCHandle::GetTargetHandle(Il2CppObject* obj, intptr_t handle, int32_t type)
     {
         if (type == gc::HANDLE_PINNED && !IsObjectPinnable(obj))
         {
@@ -91,9 +91,9 @@ namespace InteropServices
             vm::Exception::Raise(ex);
         }
 
-        auto targetHandle = gc::GCHandle::GetTargetHandle(obj, handle, type);
+        auto targetHandle = gc::GCHandle::GetTargetHandle(obj, (Il2CppGCHandle)handle, type);
         vm::Exception::RaiseIfError(targetHandle.GetError());
-        return targetHandle.Get();
+        return (intptr_t)targetHandle.Get();
     }
 } /* namespace InteropServices */
 } /* namespace Runtime */
