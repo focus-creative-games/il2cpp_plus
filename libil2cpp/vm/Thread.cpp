@@ -537,7 +537,7 @@ namespace vm
 
             for (int i = 0; i < kMaxThreadStaticDataPointers; i++)
             {
-                if (staticData->slots[slot]->data[i])
+                if (!staticData->slots[slot]->data[i])
                     break;
                 gc::GarbageCollector::FreeFixed(staticData->slots[slot]->data[i]);
             }
