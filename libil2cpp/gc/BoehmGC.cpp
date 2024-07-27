@@ -386,8 +386,11 @@ void*
 il2cpp::gc::GarbageCollector::MakeDescriptorForObject(size_t *bitmap, int numbits)
 {
 #ifdef GC_GCJ_SUPPORT
+
     /* It seems there are issues when the bitmap doesn't fit: play it safe */
-    if (numbits >= 30)
+#define MAX_GC_DESCR_BITS   (IL2CPP_SIZEOF_VOID_P * 8 - GC_DS_TAG_BITS)
+
+    if (numbits >= MAX_GC_DESCR_BITS)
         return GC_NO_DESCRIPTOR;
     else
     {
@@ -402,6 +405,11 @@ il2cpp::gc::GarbageCollector::MakeDescriptorForObject(size_t *bitmap, int numbit
 #else
     return 0;
 #endif
+}
+
+void* il2cpp::gc::GarbageCollector::MakeEmptyDescriptor()
+{
+    return GC_NO_DESCRIPTOR;
 }
 
 void* il2cpp::gc::GarbageCollector::MakeDescriptorForString()

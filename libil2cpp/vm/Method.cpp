@@ -298,6 +298,12 @@ namespace vm
         if (!method->methodMetadataHandle)
             return 0;
 
+        // We are looking at the return parameter, which is not stored as a parameter, but the method has its token
+        if (index == -1)
+        {
+            return MetadataCache::GetReturnParameterToken(method->methodMetadataHandle);
+        }
+
         Il2CppMetadataParameterInfo paramInfo = MetadataCache::GetParameterInfo(method->klass, method->methodMetadataHandle, index);
 
         return paramInfo.token;

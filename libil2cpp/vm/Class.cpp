@@ -1914,8 +1914,8 @@ namespace vm
 
     size_t Class::GetBitmapSize(const Il2CppClass* klass)
     {
-        size_t maxBits = klass->instance_size / sizeof(void*);
-        size_t maxWords = 1 + (maxBits / sizeof(size_t));
+        size_t maxBytes = klass->instance_size / kWordSize + 1;
+        size_t maxWords = 1 + (maxBytes / sizeof(size_t));
         return sizeof(size_t) * maxWords;
     }
 
@@ -2018,6 +2018,12 @@ namespace vm
 
     void SetupGCDescriptor(Il2CppClass* klass, const il2cpp::os::FastAutoLock& lock)
     {
+        if (!klass->has_references)
+        {
+            klass->gc_desc = il2cpp::gc::GarbageCollector::MakeEmptyDescriptor();
+            return;
+        }
+
         const size_t kMaxAllocaSize = 1024;
         size_t bitmapSize = Class::GetBitmapSize(klass);
         size_t* bitmap = NULL;

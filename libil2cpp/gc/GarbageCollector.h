@@ -69,6 +69,7 @@ namespace gc
         static int64_t GetAllocatedHeapSize();
 
         static void* MakeDescriptorForObject(size_t *bitmap, int numbits);
+        static void* MakeEmptyDescriptor();
         static void* MakeDescriptorForString();
         static void* MakeDescriptorForArray();
 

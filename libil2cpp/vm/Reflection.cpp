@@ -464,9 +464,6 @@ namespace vm
             Il2CppReflectionMethod* method = (Il2CppReflectionMethod*)parameter->MemberImpl;
             const Il2CppImage* image = method->method->klass->image;
 
-            if (parameter->PositionImpl == -1)
-                return std::make_tuple(0x8000000, method->method->klass->image); // This is what mono returns as a fixed value.
-
             return std::make_tuple(vm::Method::GetParameterToken(method->method, parameter->PositionImpl), method->method->klass->image);
         }
         if (IsAssembly(obj))
@@ -564,10 +561,6 @@ namespace vm
             Il2CppReflectionMethod* method = (Il2CppReflectionMethod*)parameter->MemberImpl;
 
             if (method->method->parameters == NULL)
-                return il2cpp::metadata::CustomAttributeDataReader::Empty();
-
-            IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(Reflection::GetCustomAttributeReaderFor, "-1 represents the return value. Need to emit custom attribute information for that.")
-            if (parameter->PositionImpl == -1)
                 return il2cpp::metadata::CustomAttributeDataReader::Empty();
         }
 

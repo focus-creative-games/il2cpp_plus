@@ -441,18 +441,6 @@ void* il2cpp_class_get_static_field_data(const Il2CppClass *klass)
     return klass->static_fields;
 }
 
-// testing only
-size_t il2cpp_class_get_bitmap_size(const Il2CppClass *klass)
-{
-    return Class::GetBitmapSize(klass);
-}
-
-void il2cpp_class_get_bitmap(Il2CppClass *klass, size_t* bitmap)
-{
-    size_t dummy = 0;
-    Class::GetBitmap(klass, bitmap, dummy);
-}
-
 // stats
 
 extern Il2CppRuntimeStats il2cpp_runtime_stats;

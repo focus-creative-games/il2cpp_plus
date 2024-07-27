@@ -1208,19 +1208,19 @@ namespace vm
         if (IsGenericParameter(type))
             return MetadataCache::IsReferenceTypeGenericParameter(MetadataCache::GetGenericParameterFromType(type)) != GenericParameterRestrictionReferenceType;
 
-        // If we're not a generic instance then we'll be a concrete type
-        if (!IsGenericInstance(type))
-            return false;
-
         // If a reference type or pointer then we aren't variable sized
         if (!IsValueType(type))
             return false;
 
         Il2CppClass* klass = Class::FromIl2CppType(type);
-        Il2CppClass* typeDef = GenericClass::GetTypeDefinition(klass->generic_class);
+
+        // If we're not a generic instance or generic type definition then we'll be a concrete type
+        if (!vm::Class::IsInflated(klass) && !vm::Class::IsGeneric(klass))
+            return false;
+
         FieldInfo* field;
         void* iter = NULL;
-        while ((field = Class::GetFields(typeDef, &iter)))
+        while ((field = Class::GetFields(klass, &iter)))
         {
             if (Field::IsInstance(field) && HasVariableRuntimeSizeWhenFullyShared(Field::GetType(field)))
                 return true;
