@@ -1001,21 +1001,29 @@ uint32_t il2cpp::vm::GlobalMetadata::GetFieldOffset(const Il2CppClass* klass, in
     return offset;
 }
 
+static int CompareFieldMarshaledSize(const void* pkey, const void* pelem)
+{
+    return (int)(((Il2CppFieldMarshaledSize*)pkey)->fieldIndex - ((Il2CppFieldMarshaledSize*)pelem)->fieldIndex);
+}
+
 int il2cpp::vm::GlobalMetadata::GetFieldMarshaledSizeForField(const FieldInfo* field)
 {
     Il2CppClass* parent = field->parent;
     size_t fieldIndex = (field - parent->fields);
+
+    if (il2cpp::vm::Type::IsGenericInstance(&parent->byval_arg))
+        parent = il2cpp::vm::GenericClass::GetTypeDefinition(parent->generic_class);
+
     fieldIndex += reinterpret_cast<const Il2CppTypeDefinition*>(parent->typeMetadataHandle)->fieldStart;
 
     const Il2CppFieldMarshaledSize *start = (const Il2CppFieldMarshaledSize*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldMarshaledSizesOffset);
-    const Il2CppFieldMarshaledSize *entry = start;
-    while (entry < start + s_GlobalMetadataHeader->fieldMarshaledSizesSize / sizeof(Il2CppFieldMarshaledSize))
-    {
-        if (fieldIndex == entry->fieldIndex)
-            return entry->size;
-        entry++;
-    }
 
+    Il2CppFieldMarshaledSize key;
+    key.fieldIndex = (FieldIndex)fieldIndex;
+    const Il2CppFieldMarshaledSize* res = (const Il2CppFieldMarshaledSize*)bsearch(&key, start, s_GlobalMetadataHeader->fieldMarshaledSizesSize / sizeof(Il2CppFieldMarshaledSize), sizeof(Il2CppFieldMarshaledSize), CompareFieldMarshaledSize);
+
+    if (res != NULL)
+        return res->size;
     return -1;
 }
 
