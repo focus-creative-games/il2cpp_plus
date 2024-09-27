@@ -22,7 +22,7 @@ namespace il2cpp
 {
 namespace vm
 {
-    const char* Field::GetName(FieldInfo *field)
+    const char* Field::GetName(const FieldInfo *field)
     {
         return field->name;
     }

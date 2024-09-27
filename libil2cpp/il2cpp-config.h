@@ -134,11 +134,11 @@ typedef void (STDCALL *CultureInfoChangedCallback)(const Il2CppChar* arg);
 #define IL2CPP_ENABLE_PLATFORM_THREAD_STACKSIZE 1
 #endif
 
-#define IL2CPP_ENABLE_STACKTRACES !IL2CPP_TARGET_QNX
+#define IL2CPP_ENABLE_STACKTRACES 1
 
 /* Platforms which use OS specific implementation to extract stracktrace */
 #if !defined(IL2CPP_ENABLE_NATIVE_STACKTRACES)
-#define IL2CPP_ENABLE_NATIVE_STACKTRACES (IL2CPP_TARGET_WINDOWS || IL2CPP_TARGET_LINUX || IL2CPP_TARGET_DARWIN || IL2CPP_TARGET_IOS || IL2CPP_TARGET_ANDROID)
+#define IL2CPP_ENABLE_NATIVE_STACKTRACES (IL2CPP_TARGET_WINDOWS || IL2CPP_TARGET_LINUX || IL2CPP_TARGET_DARWIN || IL2CPP_TARGET_IOS || IL2CPP_TARGET_ANDROID || IL2CPP_TARGET_QNX)
 #endif
 
 /* Platforms which support native IP emission to crash reporting to enable server-side reconstruction of C# exception stack trace line numbers */

@@ -18,7 +18,7 @@ namespace vm
         static const Il2CppType* GetType(FieldInfo *field);
         static Il2CppClass* GetParent(FieldInfo *field);
         static int GetFlags(FieldInfo *field);
-        static const char* GetName(FieldInfo *field);
+        static const char* GetName(const FieldInfo *field);
         static size_t GetOffset(FieldInfo *field);
         static void GetValue(Il2CppObject *obj, FieldInfo *field, void *value);
         static uint32_t GetToken(const FieldInfo *field);

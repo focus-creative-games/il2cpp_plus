@@ -524,6 +524,19 @@ Exception_t* il2cpp_codegen_get_marshal_directive_exception(const char* msg)
     return (Exception_t*)il2cpp::vm::Exception::GetMarshalDirectiveException(msg);
 }
 
+Exception_t* il2cpp_codegen_get_marshal_directive_exception(const char* msg, const RuntimeType* type)
+{
+    auto formattedMsg = il2cpp::utils::StringUtils::Printf(msg, il2cpp::vm::Type::GetName(type, IL2CPP_TYPE_NAME_FORMAT_FULL_NAME).c_str());
+    return (Exception_t*)il2cpp::vm::Exception::GetMarshalDirectiveException(formattedMsg.c_str());
+}
+
+// format string will require first instance as a field and second instance as a type or this will break
+Exception_t* il2cpp_codegen_get_marshal_directive_exception(const char* msg, const RuntimeField *field, const RuntimeType* type)
+{
+    auto formattedMsg = il2cpp::utils::StringUtils::Printf(msg, il2cpp::vm::Field::GetName(field), il2cpp::vm::Type::GetName(type, IL2CPP_TYPE_NAME_FORMAT_FULL_NAME).c_str());
+    return (Exception_t*)il2cpp::vm::Exception::GetMarshalDirectiveException(formattedMsg.c_str());
+}
+
 Exception_t* il2cpp_codegen_get_missing_method_exception(const char* msg)
 {
     return (Exception_t*)il2cpp::vm::Exception::GetMissingMethodException(msg);

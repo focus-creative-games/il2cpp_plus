@@ -29,7 +29,9 @@ namespace os
         static inline int32_t Add(int32_t* location1, int32_t value)
         {
             int32_t result = Baselib_atomic_fetch_add_32_seq_cst(location1, value) + value;
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -42,7 +44,9 @@ namespace os
         static inline int64_t Add64(int64_t* location1, int64_t value)
         {
             int64_t result = Baselib_atomic_fetch_add_64_seq_cst(location1, value) + value;
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -52,7 +56,9 @@ namespace os
         static inline T* CompareExchangePointer(T** dest, T* newValue, T* oldValue)
         {
             Baselib_atomic_compare_exchange_strong_ptr_seq_cst_seq_cst((intptr_t*)dest, (intptr_t*)&oldValue, (intptr_t)newValue);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return static_cast<T*>(oldValue);
         }
 
@@ -60,14 +66,18 @@ namespace os
         static inline T* ExchangePointer(T** dest, const T* newValue)
         {
             T* result = (T*)Baselib_atomic_exchange_ptr_seq_cst((intptr_t*)dest, (intptr_t)newValue);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
         static inline int64_t Read64(int64_t* addr)
         {
             int64_t result = Baselib_atomic_fetch_add_64_seq_cst(addr, 0);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -103,7 +113,9 @@ namespace os
         static inline int32_t Increment(int32_t* value)
         {
             int32_t result = Baselib_atomic_fetch_add_32_seq_cst(value, 1) + 1;
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -116,7 +128,9 @@ namespace os
         static inline int64_t Increment64(int64_t* value)
         {
             int64_t result = Baselib_atomic_fetch_add_64_seq_cst(value, 1) + 1;
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -130,7 +144,9 @@ namespace os
         static inline int32_t Decrement(int32_t* value)
         {
             int32_t result = Baselib_atomic_fetch_add_32_seq_cst(value, -1) - 1;
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -143,7 +159,9 @@ namespace os
         static inline int64_t Decrement64(int64_t* value)
         {
             int64_t result = Baselib_atomic_fetch_add_64_seq_cst(value, -1) - 1;
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -157,7 +175,9 @@ namespace os
         static inline int32_t CompareExchange(int32_t* dest, int32_t exchange, int32_t comparand)
         {
             Baselib_atomic_compare_exchange_strong_32_seq_cst_seq_cst(dest, &comparand, exchange);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return comparand;
         }
 
@@ -169,7 +189,9 @@ namespace os
         static inline int64_t CompareExchange64(int64_t* dest, int64_t exchange, int64_t comparand)
         {
             Baselib_atomic_compare_exchange_strong_64_seq_cst_seq_cst(dest, &comparand, exchange);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return comparand;
         }
 
@@ -186,7 +208,9 @@ namespace os
         static inline int32_t Exchange(int32_t* dest, int32_t exchange)
         {
             int32_t result = Baselib_atomic_exchange_32_seq_cst(dest, exchange);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -199,7 +223,9 @@ namespace os
         static inline int64_t Exchange64(int64_t* dest, int64_t exchange)
         {
             int64_t result = Baselib_atomic_exchange_64_seq_cst(dest, exchange);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
 
@@ -212,7 +238,9 @@ namespace os
         static inline intptr_t ReadPtrVal(intptr_t* addr)
         {
             intptr_t result = Baselib_atomic_fetch_add_ptr_seq_cst(addr, 0);
+#if IL2CPP_TARGET_ARM64
             Baselib_atomic_thread_fence_seq_cst();
+#endif
             return result;
         }
     };

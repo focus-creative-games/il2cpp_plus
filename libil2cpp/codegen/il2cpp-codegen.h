@@ -536,6 +536,11 @@ Exception_t* il2cpp_codegen_get_invalid_operation_exception(const char* msg);
 
 Exception_t* il2cpp_codegen_get_marshal_directive_exception(const char* msg);
 
+Exception_t* il2cpp_codegen_get_marshal_directive_exception(const char* msg, const RuntimeType* type);
+
+// format string will require first instance as a field and second instance as a type or this will break
+Exception_t* il2cpp_codegen_get_marshal_directive_exception(const char* msg, const RuntimeField* field, const RuntimeType* type);
+
 Exception_t* il2cpp_codegen_get_missing_method_exception(const char* msg);
 
 Exception_t* il2cpp_codegen_get_maximum_nested_generics_exception();
