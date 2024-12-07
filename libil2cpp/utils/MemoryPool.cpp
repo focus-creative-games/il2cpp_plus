@@ -8,11 +8,10 @@ namespace il2cpp
 {
 namespace utils
 {
-    const size_t kPageSize = IL2CPP_PAGE_SIZE;
-    const size_t kDefaultRegionSize = 64 * 1024;
-// by making all allocations a multiple of this value, we ensure the next
-// allocation will always be aligned to this value
+    // by making all allocations a multiple of this value, we ensure the next
+    // allocation will always be aligned to this value
     const size_t kMemoryAlignment = 8;
+    static size_t s_RegionSize = 64 * 1024;
 
     static inline size_t MakeMultipleOf(size_t size, size_t alignment)
     {
@@ -27,9 +26,19 @@ namespace utils
         size_t free;
     };
 
+    void MemoryPool::SetRegionSize(size_t size)
+    {
+        s_RegionSize = size;
+    }
+
+    size_t MemoryPool::GetRegionSize()
+    {
+        return s_RegionSize;
+    }
+
     MemoryPool::MemoryPool()
     {
-        AddRegion(kDefaultRegionSize);
+        AddRegion(s_RegionSize);
     }
 
     MemoryPool::MemoryPool(size_t initialSize)
@@ -77,9 +86,11 @@ namespace utils
         Region* lastFreeRegion = m_Regions.size() > 0 ? m_Regions.back() : NULL;
         size_t allocationSize;
 
-        if (lastFreeRegion != NULL && lastFreeRegion->free >= kPageSize)
+        // If we have more than 1/16th (4k by default) of the current region remaining free,
+        // perform a one off allocation rather than losing that space to fragmentation.
+        if (lastFreeRegion != NULL && lastFreeRegion->free >= (s_RegionSize / 16))
         {
-            allocationSize = MakeMultipleOf(size, kPageSize);
+            allocationSize = size;
 
             m_Regions.pop_back();
             m_Regions.push_back(newRegion);
@@ -87,7 +98,7 @@ namespace utils
         }
         else
         {
-            allocationSize = std::max(kDefaultRegionSize, MakeMultipleOf(size, kPageSize));
+            allocationSize = std::max(s_RegionSize, size);
             m_Regions.push_back(newRegion);
         }
 

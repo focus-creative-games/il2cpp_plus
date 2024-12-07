@@ -114,7 +114,7 @@ typedef struct {
 
 static il2cpp::utils::OnceFlag lazy_init_io_status;
 
-static bool io_selector_running = false;
+static volatile bool io_selector_running = false;
 
 static ThreadPoolIO* threadpool_io;
 
@@ -633,7 +633,7 @@ static void cleanup_ms_io (void)
 
 	selector_thread_wakeup ();
 	while (io_selector_running)
-		il2cpp::vm::Thread::Sleep(1000);
+		il2cpp::vm::Thread::YieldInternal();
 }
 
 void threadpool_ms_io_cleanup (void)

@@ -14,6 +14,9 @@ namespace utils
         ~MemoryPool();
         void* Malloc(size_t size);
         void* Calloc(size_t count, size_t size);
+
+        static void SetRegionSize(size_t size);
+        static size_t GetRegionSize();
     private:
         struct Region;
         typedef std::list<Region*> RegionList;

@@ -32,6 +32,7 @@
 #include "utils/Exception.h"
 #include "utils/Logging.h"
 #include "utils/Memory.h"
+#include "utils/MemoryPool.h"
 #include "utils/StringUtils.h"
 #include "utils/Runtime.h"
 #include "utils/Environment.h"
@@ -144,6 +145,16 @@ void il2cpp_set_config(const char* executablePath)
 void il2cpp_set_memory_callbacks(Il2CppMemoryCallbacks* callbacks)
 {
     Memory::SetMemoryCallbacks(callbacks);
+}
+
+void il2cpp_memory_pool_set_region_size(size_t size)
+{
+    il2cpp::utils::MemoryPool::SetRegionSize(size);
+}
+
+size_t il2cpp_memory_pool_get_region_size()
+{
+    return il2cpp::utils::MemoryPool::GetRegionSize();
 }
 
 const Il2CppImage* il2cpp_get_corlib()
