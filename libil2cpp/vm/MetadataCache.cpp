@@ -973,6 +973,15 @@ const Il2CppAssembly* il2cpp::vm::MetadataCache::GetAssemblyByName(const char* n
 
 void il2cpp::vm::MetadataCache::RegisterInterpreterAssembly(Il2CppAssembly* assembly)
 {
+    // avoid register placeholder assembly twicely.
+    for (Il2CppAssembly* ass : s_cliAssemblies)
+    {
+        if (ass == assembly)
+        {
+            il2cpp::vm::Assembly::InvalidateAssemblyList();
+            return;
+        }
+    }
     il2cpp::vm::Assembly::Register(assembly);
     s_cliAssemblies.push_back(assembly);
 }
@@ -980,18 +989,6 @@ void il2cpp::vm::MetadataCache::RegisterInterpreterAssembly(Il2CppAssembly* asse
 const Il2CppAssembly* il2cpp::vm::MetadataCache::LoadAssemblyFromBytes(const char* assemblyBytes, size_t length, const char* rawSymbolStoreBytes, size_t rawSymbolStoreLength)
 {
     Il2CppAssembly* newAssembly = hybridclr::metadata::Assembly::LoadFromBytes(assemblyBytes, length, rawSymbolStoreBytes, rawSymbolStoreLength);
-    il2cpp::os::FastAutoLock lock(&il2cpp::vm::g_MetadataLock);
-
-    // avoid register placeholder assembly twicely.
-    for (Il2CppAssembly* ass : s_cliAssemblies)
-    {
-        if (ass == newAssembly)
-        {
-            il2cpp::vm::Assembly::InvalidateAssemblyList();
-            return ass;
-        }
-    }
-    RegisterInterpreterAssembly(newAssembly);
     return newAssembly;
 }
 
