@@ -372,11 +372,11 @@ typedef struct MethodInfo
     uint8_t is_marshaled_from_native : 1; /* a fake MethodInfo wrapping a native function pointer */
 
     // ==={{ hybridclr
+    bool initInterpCallMethodPointer : 1;
+    bool isInterpterImpl : 1;
     void* interpData;
     Il2CppMethodPointer methodPointerCallByInterp;
     Il2CppMethodPointer virtualMethodPointerCallByInterp;
-    bool initInterpCallMethodPointer;
-    bool isInterpterImpl;
     // ===}} hybridclr
 } MethodInfo;
 
