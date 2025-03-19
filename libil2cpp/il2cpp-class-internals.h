@@ -354,11 +354,11 @@ typedef struct MethodInfo
     uint8_t has_full_generic_sharing_signature : 1;
 
     // ==={{ hybridclr
+    bool initInterpCallMethodPointer : 1;
+    bool isInterpterImpl : 1;
     void* interpData;
     Il2CppMethodPointer methodPointerCallByInterp;
     Il2CppMethodPointer virtualMethodPointerCallByInterp;
-    bool initInterpCallMethodPointer;
-    bool isInterpterImpl;
     // ===}} hybridclr
 } MethodInfo;
 
