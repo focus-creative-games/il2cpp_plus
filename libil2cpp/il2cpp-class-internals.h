@@ -384,11 +384,11 @@ typedef struct MethodInfo
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t is_marshaled_from_native : 1; /* a fake MethodInfo wrapping a native function pointer */
 
+    bool initInterpCallMethodPointer : 1;
+    bool isInterpterImpl : 1;
     void* interpData;
     Il2CppMethodPointer methodPointerCallByInterp;
     Il2CppMethodPointer virtualMethodPointerCallByInterp;
-    bool initInterpCallMethodPointer;
-    bool isInterpterImpl;
 } MethodInfo;
 
 typedef struct Il2CppRuntimeInterfaceOffsetPair
