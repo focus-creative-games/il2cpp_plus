@@ -361,11 +361,11 @@ typedef struct MethodInfo
     uint8_t indirect_call_via_invokers : 1;
 
     // ==={{ hybridclr
+    bool initInterpCallMethodPointer : 1;
+    bool isInterpterImpl : 1;
     void* interpData;
     Il2CppMethodPointer methodPointerCallByInterp;
     Il2CppMethodPointer virtualMethodPointerCallByInterp;
-    bool initInterpCallMethodPointer;
-    bool isInterpterImpl;
     // ===}} hybridclr
 } MethodInfo;
 
