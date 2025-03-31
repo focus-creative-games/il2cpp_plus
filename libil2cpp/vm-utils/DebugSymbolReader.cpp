@@ -76,7 +76,7 @@ namespace utils
 
     // Do a binary search to find the line with the given address
     // This is looking for the line with the closest address without going over (price is right style)
-    usymliteLine FindLine(uint64_t address)
+    static usymliteLine FindLine(uint64_t address)
     {
         uint32_t head = 0;
         uint32_t tail = s_usym.header.lineCount - 1;
@@ -107,7 +107,7 @@ namespace utils
         return s_usym.lines[head];
     }
 
-    const char* GetString(uint32_t index)
+    static const char* GetString(uint32_t index)
     {
         IL2CPP_ASSERT(index < s_usym.maxStringIndex);
         return s_usym.strings + index;
@@ -236,7 +236,7 @@ namespace utils
         return true;
     }
 
-    void InsertStackFrame(usymliteLine line, std::vector<Il2CppStackFrameInfo>* stackFrames)
+    static void InsertStackFrame(usymliteLine line, std::vector<Il2CppStackFrameInfo>* stackFrames)
     {
         if (line.parent != noLine)
         {
@@ -253,16 +253,17 @@ namespace utils
         stackFrames->push_back(frameInfo);
     }
 
-    bool DebugSymbolReader::AddStackFrames(void* nativeInstructionPointer, std::vector<Il2CppStackFrameInfo>* stackFrames)
+    // Gets the line information for the given address
+    static bool GetUsymLine(void* address, usymliteLine& line)
     {
-        if (s_usym.debugSymbolData == NULL || nativeInstructionPointer == NULL)
+        if (s_usym.debugSymbolData == NULL || address == NULL)
         {
             return false;
         }
 
         // The instruction pointer points to the next address, so to get the address we came from, we subtract 1.
         // findLine matches the address to the closest address <= the one we give, so it finds the one we need
-        uint64_t adjustedAddress = ((uint64_t)nativeInstructionPointer) - ((uint64_t)os::Image::GetImageBase()) - 1;
+        uint64_t adjustedAddress = ((uint64_t)address) - ((uint64_t)os::Image::GetImageBase()) - 1;
 
 #if IL2CPP_TARGET_ANDROID
         // We don't seem to need to subtract by one for Android
@@ -280,11 +281,36 @@ namespace utils
             return false;
         }
 
-        usymliteLine line = FindLine(adjustedAddress);
+        line = FindLine(adjustedAddress);
 
         // End of symbol entries are placed to indicate that we're past the end of a C# function.
         // These EOS entries have their Line and FileName set to 0xFFFFFFFF
         if (line.line == noLine)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool DebugSymbolReader::GetSourceLocation(void* nativeInstructionPointer, SourceLocation& sourceLocation)
+    {
+        usymliteLine line;
+        if (!GetUsymLine(nativeInstructionPointer, line))
+        {
+            return false;
+        }
+
+        sourceLocation.filePath = GetString(line.fileName);
+        sourceLocation.lineNumber = line.line;
+
+        return true;
+    }
+
+    bool DebugSymbolReader::AddStackFrames(void* nativeInstructionPointer, std::vector<Il2CppStackFrameInfo>* stackFrames)
+    {
+        usymliteLine line;
+        if (!GetUsymLine(nativeInstructionPointer, line))
         {
             return false;
         }

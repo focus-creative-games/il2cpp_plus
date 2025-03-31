@@ -1161,9 +1161,6 @@ namespace vm
 
     bool Type::IsReference(const Il2CppType* type)
     {
-        if (!type)
-            return false;
-
         if (type->type == IL2CPP_TYPE_STRING ||
             type->type == IL2CPP_TYPE_SZARRAY ||
             type->type == IL2CPP_TYPE_CLASS ||
@@ -1241,11 +1238,6 @@ namespace vm
 
         Il2CppClass* klass = GetClass(type);
         return klass->enumtype;
-    }
-
-    bool Type::IsValueType(const Il2CppType *type)
-    {
-        return type->valuetype;
     }
 
     bool Type::IsPointerType(const Il2CppType *type)

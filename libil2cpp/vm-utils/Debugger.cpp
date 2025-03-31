@@ -474,6 +474,32 @@ namespace utils
         SequencePointList::iterator iter, end;
     };
 
+    // Returns first sequence point for a method
+    Il2CppSequencePoint* Debugger::GetSequenceFirstSequencePoint(const MethodInfo* method)
+    {
+        // m_methodToSequencePoints contains only generic methods
+        if (method->is_inflated)
+            method = method->genericMethod->methodDefinition;
+
+        MethodToSequencePointsMap::const_iterator entry = s_DebuggerContext->m_methodToSequencePoints.find(method);
+        if (entry == s_DebuggerContext->m_methodToSequencePoints.end())
+        {
+            return nullptr;
+        }
+
+        SequencePointList::iterator iter = entry->second->begin();
+        SequencePointList::iterator end = entry->second->end();
+        while (iter != end)
+        {
+            // Return the first sequence point that has a line number
+            if ((*iter)->lineStart != 0)
+                return *iter;
+            ++iter;
+        }
+
+        return nullptr;
+    }
+
     Il2CppSequencePoint* Debugger::GetSequencePoints(const MethodInfo* method, void** iter)
     {
         if (!iter)

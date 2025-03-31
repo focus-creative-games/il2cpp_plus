@@ -1418,6 +1418,13 @@ void il2cpp_register_debugger_agent_transport(Il2CppDebuggerTransport * debugger
 #endif
 }
 
+void il2cpp_debug_foreach_method(void(*func)(const MethodInfo* method, Il2CppMethodDebugInfo* methodDebugInfo, void* userData), void* userData)
+{
+#if IL2CPP_ENABLE_NATIVE_STACKTRACES
+    return il2cpp::utils::NativeSymbol::GetAllManagedMethodsWithDebugInfo(func, userData);
+#endif
+}
+
 bool il2cpp_debug_get_method_info(const MethodInfo* method, Il2CppMethodDebugInfo* methodDebugInfo)
 {
 #if IL2CPP_ENABLE_NATIVE_STACKTRACES

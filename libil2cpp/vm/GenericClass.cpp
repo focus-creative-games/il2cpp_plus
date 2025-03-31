@@ -250,10 +250,5 @@ namespace vm
     {
         return IsValueType(gclass) && GetTypeDefinition(gclass)->enumtype;
     }
-
-    bool GenericClass::IsValueType(Il2CppGenericClass *gclass)
-    {
-        return GetTypeDefinition(gclass)->byval_arg.valuetype;
-    }
 } /* namespace vm */
 } /* namespace il2cpp */

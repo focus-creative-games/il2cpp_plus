@@ -18,6 +18,7 @@ namespace utils
 #if IL2CPP_ENABLE_NATIVE_STACKTRACES
         static void RegisterMethods(const std::vector<MethodDefinitionKey>& managedMethods);
         static const VmMethod* GetMethodFromNativeSymbol(Il2CppMethodPointer nativeMethod);
+        static void GetAllManagedMethodsWithDebugInfo(void(*func)(const MethodInfo* method, Il2CppMethodDebugInfo* methodDebugInfo, void* userData), void* userData);
         static bool GetMethodDebugInfo(const MethodInfo* method, Il2CppMethodDebugInfo* methodDebugInfo);
 #endif
     };

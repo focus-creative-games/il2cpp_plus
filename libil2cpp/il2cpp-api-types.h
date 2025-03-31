@@ -126,6 +126,7 @@ typedef struct Il2CppMethodDebugInfo
     Il2CppMethodPointer methodPointer;
     int32_t code_size;
     const char *file;
+    int line;
 } Il2CppMethodDebugInfo;
 
 typedef struct

@@ -291,7 +291,8 @@ DO_API(bool, il2cpp_is_debugger_attached, ());
 DO_API(void, il2cpp_register_debugger_agent_transport, (Il2CppDebuggerTransport * debuggerTransport));
 
 // Debug metadata
-DO_API(bool, il2cpp_debug_get_method_info, (const MethodInfo*, Il2CppMethodDebugInfo * methodDebugInfo));
+DO_API(void, il2cpp_debug_foreach_method, (void(*func)(const MethodInfo* method, Il2CppMethodDebugInfo * methodDebugInfo, void* userData), void* userData));
+DO_API(bool, il2cpp_debug_get_method_info, (const MethodInfo * method, Il2CppMethodDebugInfo * methodDebugInfo));
 
 // TLS module
 DO_API(void, il2cpp_unity_install_unitytls_interface, (const void* unitytlsInterfaceStruct));
