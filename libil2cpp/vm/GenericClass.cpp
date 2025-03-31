@@ -266,10 +266,5 @@ namespace vm
     {
         return Type::IsEnum(gclass->type);
     }
-
-    bool GenericClass::IsValueType(Il2CppGenericClass *gclass)
-    {
-        return gclass->type->type == IL2CPP_TYPE_VALUETYPE;
-    }
 } /* namespace vm */
 } /* namespace il2cpp */

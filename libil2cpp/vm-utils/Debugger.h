@@ -134,6 +134,7 @@ namespace utils
         static void AllocateThreadLocalData();
         static void FreeThreadLocalData();
         static Il2CppSequencePoint* GetSequencePoint(const Il2CppImage* image, size_t id);
+        static Il2CppSequencePoint* GetSequenceFirstSequencePoint(const MethodInfo* method);
         static Il2CppSequencePoint* GetSequencePoints(const MethodInfo* method, void**iter);
         static Il2CppSequencePoint* GetSequencePoint(const Il2CppImage* image, Il2CppCatchPoint* cp);
         static Il2CppCatchPoint* GetCatchPoints(const MethodInfo* method, void**iter);
