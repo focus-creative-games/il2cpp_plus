@@ -929,6 +929,7 @@ inline RuntimeException* il2cpp_codegen_com_get_exception(il2cpp_hresult_t hr, b
 {
 #if IL2CPP_TRIM_COM
     IL2CPP_NOT_IMPLEMENTED(il2cpp_codegen_com_get_exception);
+    return NULL;
 #else
     return (RuntimeException*)il2cpp_codegen_get_exception(hr, defaultToCOMException);
 #endif
