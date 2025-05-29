@@ -442,12 +442,7 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
     // temporary inst to lookup a permanent one that may already exist
     Il2CppGenericInst inst;
     inst.type_argc = typeCount;
-    inst.type_argv = (const Il2CppType**)alloca(inst.type_argc * sizeof(Il2CppType*));
-
-    size_t index = 0;
-    const Il2CppType* const* typesEnd = types + typeCount;
-    for (const Il2CppType* const* iter = types; iter != typesEnd; ++iter, ++index)
-        inst.type_argv[index] = *iter;
+    inst.type_argv = (const Il2CppType**)types;
 
     il2cpp::os::FastAutoLock lock(&g_MetadataLock);
 
@@ -462,10 +457,7 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
     newInst = (Il2CppGenericInst*)MetadataMalloc(sizeof(Il2CppGenericInst));
     newInst->type_argc = typeCount;
     newInst->type_argv = (const Il2CppType**)MetadataMalloc(newInst->type_argc * sizeof(Il2CppType*));
-
-    index = 0;
-    for (const Il2CppType* const* iter = types; iter != typesEnd; ++iter, ++index)
-        newInst->type_argv[index] = *iter;
+    std::memcpy(newInst->type_argv, types, newInst->type_argc * sizeof(Il2CppType*));
 
     // Do this while still holding the g_MetadataLock to prevent the same instance from being added twice
     s_GenericInstSet.insert(newInst);
