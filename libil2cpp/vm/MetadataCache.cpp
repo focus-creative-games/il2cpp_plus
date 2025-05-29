@@ -2,6 +2,7 @@
 #include "MetadataCache.h"
 
 #include <map>
+#include <unordered_set>
 #include <limits>
 #include "il2cpp-class-internals.h"
 #include "il2cpp-tabledefs.h"
@@ -77,7 +78,7 @@ static int32_t s_AssembliesCount = 0;
 static Il2CppAssembly* s_AssembliesTable = NULL;
 
 
-typedef Il2CppHashSet<const Il2CppGenericInst*, il2cpp::metadata::Il2CppGenericInstHash, il2cpp::metadata::Il2CppGenericInstCompare> Il2CppGenericInstSet;
+typedef std::unordered_set<const Il2CppGenericInst*, il2cpp::metadata::Il2CppGenericInstHash, il2cpp::metadata::Il2CppGenericInstCompare> Il2CppGenericInstSet;
 static Il2CppGenericInstSet s_GenericInstSet;
 
 typedef Il2CppHashMap<const Il2CppGenericMethod*, const Il2CppGenericMethodIndices*, il2cpp::metadata::Il2CppGenericMethodHash, il2cpp::metadata::Il2CppGenericMethodCompare> Il2CppMethodTableMap;
@@ -588,12 +589,7 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
     // temporary inst to lookup a permanent one that may already exist
     Il2CppGenericInst inst;
     inst.type_argc = typeCount;
-    inst.type_argv = (const Il2CppType**)alloca(inst.type_argc * sizeof(Il2CppType*));
-
-    size_t index = 0;
-    const Il2CppType* const* typesEnd = types + typeCount;
-    for (const Il2CppType* const* iter = types; iter != typesEnd; ++iter, ++index)
-        inst.type_argv[index] = *iter;
+    inst.type_argv = (const Il2CppType**)types;
 
     {
         // Acquire lock to check if inst has already been cached.
@@ -611,9 +607,7 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
         newInst->type_argv = (const Il2CppType**)MetadataMalloc(newInst->type_argc * sizeof(Il2CppType*));
     }
 
-    index = 0;
-    for (const Il2CppType* const* iter = types; iter != typesEnd; ++iter, ++index)
-        newInst->type_argv[index] = *iter;
+	std::memcpy(newInst->type_argv, types, typeCount * sizeof(Il2CppType*));
 
     {
         // Acquire lock agains to attempt to cache inst.
