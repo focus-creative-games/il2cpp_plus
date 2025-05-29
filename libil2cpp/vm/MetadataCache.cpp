@@ -3,6 +3,7 @@
 #include "GlobalMetadata.h"
 
 #include <map>
+#include <unordered_set>
 #include <limits>
 #include "il2cpp-tabledefs.h"
 #include "il2cpp-runtime-stats.h"
@@ -56,7 +57,7 @@ static int32_t s_AssembliesCount = 0;
 static Il2CppAssembly* s_AssembliesTable = NULL;
 
 
-typedef Il2CppReaderWriterLockedHashSet<const Il2CppGenericInst*, il2cpp::metadata::Il2CppGenericInstHash, il2cpp::metadata::Il2CppGenericInstCompare> Il2CppGenericInstSet;
+typedef std::unordered_set<const Il2CppGenericInst*, il2cpp::metadata::Il2CppGenericInstHash, il2cpp::metadata::Il2CppGenericInstCompare> Il2CppGenericInstSet;
 static Il2CppGenericInstSet s_GenericInstSet;
 
 typedef il2cpp::vm::Il2CppMethodTableMap::const_iterator Il2CppMethodTableMapIter;
@@ -156,11 +157,10 @@ bool il2cpp::vm::MetadataCache::Initialize()
     il2cpp::metadata::GenericMetadata::RegisterGenericClasses(s_MetadataCache_Il2CppMetadataRegistration->genericClasses, s_MetadataCache_Il2CppMetadataRegistration->genericClassesCount);
     il2cpp::metadata::GenericMetadata::SetMaximumRuntimeGenericDepth(s_Il2CppCodeGenOptions->maximumRuntimeGenericDepth);
 
-    s_GenericInstSet.Resize(s_MetadataCache_Il2CppMetadataRegistration->genericInstsCount);
+    s_GenericInstSet.reserve(s_MetadataCache_Il2CppMetadataRegistration->genericInstsCount);
     for (int32_t i = 0; i < s_MetadataCache_Il2CppMetadataRegistration->genericInstsCount; i++)
     {
-        bool inserted = s_GenericInstSet.Add(s_MetadataCache_Il2CppMetadataRegistration->genericInsts[i]);
-        IL2CPP_ASSERT(inserted);
+        s_GenericInstSet.insert(s_MetadataCache_Il2CppMetadataRegistration->genericInsts[i]);
     }
 
     s_InteropData.assign_external(s_Il2CppCodeRegistration->interopData, s_Il2CppCodeRegistration->interopDataCount);
@@ -326,7 +326,7 @@ void il2cpp::vm::MetadataCache::Clear()
 
     metadata::ArrayMetadata::Clear();
 
-    s_GenericInstSet.Clear();
+    s_GenericInstSet.clear();
 
     s_Il2CppCodeRegistration = NULL;
     s_Il2CppCodeGenOptions = NULL;
@@ -449,15 +449,14 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
     for (const Il2CppType* const* iter = types; iter != typesEnd; ++iter, ++index)
         inst.type_argv[index] = *iter;
 
-    const Il2CppGenericInst* foundInst;
-    if (s_GenericInstSet.TryGet(&inst, &foundInst))
-        return foundInst;
-
     il2cpp::os::FastAutoLock lock(&g_MetadataLock);
 
     // Check if instance was added while we were blocked on g_MetadataLock
-    if (s_GenericInstSet.TryGet(&inst, &foundInst))
-        return foundInst;
+	auto it = s_GenericInstSet.find(&inst);
+	if (it != s_GenericInstSet.end())
+	{
+		return *it;
+	}
 
     Il2CppGenericInst* newInst = NULL;
     newInst = (Il2CppGenericInst*)MetadataMalloc(sizeof(Il2CppGenericInst));
@@ -469,8 +468,7 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
         newInst->type_argv[index] = *iter;
 
     // Do this while still holding the g_MetadataLock to prevent the same instance from being added twice
-    bool added = s_GenericInstSet.Add(newInst);
-    IL2CPP_ASSERT(added);
+    s_GenericInstSet.insert(newInst);
     ++il2cpp_runtime_stats.generic_instance_count;
 
     return newInst;
