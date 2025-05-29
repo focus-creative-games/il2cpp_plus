@@ -498,10 +498,7 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
     newInst->type_argc = typeCount;
     newInst->type_argv = (const Il2CppType**)MetadataMalloc(newInst->type_argc * sizeof(Il2CppType*), IL2CPP_MSTAT_TYPE);
 
-    int index = 0;
-    const Il2CppType* const* typesEnd = types + typeCount;
-    for (const Il2CppType* const* iter = types; iter != typesEnd; ++iter, ++index)
-        newInst->type_argv[index] = *iter;
+    std::memcpy(newInst->type_argv, types, newInst->type_argc * sizeof(Il2CppType*));
 
     // Do this while still holding the g_MetadataLock to prevent the same instance from being added twice
     s_GenericInstSet.insert(newInst);
