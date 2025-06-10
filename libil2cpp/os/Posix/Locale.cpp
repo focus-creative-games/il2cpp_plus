@@ -115,7 +115,11 @@ namespace os
             posix_locale = getenv("LANG");
             if (posix_locale == 0)
             {
+#ifdef SETLOCALE_NULL_NOT_SUPPORTED
+                posix_locale = setlocale(LC_ALL, "C");
+#else
                 posix_locale = setlocale(LC_ALL, NULL);
+#endif
             }
         }
 

@@ -75,6 +75,21 @@ namespace os
 
         *daylight_inverted = start.tm_isdst;
 
+#ifdef DO_NOT_CALCULATE_DST_FOR_GMT_AND_UTC
+        // If we got here then probably there is no tz database in the system.
+        // The default time zone is GMT which has no daylight saving time (same for UTC).
+
+        tt = *localtime(&t);
+        strftime(tzone, sizeof(tzone), "%Z", &tt);
+
+        if (tzone[0] == 0 || memcmp(tzone, "GMT", 3) == 0 || memcmp(tzone, "UTC", 3) == 0)
+        {
+            names[0] = tzone;
+            names[1] = tzone;
+            return true;
+        }
+#endif // DO_NOT_CALCULATE_DST_FOR_GMT_AND_UTC
+
         gmtoff = GMTOffset(&start, t);
         gmtoff_start = gmtoff;
 

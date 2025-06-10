@@ -66,6 +66,7 @@ namespace vm
     static void GetBitmapNoInit(Il2CppClass* klass, size_t* bitmap, size_t& maxSetBit, size_t parentOffset, const il2cpp::os::FastAutoLock* lockPtr);
     static Il2CppClass* ResolveGenericInstanceType(Il2CppClass*, const il2cpp::vm::TypeNameParseInfo&, TypeSearchFlags searchFlags);
     static void SetupVTable(Il2CppClass *klass, const il2cpp::os::FastAutoLock& lock);
+    static void AddStaticFieldData(Il2CppClass* klass);
 
     Il2CppClass* Class::FromIl2CppType(const Il2CppType* type, bool throwOnError)
     {
@@ -1008,9 +1009,7 @@ namespace vm
         if (klass->static_fields_size)
         {
             klass->static_fields = il2cpp::gc::GarbageCollector::AllocateFixed(klass->static_fields_size, NULL);
-            s_staticFieldData.push_back(klass);
-
-            il2cpp_runtime_stats.class_static_data_size += klass->static_fields_size;
+            AddStaticFieldData(klass);
         }
         if (klass->thread_static_fields_size)
             klass->thread_static_fields_offset = il2cpp::vm::Thread::AllocThreadStaticData(klass->thread_static_fields_size);
@@ -1906,8 +1905,22 @@ namespace vm
         return klass->has_references;
     }
 
+    static void AddStaticFieldData(Il2CppClass* klass)
+    {
+        // The s_staticFieldData collect is used by liveness checking with the GC lock held
+        // Use the GC lock to add to this array
+
+        gc::GarbageCollector::CallWithAllocLockHeld([](void* klass) {
+            s_staticFieldData.push_back((Il2CppClass*)klass);
+            return (void*)nullptr;
+        }, klass);
+
+        il2cpp_runtime_stats.class_static_data_size += klass->static_fields_size;
+    }
+
     const il2cpp::utils::dynamic_array<Il2CppClass*>& Class::GetStaticFieldData()
     {
+        // Must be called with the GC lock held!
         return s_staticFieldData;
     }
 

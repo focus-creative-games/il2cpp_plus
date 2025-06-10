@@ -138,8 +138,11 @@ il2cpp::gc::GarbageCollector::Initialize()
 #endif
 
     GC_INIT();
-#if defined(GC_THREADS)
+    // Always manually trigger finalizers. This is done by the notifier callback registered
+    // below on the majority of platforms. On the Web platform we trigger finalizers if needed
+    // in CollectALittle which is called at top of each frame.
     GC_set_finalize_on_demand(1);
+#if defined(GC_THREADS)
 #if !RUNTIME_TINY
     GC_set_finalizer_notifier(&il2cpp::gc::GarbageCollector::NotifyFinalizers);
 #endif
@@ -197,16 +200,28 @@ int32_t
 il2cpp::gc::GarbageCollector::CollectALittle()
 {
 #if IL2CPP_ENABLE_DEFERRED_GC
+    // This should only be called from Unity at the top of stack
+    // with the GC enabled.
+
+    IL2CPP_ASSERT(!GC_is_disabled());
+    int32_t ret = 0;
     if (s_PendingGC)
     {
         s_PendingGC = false;
         GC_gcollect();
-        return 0; // no more work to do
+        ret = 0; // no more work to do
     }
     else
     {
-        return GC_collect_a_little();
+        ret = GC_collect_a_little();
     }
+
+    // Disable the GC to run finalizers, as they may allocate and interact with managed memory.
+    GC_disable();
+    // this checks and only runs finalizers if there is work to do
+    GarbageCollector::WaitForPendingFinalizers();
+    GC_enable();
+    return ret;
 #else
     return GC_collect_a_little();
 #endif
@@ -258,6 +273,7 @@ il2cpp::gc::GarbageCollector::IsDisabled()
 }
 
 static baselib::ReentrantLock s_GCSetModeLock;
+static Il2CppGCMode s_CurrentGCMode = IL2CPP_GC_MODE_ENABLED;
 
 void
 il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
@@ -266,22 +282,24 @@ il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
     switch (mode)
     {
         case IL2CPP_GC_MODE_ENABLED:
-            if (GC_is_disabled())
+            if (s_CurrentGCMode == IL2CPP_GC_MODE_DISABLED)
                 GC_enable();
             GC_set_disable_automatic_collection(false);
             break;
 
         case IL2CPP_GC_MODE_DISABLED:
-            if (!GC_is_disabled())
+            if (s_CurrentGCMode != IL2CPP_GC_MODE_DISABLED)
                 GC_disable();
             break;
 
         case IL2CPP_GC_MODE_MANUAL:
-            if (GC_is_disabled())
+            if (s_CurrentGCMode == IL2CPP_GC_MODE_DISABLED)
                 GC_enable();
             GC_set_disable_automatic_collection(true);
             break;
     }
+
+    s_CurrentGCMode = mode;
 }
 
 void
