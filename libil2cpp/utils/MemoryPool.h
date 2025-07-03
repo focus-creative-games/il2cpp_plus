@@ -19,6 +19,8 @@ namespace utils
         size_t TotalSize();
 
         static size_t RegionSize();
+		static void SetRegionSize(size_t size);
+        static size_t GetRegionSize();
         bool Contains(const void* data) const;
     private:
         struct Region;

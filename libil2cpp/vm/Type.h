@@ -233,7 +233,12 @@ namespace vm
 
         static bool IsArray(const Il2CppType *type);
         static bool IsEnum(const Il2CppType *type);
-        static bool IsValueType(const Il2CppType *type);
+
+        inline static bool IsValueType(const Il2CppType* type)
+        {
+            return type->valuetype;
+        }
+
         static bool IsPointerType(const Il2CppType *type);
 
         static bool IsSystemDBNull(const Il2CppType *type);

@@ -82,7 +82,7 @@
 #define _UNICODE 1
 #define UNICODE 1
 #define IL2CPP_PLATFORM_SUPPORTS_CUSTOM_SECTIONS 1
-#define IL2CPP_METHOD_ATTR __attribute__((section(IL2CPP_BINARY_SECTION_NAME)))
+#define IL2CPP_METHOD_ATTR __attribute__((section(IL2CPP_BINARY_SECTION_NAME), retain))
 #elif defined(_MSC_VER)
 #define IL2CPP_TARGET_WINDOWS 1
 

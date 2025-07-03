@@ -264,6 +264,7 @@ il2cpp::gc::GarbageCollector::IsDisabled()
 }
 
 static baselib::ReentrantLock s_GCSetModeLock;
+static Il2CppGCMode s_CurrentGCMode = IL2CPP_GC_MODE_ENABLED;
 
 void
 il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
@@ -272,22 +273,24 @@ il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
     switch (mode)
     {
         case IL2CPP_GC_MODE_ENABLED:
-            if (GC_is_disabled())
+            if (s_CurrentGCMode == IL2CPP_GC_MODE_DISABLED)
                 GC_enable();
             GC_set_disable_automatic_collection(false);
             break;
 
         case IL2CPP_GC_MODE_DISABLED:
-            if (!GC_is_disabled())
+            if (s_CurrentGCMode != IL2CPP_GC_MODE_DISABLED)
                 GC_disable();
             break;
 
         case IL2CPP_GC_MODE_MANUAL:
-            if (GC_is_disabled())
+            if (s_CurrentGCMode == IL2CPP_GC_MODE_DISABLED)
                 GC_enable();
             GC_set_disable_automatic_collection(true);
             break;
     }
+
+    s_CurrentGCMode = mode;
 }
 
 void

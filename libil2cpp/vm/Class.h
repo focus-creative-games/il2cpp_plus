@@ -187,8 +187,9 @@ namespace vm
         static const MethodInfo* GetOrSetupOneMethod(Il2CppClass* klass, MethodIndex index);
         static const VirtualInvokeData* GetOrSetupOneVTableSlot(Il2CppClass* klass, const Il2CppClass* itf, VTableIndex index);
         static const void SetupInterfaceOffsets(Il2CppClass* klass);
+		static const PropertyInfo* GetOrSetupOneProperty(Il2CppClass* klass, TypePropertyIndex index);
+        // Must be called with the GC lock held!
         static const il2cpp::utils::dynamic_array<Il2CppClass*>& GetStaticFieldData();
-        static const PropertyInfo* GetOrSetupOneProperty(Il2CppClass* klass, TypePropertyIndex index);
 
         static size_t GetBitmapSize(const Il2CppClass* klass);
         static void GetBitmap(Il2CppClass* klass, size_t* bitmap, size_t& maxSetBit);
