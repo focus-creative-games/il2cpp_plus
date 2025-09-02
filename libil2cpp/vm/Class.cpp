@@ -1566,7 +1566,7 @@ namespace vm
             klass->is_blittable = genericTypeDefinition->is_blittable;
         }
 
-        if (klass->byval_arg.type == IL2CPP_TYPE_ARRAY || klass->byval_arg.type == IL2CPP_TYPE_SZARRAY)
+        if (klass->byval_arg.type == IL2CPP_TYPE_ARRAY || klass->byval_arg.type == IL2CPP_TYPE_SZARRAY || klass->nullabletype)
         {
             Il2CppClass *element_class = klass->element_class;
             if (!element_class->initialized)
