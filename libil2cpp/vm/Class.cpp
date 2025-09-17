@@ -487,11 +487,11 @@ namespace vm
         IL2CPP_ASSERT(Class::IsInflated(genericInstanceClass));
         IL2CPP_ASSERT(metadata::Il2CppTypeEqualityComparer::AreEqual(genericInstanceClass->generic_class->type, &methodDefinition->klass->byval_arg));
 
-#if !IL2CPP_ENABLE_LAZY_INIT
-        ptrdiff_t index = methodDefinition - methodDefinition->klass->methods[0];
-#else
+//#if !IL2CPP_ENABLE_LAZY_INIT
+//        ptrdiff_t index = methodDefinition - methodDefinition->klass->methods[0];
+//#else
         int32_t index = GetMethodIndex(methodDefinition);
-#endif //IL2CPP_ENABLE_LAZY_INIT
+//#endif //IL2CPP_ENABLE_LAZY_INIT
 
         IL2CPP_ASSERT(index >= 0 && index < methodDefinition->klass->method_count);
         IL2CPP_ASSERT(index < genericInstanceClass->method_count);
