@@ -17,6 +17,10 @@
 #include "ThreadImpl.h"
 #include "PosixHelpers.h"
 
+#if IL2CPP_TARGET_ANDROID
+#include "gc/GarbageCollector.h"
+#endif
+
 namespace il2cpp
 {
 namespace os
@@ -89,7 +93,16 @@ namespace os
 
         // Create thread.
         pthread_t threadId;
+        // On the Android platform pthread_create may conflict with pthread_kill for the same lock
+        // in native code, this may blocked the RAISE_SIGNAL in pthread_stop_world.c, 
+        // or we can use tkill instead of pthread_kill later?
+#if IL2CPP_TARGET_ANDROID
+        gc::GarbageCollector::Disable();
+#endif
         s = pthread_create(&threadId, &attr, &ThreadStartWrapper, this);
+#if IL2CPP_TARGET_ANDROID
+        gc::GarbageCollector::Enable();
+#endif
         if (s)
             return kErrorCodeGenFailure;
 
