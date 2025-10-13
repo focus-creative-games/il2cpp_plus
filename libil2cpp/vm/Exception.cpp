@@ -24,6 +24,10 @@
 #include "vm-utils/VmStringUtils.h"
 #include "vm-utils/DebugSymbolReader.h"
 
+#if IL2CPP_JS_STACKTRACE && HYBRIDCLR_TUANJIE_VERSION >= 10606
+extern char* GetExceptionStacktrace(char* buffer, size_t bufferSize);
+#endif
+
 namespace il2cpp
 {
 namespace vm
@@ -105,6 +109,16 @@ namespace vm
             IL2CPP_ASSERT(ips != NULL);
             IL2CPP_OBJECT_SETREF(ex, trace_ips, ips);
             IL2CPP_OBJECT_SETREF(ex, native_trace_ips, raw_ips);
+
+            #if IL2CPP_JS_STACKTRACE && HYBRIDCLR_TUANJIE_VERSION >= 10606
+            if (ips->max_length == 0)
+            {
+                static const size_t jsStackTraceBufferSize = 10240;
+                char* jsStackTrace = new char[jsStackTraceBufferSize] {0};
+                IL2CPP_OBJECT_SETREF(ex, stack_trace, il2cpp::vm::String::New(GetExceptionStacktrace(jsStackTrace, jsStackTraceBufferSize)));
+                delete[] jsStackTrace;
+            }
+            #endif
         }
 #endif // !IL2CPP_TINY
     }

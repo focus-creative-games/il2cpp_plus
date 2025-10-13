@@ -616,6 +616,10 @@ char(*il2cpp_array_size_helper(Type(&array)[Size]))[Size];
 #define IL2CPP_ENABLE_MEM_STATS 0
 #endif
 
+#ifndef IL2CPP_JS_STACKTRACE
+#define IL2CPP_JS_STACKTRACE (IL2CPP_TARGET_JAVASCRIPT && PLATFORM_WEIXINMINIGAME && !IL2CPP_MONO_DEBUGGER)
+#endif
+
 //defined by buildprogram
 //#define SLIM_GLOBAL_METADATA_FILE 1
 
