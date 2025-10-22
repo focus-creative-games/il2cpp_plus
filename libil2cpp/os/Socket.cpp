@@ -16,7 +16,7 @@
 # include "os/Posix/SocketImpl.h"
 #elif IL2CPP_TARGET_WINDOWS
 # include "os/Win32/SocketImpl.h"
-#elif IL2CPP_TARGET_SWITCH
+#elif IL2CPP_TARGET_SWITCH || IL2CPP_TARGET_SWITCH2
 # include "os/SocketImpl.h"
 #else
 # include "os/Generic/SocketImpl.h"

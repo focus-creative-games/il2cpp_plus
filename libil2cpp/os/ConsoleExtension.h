@@ -13,7 +13,7 @@ namespace os
 {
 namespace ConsoleExtension
 {
-    void Write(const char* buffer);
+    void Write(const char* buffer, int count);
 }
 }
 }
