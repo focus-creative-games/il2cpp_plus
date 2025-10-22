@@ -268,6 +268,10 @@
 #define IL2CPP_TARGET_SWITCH 0
 #endif
 
+#ifndef IL2CPP_TARGET_SWITCH2
+#define IL2CPP_TARGET_SWITCH2 0
+#endif
+
 #ifndef IL2CPP_TARGET_EMBEDDED_LINUX
 #define IL2CPP_TARGET_EMBEDDED_LINUX 0
 #endif
@@ -337,6 +341,7 @@
 #define IL2CPP_THREADS_PS4 (!IL2CPP_THREADS_STD && IL2CPP_TARGET_PS4)
 #define IL2CPP_THREADS_PSP2 (!IL2CPP_THREADS_STD && IL2CPP_TARGET_PSP2)
 #define IL2CPP_THREADS_SWITCH (!IL2CPP_THREADS_STD && IL2CPP_TARGET_SWITCH)
+#define IL2CPP_THREADS_SWITCH2 (!IL2CPP_THREADS_STD && IL2CPP_TARGET_SWITCH2)
 
 // Set to 1 to use the baselib based version of the FastReaderReaderWriterLock
 // Use if the baselib::Lock implementation on the platform is faster than the il2cpp::os based version

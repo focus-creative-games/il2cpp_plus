@@ -1,6 +1,6 @@
 #include "il2cpp-config.h"
 
-#if IL2CPP_TARGET_POSIX || IL2CPP_TARGET_SWITCH
+#if IL2CPP_TARGET_POSIX || IL2CPP_TARGET_SWITCH || IL2CPP_TARGET_SWITCH2
 
 #include "os/MarshalAlloc.h"
 #include <stdlib.h>

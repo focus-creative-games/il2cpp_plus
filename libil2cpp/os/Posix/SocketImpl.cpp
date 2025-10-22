@@ -416,12 +416,18 @@ namespace os
 #if IL2CPP_TARGET_SWITCH
         Switch::NetworkInterface::Get().TryInitialize();
 #endif
+#if IL2CPP_TARGET_SWITCH2
+        Switch2::NetworkInterface::Get().TryInitialize();
+#endif
     }
 
     void SocketImpl::Cleanup()
     {
 #if IL2CPP_TARGET_SWITCH
         Switch::NetworkInterface::Get().Finalize();
+#endif
+#if IL2CPP_TARGET_SWITCH2
+        Switch2::NetworkInterface::Get().Finalize();
 #endif
     }
 

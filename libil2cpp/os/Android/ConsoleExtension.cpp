@@ -13,9 +13,9 @@ namespace os
 {
 namespace ConsoleExtension
 {
-    void Write(const char* buffer)
+    void Write(const char* buffer, int count)
     {
-        __android_log_print(ANDROID_LOG_INFO, "IL2CPP", "%s", buffer);
+        __android_log_print(ANDROID_LOG_INFO, "IL2CPP", "%.*s", count, buffer);
     }
 }
 }

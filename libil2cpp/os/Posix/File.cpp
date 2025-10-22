@@ -1075,7 +1075,7 @@ namespace os
 
 #if IL2CPP_SUPPORTS_CONSOLE_EXTENSION
         if (handle == GetStdOutput() || handle == GetStdError())
-            os::ConsoleExtension::Write(buffer);
+            os::ConsoleExtension::Write(buffer, count);
 #endif
         return ret;
     }

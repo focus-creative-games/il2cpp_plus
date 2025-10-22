@@ -14,6 +14,8 @@
 #include "os/Emscripten/pal_emscripten.h"
 #elif IL2CPP_TARGET_SWITCH
 #include "pal/pal_switch.h"
+#elif IL2CPP_TARGET_SWITCH2
+#include "pal/pal_switch2.h"
 #elif IL2CPP_TARGET_PS4 || IL2CPP_TARGET_PS5
 #include "pal/pal_playstation.h"
 #endif

@@ -25,7 +25,7 @@ namespace vm
             if (il2cpp::vm::Class::IsNullable(parameterType))
             {
                 parameterType = il2cpp::vm::Class::GetNullableArgument(parameterType);
-                typeOfDefaultValue = &parameterType->byval_arg;
+                typeOfDefaultValue = il2cpp::vm::Class::IsEnum(parameterType) ? il2cpp::vm::Class::GetEnumBaseType(parameterType) : &parameterType->byval_arg;
             }
 
             Class::SetupFields(parameterType);
