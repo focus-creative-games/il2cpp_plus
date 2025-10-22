@@ -22,11 +22,11 @@ namespace os
             return false;
 
         ret = pthread_attr_getstack(&attr, low, &stacksize);
-        if (ret != 0)
-            return false;
+        *high = (void*)((uintptr_t)*low - stacksize);
 
-        *high = (void*)((uintptr_t)low + stacksize);
-        return true;
+        pthread_attr_destroy(&attr);
+
+        return ret != 0;;
 #else
         return false;
 #endif
