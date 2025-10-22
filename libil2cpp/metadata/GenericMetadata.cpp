@@ -212,19 +212,23 @@ namespace metadata
         return maximumDepth + 1;
     }
 
-    const Il2CppGenericMethod* GenericMetadata::Inflate(const Il2CppGenericMethod* genericMethod, const Il2CppGenericContext* context)
+    const Il2CppGenericMethod GenericMetadata::Inflate(const Il2CppGenericMethod& genericMethod, const Il2CppGenericContext* context)
     {
-        const Il2CppGenericInst* classInst = GetInflatedGenericIntance(genericMethod->context.class_inst, context, true);
-        const Il2CppGenericInst* methodInst = GetInflatedGenericIntance(genericMethod->context.method_inst, context, true);
+        const Il2CppGenericInst* classInst = GetInflatedGenericIntance(genericMethod.context.class_inst, context, true);
+        const Il2CppGenericInst* methodInst = GetInflatedGenericIntance(genericMethod.context.method_inst, context, true);
 
         // We have cases where we could infinitely recurse, inflating generics at runtime. This will lead to a stack overflow.
         // As we do for code generation, let's cut this off at an arbitrary level. If something tries to execute code at this
         // level, a crash will happen. We'll assume that this code won't actually be executed though.
         int maximumRuntimeGenericDepth = GetMaximumRuntimeGenericDepth();
         if (!il2cpp::vm::Runtime::IsLazyRGCTXInflationEnabled() && (RecursiveGenericDepthFor(classInst) > maximumRuntimeGenericDepth || RecursiveGenericDepthFor(methodInst) > maximumRuntimeGenericDepth))
-            return NULL;
+            return { 0 };
 
-        return MetadataCache::GetGenericMethod(genericMethod->methodDefinition, classInst, methodInst);
+        Il2CppGenericMethod gmethod = { 0 };
+        gmethod.methodDefinition = genericMethod.methodDefinition;
+        gmethod.context.class_inst = classInst;
+        gmethod.context.method_inst = methodInst;
+        return gmethod;
     }
 
     const Il2CppGenericInst* GenericMetadata::GetInflatedGenericIntance(const Il2CppGenericInst* inst, const Il2CppGenericContext* context, bool inflateMethodVars)
@@ -280,7 +284,7 @@ namespace metadata
 
                     const Il2CppType* inflatedType = GenericMetadata::InflateIfNeeded(type, context, true);
                     if (method->is_inflated)
-                        method = GenericMethod::GetMethod(Inflate(method->genericMethod, context));
+                        method = GenericMethod::GetMethod(Inflate(*method->genericMethod, context));
 
                     if (inflatedType->valuetype)
                     {

@@ -18,6 +18,10 @@
 #include "metadata/Il2CppSignature.h"
 #include "metadata/Il2CppTypeCompare.h"
 #include "metadata/Il2CppTypeHash.h"
+#include "metadata/Il2CppMethodSpecOrGenericMethod.h"
+#include "metadata/Il2CppMethodSpecOrGenericMethodHash.h"
+#include "metadata/Il2CppMethodSpecOrGenericMethodCompare.h"
+
 #include "vm-utils/VmStringUtils.h"
 #include "os/Mutex.h"
 
@@ -56,7 +60,7 @@ namespace vm
     typedef Il2CppHashMap<const char*, Il2CppClass*, il2cpp::utils::StringUtils::StringHasher<const char*>, il2cpp::utils::VmStringUtils::CaseSensitiveComparer> WindowsRuntimeTypeNameToClassMap;
     typedef Il2CppHashMap<const Il2CppClass*, const char*, il2cpp::utils::PointerHash<Il2CppClass> > ClassToWindowsRuntimeTypeNameMap;
     typedef Il2CppHashMap<il2cpp::metadata::Il2CppSignature, int32_t, il2cpp::metadata::Il2CppSignatureHash, il2cpp::metadata::Il2CppSignatureCompare> Il2CppUnresolvedSignatureMap;
-    typedef Il2CppHashMap<const Il2CppGenericMethod*, const Il2CppGenericMethodIndices*, il2cpp::metadata::Il2CppGenericMethodHash, il2cpp::metadata::Il2CppGenericMethodCompare> Il2CppMethodTableMap;
+    typedef Il2CppHashMap<il2cpp::metadata::Il2CppMethodSpecOrGenericMethod, const Il2CppGenericMethodIndices*, il2cpp::metadata::Il2CppMethodSpecOrGenericMethodHash, il2cpp::metadata::Il2CppMethodSpecOrGenericMethodCompare> Il2CppMethodTableMap;
 
     class LIBIL2CPP_CODEGEN_API MetadataCache
     {
@@ -85,7 +89,6 @@ namespace vm
         static void AddPointerTypeLocked(Il2CppClass* type, Il2CppClass* pointerType, const il2cpp::os::FastAutoLock& lock);
 
         static const Il2CppGenericInst* GetGenericInst(const Il2CppType* const* types, uint32_t typeCount);
-        static const Il2CppGenericMethod* GetGenericMethod(const MethodInfo* methodDefinition, const Il2CppGenericInst* classInst, const Il2CppGenericInst* methodInst);
         static GenericParameterRestriction IsReferenceTypeGenericParameter(Il2CppMetadataGenericParameterHandle genericParameter);
 
         static Il2CppGenericMethodPointers GetGenericMethodPointers(const MethodInfo* methodDefinition, const Il2CppGenericContext* context);
@@ -93,7 +96,7 @@ namespace vm
         static const MethodInfo* GetMethodInfoFromVTableSlot(const Il2CppClass* klass, int32_t vTableSlot);
 
         static const Il2CppType* GetTypeFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
-        static const Il2CppGenericMethod* GetGenericMethodFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
+        static Il2CppGenericMethod GetGenericMethodFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
         static std::pair<const Il2CppType*, const MethodInfo*> GetConstrainedCallFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
 
         static void InitializeAllMethodMetadata();

@@ -163,7 +163,7 @@ namespace metadata
         gmethod.methodDefinition = methodDefinition;
         gmethod.context.class_inst = classInst;
         gmethod.context.method_inst = methodInst;
-        return GetMethod(&gmethod, true);
+        return GetMethod(gmethod);
     }
 
     MethodInfo* GenericMethod::AllocateNewMethodInfo(const MethodInfo* methodDefinition, const Il2CppGenericInst* classInst, const Il2CppGenericInst* methodInst)
@@ -172,15 +172,10 @@ namespace metadata
         return AllocCopyGenericMethodInfo(methodInfo);
     }
 
-    const MethodInfo* GenericMethod::GetMethod(const Il2CppGenericMethod* gmethod)
-    {
-        return GetMethod(gmethod, false);
-    }
-
-    const MethodInfo* GenericMethod::GetMethod(const Il2CppGenericMethod* gmethod, bool copyMethodPtr)
+    const MethodInfo* GenericMethod::GetMethod(const Il2CppGenericMethod& gmethod)
     {
         // This can be NULL only when we have hit the generic recursion depth limit.
-        if (gmethod == NULL)
+        if (gmethod.methodDefinition == NULL)
         {
             MethodInfo* newMethod = AllocGenericMethodInfo(il2cpp::vm::Runtime::IsFullGenericSharingEnabled());
             if (il2cpp::vm::Runtime::IsFullGenericSharingEnabled())
@@ -198,28 +193,30 @@ namespace metadata
 
         // First check for an already constructed generic method using the shared/reader lock
         MethodInfo* existingMethod;
-        if (s_GenericMethodMap.TryGet(gmethod, &existingMethod))
+        if (s_GenericMethodMap.TryGet(&gmethod, &existingMethod))
             return existingMethod;
 
-        if (Method::IsAmbiguousMethodInfo(gmethod->methodDefinition))
+        const MethodInfo* methodDefinition = gmethod.methodDefinition;
+
+        if (Method::IsAmbiguousMethodInfo(methodDefinition))
         {
             // is_inflated is used as an initialized check
             if (!ambiguousMethodInfo.is_inflated)
             {
-                memcpy(&ambiguousMethodInfo, gmethod->methodDefinition, sizeof(MethodInfo));
+                memcpy(&ambiguousMethodInfo, gmethod.methodDefinition, sizeof(MethodInfo));
                 ambiguousMethodInfo.is_inflated = true;
-                ambiguousMethodInfo.rawVirtualMethodPointer = gmethod->methodDefinition->virtualMethodPointer;
-                ambiguousMethodInfo.rawDirectMethodPointer = gmethod->methodDefinition->methodPointer;
-                ambiguousMethodInfo.invoker_method = gmethod->methodDefinition->invoker_method;
+                ambiguousMethodInfo.rawVirtualMethodPointer = gmethod.methodDefinition->virtualMethodPointer;
+                ambiguousMethodInfo.rawDirectMethodPointer = gmethod.methodDefinition->methodPointer;
+                ambiguousMethodInfo.invoker_method = gmethod.methodDefinition->invoker_method;
             }
 
             return &ambiguousMethodInfo;
         }
 
-        return CreateMethodLocked(gmethod, copyMethodPtr);
+        return CreateMethodLocked(gmethod);
     }
 
-    const MethodInfo* GenericMethod::CreateMethodLocked(const Il2CppGenericMethod* gmethod, bool copyMethodPtr)
+    const MethodInfo* GenericMethod::CreateMethodLocked(const Il2CppGenericMethod& gmethod)
     {
         // We need to inflate a new generic method, take the metadata mutex
         // All code below this point can and does assume mutual exclusion
@@ -227,21 +224,18 @@ namespace metadata
 
         // Recheck the s_GenericMethodMap in case there was a race to add this generic method
         MethodInfo* existingMethod;
-        if (s_GenericMethodMap.TryGet(gmethod, &existingMethod))
+        if (s_GenericMethodMap.TryGet(&gmethod, &existingMethod))
             return existingMethod;
 
         // GetMethodLocked may be called recursively, we keep tracking of pending inflations
-        if (s_PendingGenericMethodMap.TryGet(gmethod, &existingMethod))
+        if (s_PendingGenericMethodMap.TryGet(&gmethod, &existingMethod))
             return existingMethod;
 
-        if (copyMethodPtr)
-            gmethod = MetadataCache::GetGenericMethod(gmethod->methodDefinition, gmethod->context.class_inst, gmethod->context.method_inst);
-
-        const MethodInfo* methodDefinition = gmethod->methodDefinition;
+        const MethodInfo* methodDefinition = gmethod.methodDefinition;
         Il2CppClass* declaringClass = methodDefinition->klass;
-        if (gmethod->context.class_inst)
+        if (gmethod.context.class_inst)
         {
-            Il2CppGenericClass* genericClassDeclaringType = GenericMetadata::GetGenericClass(methodDefinition->klass, gmethod->context.class_inst);
+            Il2CppGenericClass* genericClassDeclaringType = GenericMetadata::GetGenericClass(methodDefinition->klass, gmethod.context.class_inst);
             declaringClass = GenericClass::GetClass(genericClassDeclaringType);
 
             // we may fail if we cannot construct generic type
@@ -249,16 +243,16 @@ namespace metadata
                 return NULL;
         }
 
-        const Il2CppType** parameters = GenericMetadata::InflateParameters(methodDefinition->parameters, methodDefinition->parameters_count, &gmethod->context, true);
-        il2cpp::vm::Il2CppGenericMethodPointers methodPointers = MetadataCache::GetGenericMethodPointers(methodDefinition, &gmethod->context);
-        bool hasFullGenericSharingSignature = methodPointers.isFullGenericShared && HasFullGenericSharedParametersOrReturn(gmethod->methodDefinition, parameters);
+        const Il2CppType** parameters = GenericMetadata::InflateParameters(methodDefinition->parameters, methodDefinition->parameters_count, &gmethod.context, true);
+        il2cpp::vm::Il2CppGenericMethodPointers methodPointers = MetadataCache::GetGenericMethodPointers(methodDefinition, &gmethod.context);
+        bool hasFullGenericSharingSignature = methodPointers.isFullGenericShared && HasFullGenericSharedParametersOrReturn(methodDefinition, parameters);
 
         MethodInfo* newMethod = AllocGenericMethodInfo(hasFullGenericSharingSignature);
 
         // we set the pending generic method map here because the initialization may recurse and try to retrieve the same generic method
         // this is safe because we *always* take the lock when retrieving the MethodInfo from a generic method.
         // if we move lock to only if MethodInfo needs constructed then we need to revisit this since we could return a partially initialized MethodInfo
-        s_PendingGenericMethodMap.Add(gmethod, newMethod);
+        s_PendingGenericMethodMap.Add(&gmethod, newMethod);
 
         newMethod->klass = declaringClass;
         newMethod->flags = methodDefinition->flags;
@@ -269,14 +263,15 @@ namespace metadata
         newMethod->is_inflated = true;
         newMethod->token = methodDefinition->token;
 
-        newMethod->return_type = GenericMetadata::InflateIfNeeded(methodDefinition->return_type, &gmethod->context, true);
+        newMethod->return_type = GenericMetadata::InflateIfNeeded(methodDefinition->return_type, &gmethod.context, true);
 
         newMethod->parameters_count = methodDefinition->parameters_count;
         newMethod->parameters = parameters;
 
-        newMethod->genericMethod = gmethod;
+        newMethod->genericMethod = (Il2CppGenericMethod*)MetadataCalloc(1, sizeof(Il2CppGenericMethod));
+        *const_cast<Il2CppGenericMethod*>(newMethod->genericMethod) = gmethod;
 
-        if (!gmethod->context.method_inst)
+        if (!gmethod.context.method_inst)
         {
             if (methodDefinition->is_generic)
                 newMethod->is_generic = true;
@@ -368,13 +363,13 @@ namespace metadata
 
         // The generic method is fully created,
         // Update the generic method map, this needs to take an exclusive lock
-        // **** This must happen with the metadata lock held and be released before the metalock is released ****
+        // **** This must happen with the metadata lock held and be released before the metadata lock is released ****
         // **** This prevents deadlocks and ensures that there is no race condition
         // **** creating a new method adding it to s_GenericMethodMap and removing it from s_PendingGenericMethodMap
-        s_GenericMethodMap.Add(gmethod, newMethod);
+        s_GenericMethodMap.Add(newMethod->genericMethod, newMethod);
 
         // Remove the method from the pending table
-        s_PendingGenericMethodMap.Remove(gmethod);
+        s_PendingGenericMethodMap.Remove(&gmethod);
 
         return newMethod;
     }
@@ -386,13 +381,14 @@ namespace metadata
         IL2CPP_ASSERT(method->genericMethod->context.method_inst);
 
         return il2cpp::utils::InitOnce(const_cast<Il2CppRGCTXData**>(&method->rgctx_data), &il2cpp::vm::g_MetadataLock, [method](const il2cpp::os::FastAutoLock& lock) {
-            return const_cast<Il2CppRGCTXData*>(GenericMethod::InflateRGCTXLocked(method->genericMethod, lock));
+            return const_cast<Il2CppRGCTXData*>(GenericMethod::InflateRGCTXLocked(*method->genericMethod, lock));
         });
     }
 
-    const Il2CppRGCTXData* GenericMethod::InflateRGCTXLocked(const Il2CppGenericMethod* gmethod, const il2cpp::os::FastAutoLock &lock)
+    const Il2CppRGCTXData* GenericMethod::InflateRGCTXLocked(const Il2CppGenericMethod& gmethod, const il2cpp::os::FastAutoLock &lock)
     {
-        return GenericMetadata::InflateRGCTXLocked(gmethod->methodDefinition->klass->image, gmethod->methodDefinition->token, &gmethod->context, lock);
+        const MethodInfo* methodDefinition = gmethod.methodDefinition;
+        return GenericMetadata::InflateRGCTXLocked(methodDefinition->klass->image, methodDefinition->token, &gmethod.context, lock);
     }
 
     const Il2CppGenericContext* GenericMethod::GetContext(const Il2CppGenericMethod* gmethod)
@@ -420,12 +416,12 @@ namespace metadata
 
     std::string GenericMethod::GetFullName(const Il2CppGenericMethod* gmethod)
     {
-        const MethodInfo* method = gmethod->methodDefinition;
+        const MethodInfo* methodDefinition = gmethod->methodDefinition;
         std::string output;
-        output.append(Type::GetName(&gmethod->methodDefinition->klass->byval_arg, IL2CPP_TYPE_NAME_FORMAT_FULL_NAME));
+        output.append(Type::GetName(Class::GetType(Method::GetClass(methodDefinition)), IL2CPP_TYPE_NAME_FORMAT_FULL_NAME));
         output.append(FormatGenericArguments(gmethod->context.class_inst));
         output.append("::");
-        output.append(Method::GetName(method));
+        output.append(Method::GetName(methodDefinition));
         output.append(FormatGenericArguments(gmethod->context.method_inst));
 
         return output;

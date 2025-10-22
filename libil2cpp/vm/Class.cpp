@@ -1247,7 +1247,7 @@ namespace vm
                     {
                         if (method && method->is_inflated)
                         {
-                            const Il2CppGenericMethod* genericMethod = il2cpp::metadata::GenericMetadata::Inflate(method->genericMethod, context);
+                            Il2CppGenericMethod genericMethod = il2cpp::metadata::GenericMetadata::Inflate(*method->genericMethod, context);
                             method = il2cpp::metadata::GenericMethod::GetMethod(genericMethod);
                         }
                         if (method && method->klass && Class::IsGeneric(method->klass))
@@ -1259,7 +1259,7 @@ namespace vm
                     klass->vtable[i].method = method;
                     if (method != NULL)
                     {
-                        // For default interface methods on generic interfaces we need to ensure that their rgctx's are initalized
+                        // For default interface methods on generic interfaces we need to ensure that their rgctx's are initialized
                         if (method->klass != NULL && method->klass != klass && Method::IsDefaultInterfaceMethodOnGenericInstance(method))
                             Class::InitLocked(method->klass, lock);
 

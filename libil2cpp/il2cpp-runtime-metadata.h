@@ -45,6 +45,12 @@ typedef struct Il2CppGenericMethod
     Il2CppGenericContext context;
 } Il2CppGenericMethod;
 
+typedef struct Il2CppGenericMethodKey
+{
+    Il2CppMetadataMethodDefinitionHandle methodDefinitionHandle;
+    Il2CppGenericContext context;
+} Il2CppGenericMethodKey;
+
 typedef struct Il2CppType
 {
     union

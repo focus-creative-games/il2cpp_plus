@@ -69,6 +69,7 @@ namespace vm
 
         static const MethodInfo* GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle);
         static const MethodInfo* GetMethodInfoFromVTableSlot(const Il2CppClass* klass, int32_t vTableSlot);
+        static Il2CppGenericMethodKey BuildGenericMethodFromMethodSpec(const Il2CppMethodSpec* methodSpec);
 
         static const uint8_t* GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue);
         static const uint8_t* GetFieldDefaultValue(const FieldInfo* field, const Il2CppType** type);
@@ -87,7 +88,7 @@ namespace vm
         static Il2CppMetadataGenericParameterHandle GetGenericParameterFromType(const Il2CppType* type);
         static const MethodInfo* GetGenericInstanceMethod(const MethodInfo* genericMethodDefinition, const Il2CppGenericContext* context);
         static const Il2CppType* GetTypeFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
-        static const Il2CppGenericMethod* GetGenericMethodFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
+        static Il2CppGenericMethod BuildGenericMethodFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
         static std::pair<const Il2CppType*, const MethodInfo*> GetConstrainedCallFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
         static Il2CppClass* GetContainerDeclaringType(Il2CppMetadataGenericContainerHandle handle);
         static Il2CppClass* GetParameterDeclaringType(Il2CppMetadataGenericParameterHandle handle);
@@ -101,7 +102,7 @@ namespace vm
         static Il2CppGenericParameterInfo GetGenericParameterInfo(Il2CppMetadataGenericParameterHandle handle);
         static uint16_t GetGenericParameterFlags(Il2CppMetadataGenericParameterHandle handle);
         static int16_t GetGenericConstraintCount(Il2CppMetadataGenericParameterHandle handle);
-        static const Il2CppGenericMethod* GetGenericMethodFromTokenMethodTuple(const Il2CppTokenIndexMethodTuple* tuple);
+        static Il2CppGenericMethod BuildGenericMethodFromTokenMethodTuple(const Il2CppTokenIndexMethodTuple* tuple);
 
         static const MethodInfo* GetMethodInfoFromCatchPoint(const Il2CppCatchPoint* cp);
         static const MethodInfo* GetMethodInfoFromSequencePoint(const Il2CppSequencePoint* cp);

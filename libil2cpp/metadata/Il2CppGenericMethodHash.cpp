@@ -22,5 +22,13 @@ namespace metadata
 
         return HashUtils::Combine(tokenHash, contextHash);
     }
+
+    size_t Il2CppGenericMethodHash::Hash(const Il2CppGenericMethodKey& method)
+    {
+        size_t methodHandleHash = HashUtils::AlignedPointerHash(method.methodDefinitionHandle);
+        size_t contextHash = Il2CppGenericContextHash::Hash(&method.context);
+
+        return HashUtils::Combine(methodHandleHash, contextHash);
+    }
 } /* namespace metadata */
 } /* namespace il2cpp */
