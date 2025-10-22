@@ -75,7 +75,7 @@ namespace os
 
         *daylight_inverted = start.tm_isdst;
 
-#ifdef IL2CPP_TARGET_QNX
+#ifdef DO_NOT_CALCULATE_DST_FOR_GMT_AND_UTC
         // If we got here then probably there is no tz database in the system.
         // The default time zone is GMT which has no daylight saving time (same for UTC).
 
@@ -88,7 +88,7 @@ namespace os
             names[1] = tzone;
             return true;
         }
-#endif // IL2CPP_TARGET_QNX
+#endif // DO_NOT_CALCULATE_DST_FOR_GMT_AND_UTC
 
         gmtoff = GMTOffset(&start, t);
         gmtoff_start = gmtoff;
