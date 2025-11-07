@@ -1950,7 +1950,9 @@ namespace vm
             return pointerClass;
 
         pointerClass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass), IL2CPP_MSTAT_CLASS);
-        //pointerClass->klass = pointerClass;
+#if !IL2CPP_SLIM_CLASS
+        pointerClass->klass = pointerClass;
+#endif
 
         pointerClass->namespaze = elementClass->namespaze;
         pointerClass->name = il2cpp::utils::StringUtils::StringDuplicate(il2cpp::utils::StringUtils::Printf("%s*", elementClass->name).c_str());
