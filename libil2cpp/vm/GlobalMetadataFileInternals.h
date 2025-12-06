@@ -72,6 +72,7 @@ typedef struct Il2CppInterfaceOffsetPair
 
 typedef struct Il2CppTypeDefinition
 {
+    Il2CppMetadataTypeHandle typeHandle;
     StringIndex nameIndex;
     StringIndex namespaceIndex;
     TypeIndex byvalTypeIndex;
@@ -325,3 +326,5 @@ typedef struct Il2CppGlobalMetadataHeader
     Il2CppSectionMetadata exportedTypeDefinitions; // TypeDefinitionIndex
 } Il2CppGlobalMetadataHeader;
 #pragma pack(pop, p1)
+
+typedef Il2CppCustomAttributeDataRange Il2CppCustomAttributeTypeRange;

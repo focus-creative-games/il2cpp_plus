@@ -350,6 +350,12 @@ typedef struct MethodInfo
     uint8_t wrapper_type : 1; /* always zero (MONO_WRAPPER_NONE) needed for the debugger */
     uint8_t has_full_generic_sharing_signature : 1;
     uint8_t is_unmanaged_callers_only : 1;
+
+    bool initInterpCallMethodPointer : 1;
+    bool isInterpterImpl : 1;
+    void* interpData;
+    Il2CppMethodPointer methodPointerCallByInterp;
+    Il2CppMethodPointer virtualMethodPointerCallByInterp;
 } MethodInfo;
 
 typedef struct Il2CppRuntimeInterfaceOffsetPair

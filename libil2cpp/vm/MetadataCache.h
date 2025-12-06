@@ -198,10 +198,14 @@ namespace vm
         static void InitializeUnresolvedSignatureTable();
         static void InitializeGenericMethodTable();
         static void InitializeGuidToClassTable();
-
+    public:
         static Il2CppImage* GetImageFromIndex(ImageIndex index);
         static const Il2CppAssembly* GetAssemblyFromIndex(AssemblyIndex index);
         static Il2CppMetadataTypeHandle GetTypeHandleFromIndex(const Il2CppImage* image, TypeDefinitionIndex typeIndex);
+
+        static void RegisterInterpreterAssembly(Il2CppAssembly* assembly);
+        static const Il2CppAssembly* LoadAssemblyFromBytes(const char* assemblyBytes, size_t length, const char* rawSymbolStoreBytes, size_t rawSymbolStoreLength);
+
     };
 } // namespace vm
 } // namespace il2cpp

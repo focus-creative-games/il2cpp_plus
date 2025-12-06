@@ -95,6 +95,10 @@ namespace vm
 
         static Il2CppException* GetMaximumNestedGenericsException();
 
+        static Il2CppException* GetStackOverflowException(const char* msg);
+        static Il2CppException* GetBadImageFormatException(const char* msg);
+        static Il2CppException* GetMissingFieldException(const char* msg);
+
         static void StoreExceptionInfo(Il2CppException* ex, Il2CppString* exceptionString);
     };
 } /* namespace vm */

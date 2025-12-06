@@ -19,10 +19,53 @@ struct Il2CppGenericMethod;
 struct Il2CppType;
 struct Il2CppString;
 
+
+struct Il2CppMethodDefinition;
+struct Il2CppFieldDefinition;
+struct Il2CppTypeDefinition;
+struct Il2CppParameterDefinition;
+struct Il2CppGenericContainer;
+
+typedef struct Il2CppImageGlobalMetadata
+{
+    TypeDefinitionIndex typeStart;
+    TypeDefinitionIndex exportedTypeStart;
+    CustomAttributeIndex customAttributeStart;
+    MethodIndex entryPointIndex;
+    const Il2CppImage* image;
+} Il2CppImageGlobalMetadata;
+
 namespace il2cpp
 {
 namespace vm
 {
+
+    enum PackingSize
+    {
+        Zero,
+        One,
+        Two,
+        Four,
+        Eight,
+        Sixteen,
+        ThirtyTwo,
+        SixtyFour,
+        OneHundredTwentyEight
+    };
+
+    const int kBitIsValueType = 1;
+    const int kBitIsEnum = 2;
+    const int kBitHasFinalizer = 3;
+    const int kBitHasStaticConstructor = 4;
+    const int kBitIsBlittable = 5;
+    const int kBitIsImportOrWindowsRuntime = 6;
+    const int kPackingSize = 7;     // This uses 4 bits from bit 7 to bit 10
+    const int kPackingSizeIsDefault = 11;
+    const int kClassSizeIsDefault = 12;
+    const int kSpecifiedPackingSize = 13; // This uses 4 bits from bit 13 to bit 16
+    const int kBitIsByRefLike = 17;
+
+
     class GlobalMetadata
     {
     public:
@@ -112,6 +155,34 @@ namespace vm
         static Il2CppClass* GetTypeInfoFromTypeIndex(TypeIndex index, bool throwOnError = true);
         static const Il2CppType* GetIl2CppTypeFromIndex(TypeIndex index);
         static const MethodInfo* GetMethodInfoFromMethodDefinitionIndex(MethodIndex index);
+        
+        static const char* GetStringFromIndex(StringIndex index);
+        static const Il2CppFieldDefinition GetFieldDefinitionFromIndex(const Il2CppImage* image, FieldIndex index);
+        static const Il2CppMetadataMethodDefinitionHandle GetMethodHandleFromIndex(MethodIndex index);
+        static const Il2CppMethodDefinition GetMethodDefinitionDataFromIndex(MethodIndex index);
+        static const Il2CppMethodDefinition GetMethodDefinitionFromHandle(const Il2CppMetadataMethodDefinitionHandle methodHandle);
+        static MethodIndex GetMethodIndexFromMethodHandle(const Il2CppMetadataMethodDefinitionHandle methodHandle);
+        static const Il2CppMetadataMethodDefinitionHandle GetMethodHandleFromVTableSlot(const Il2CppMetadataTypeHandle typeHandle, int32_t vTableSlot);
+        //static const Il2CppFieldDefinition GetFieldDefinitionDataFromTypeDefAndFieldIndex(const Il2CppTypeDefinition& typeDef, FieldIndex index);
+        //static Il2CppClass* GetTypeInfoFromTypeDef(const Il2CppTypeDefinition& typeDef);
+        static const Il2CppTypeDefinition GetTypeDefinitionFromTypeHandle(Il2CppMetadataTypeHandle typeHandle);
+        static uint8_t ConvertPackingSizeEnumToValue(PackingSize packingSize);
+        static PackingSize ConvertPackingSizeToEnum(uint8_t packingSize);
+        static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex index);
+        static const Il2CppImage* GetImageForTypeHandle(Il2CppMetadataTypeHandle typeHandle);
+        static const Il2CppImage* GetImageForTypeDefinition(const Il2CppTypeDefinition& typeDef);
+        static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppMetadataTypeHandle typeHandle);
+        static TypeDefinitionIndex GetIndexForTypeDefinition(const Il2CppClass* klass);
+        static const Il2CppGenericContainer* GetGenericContainerFromIndex(GenericContainerIndex index);
+        static const Il2CppParameterDefinition GetParameterDefinitionFromIndex(const Il2CppImage* image, const ParameterIndex index);
+        static const Il2CppParameterDefinition GetParameterDefinitionFromIndex(const Il2CppMethodDefinition& methodDef, const ParameterIndex index);
+        static const Il2CppType* GetInterfaceFromOffset(const Il2CppMetadataTypeHandle typeHandle, TypeInterfaceIndex offset);
+        static Il2CppInterfaceOffsetInfo GetInterfaceOffsetInfo(const Il2CppMetadataTypeHandle typeHandle, TypeInterfaceOffsetIndex index);
+        static bool IsAOTTypeHandle(Il2CppMetadataTypeHandle handle);
+        static bool IsAOTMethodHandle(Il2CppMetadataMethodDefinitionHandle handle);
+        static bool IsAOTMetadata(const void* data);
+
+        static Il2CppClass* FromTypeDefinition(TypeDefinitionIndex index);
 
         template<typename T>
         static inline bool IsRuntimeMetadataInitialized(T item)

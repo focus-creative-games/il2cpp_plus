@@ -77,7 +77,18 @@ namespace utils
     void* MemoryPool::Calloc(size_t count, size_t size)
     {
         void* ret = Malloc(count * size);
-        return memset(ret, 0, count * size);
+        return ret;
+    }
+
+    bool MemoryPool::Contains(const void* data) const
+    {
+        for (RegionList::const_iterator iter = m_Regions.begin(); iter != m_Regions.end(); ++iter)
+        {
+			Region* region = *iter;
+			if (data >= region->start && data < region->start + region->size)
+				return true;
+        }
+        return false;
     }
 
     MemoryPool::Region* MemoryPool::AddRegion(size_t size)
@@ -102,7 +113,7 @@ namespace utils
             m_Regions.push_back(newRegion);
         }
 
-        newRegion->start = newRegion->current = (char*)IL2CPP_MALLOC(allocationSize);
+        newRegion->start = newRegion->current = (char*)IL2CPP_MALLOC_ZERO(allocationSize);
         newRegion->size = newRegion->free = allocationSize;
 
         return newRegion;

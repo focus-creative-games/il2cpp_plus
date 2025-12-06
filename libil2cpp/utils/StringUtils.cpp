@@ -102,6 +102,11 @@ namespace utils
 
     std::string StringUtils::Utf16ToUtf8(const Il2CppChar* utf16String, int maximumSize)
     {
+        std::string utf8String;
+        if (maximumSize == 0)
+        {
+            return utf8String;
+        }
         const Il2CppChar* ptr = utf16String;
         size_t length = 0;
         while (*ptr)
@@ -112,7 +117,6 @@ namespace utils
                 break;
         }
 
-        std::string utf8String;
         utf8String.reserve(length);
         utf8::unchecked::utf16to8(utf16String, ptr, std::back_inserter(utf8String));
 

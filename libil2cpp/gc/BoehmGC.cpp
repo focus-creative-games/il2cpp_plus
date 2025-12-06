@@ -34,6 +34,9 @@ static void on_heap_resize(GC_word newSize);
 static GC_push_other_roots_proc default_push_other_roots;
 typedef Il2CppHashMap<char*, char*, il2cpp::utils::PassThroughHash<char*> > RootMap;
 static RootMap s_Roots;
+typedef Il2CppHashMap<void*, il2cpp::gc::GarbageCollector::GetDynamicRootDataProc, il2cpp::utils::PassThroughHash<void*> > DynamicRootMap;
+static DynamicRootMap s_DynamicRoots;
+
 static void push_other_roots(void);
 
 typedef struct ephemeron_node ephemeron_node;
@@ -587,6 +590,39 @@ void il2cpp::gc::GarbageCollector::UnregisterRoot(char* start)
     GC_call_with_alloc_lock(deregister_root, start);
 }
 
+struct DynamicRootData
+{
+    void* root;
+    il2cpp::gc::GarbageCollector::GetDynamicRootDataProc getRootDataFunc;
+};
+
+static void* register_dynamic_root(void* arg)
+{
+    DynamicRootData* rootData = (DynamicRootData*)arg;
+    IL2CPP_ASSERT(s_DynamicRoots.find(rootData->root) == s_DynamicRoots.end());
+    s_DynamicRoots.add(rootData->root, rootData->getRootDataFunc);
+    
+    return NULL;
+}
+
+static void* deregister_dynamic_root(void* arg)
+{
+    IL2CPP_ASSERT(s_DynamicRoots.find(arg) != s_DynamicRoots.end());
+    s_DynamicRoots.erase(arg);
+    return NULL;
+}
+
+void il2cpp::gc::GarbageCollector::RegisterDynamicRoot(void* root, GetDynamicRootDataProc getRootDataFunc)
+{
+    DynamicRootData rootData = {root, getRootDataFunc};
+    GC_call_with_alloc_lock(register_dynamic_root, &rootData);
+}
+
+void il2cpp::gc::GarbageCollector::UnregisterDynamicRoot(void* root)
+{
+    GC_call_with_alloc_lock(deregister_dynamic_root, root);
+}
+
 static GC_ms_entry*
 push_roots(GC_word* addr, GC_ms_entry* mark_stack_ptr, GC_ms_entry* mark_stack_limit, GC_word env)
 {
@@ -628,6 +664,14 @@ push_other_roots(void)
     if (push_roots_proc_index)
         GC_push_proc(GC_MAKE_PROC(push_roots_proc_index, 0), NULL);
 
+    for (auto dynamicRootEntry : s_DynamicRoots)
+    {
+        std::pair<char*, size_t> dynamicRootData = dynamicRootEntry.second(dynamicRootEntry.first);
+        if (dynamicRootData.first)
+        {
+            GC_push_all(dynamicRootData.first, dynamicRootData.first + dynamicRootData.second);
+        }
+    }
     GC_push_all(&ephemeron_list, &ephemeron_list + 1);
     if (default_push_other_roots)
         default_push_other_roots();
