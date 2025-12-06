@@ -36,6 +36,9 @@ namespace gc
         static utils::Expected<Il2CppGCHandle> GetTargetHandle(Il2CppObject * obj, Il2CppGCHandle handle, int32_t type);
         typedef void(*WalkGCHandleTargetsCallback)(Il2CppObject* obj, void* context);
         static void WalkStrongGCHandleTargets(WalkGCHandleTargetsCallback callback, void* context);
+
+        static void AcquireMetadataLocks();
+        static void ReleaseMetadataLocks();
     };
 } /* gc */
 } /* il2cpp */

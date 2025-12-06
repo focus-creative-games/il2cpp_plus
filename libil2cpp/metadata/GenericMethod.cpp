@@ -431,5 +431,15 @@ namespace metadata
     {
         s_GenericMethodMap.Clear();
     }
+
+    void GenericMethod::AcquireMetadataLocks()
+    {
+        s_GenericMethodMap.LockExclusive();
+    }
+
+    void GenericMethod::ReleaseMetadataLocks()
+    {
+        s_GenericMethodMap.ReleaseExclusive();
+    }
 } /* namespace vm */
 } /* namespace il2cpp */

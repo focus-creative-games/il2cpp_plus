@@ -244,7 +244,10 @@ Il2CppClass* il2cpp_class_from_system_type(Il2CppReflectionType *type)
 
 bool il2cpp_class_is_inited(const Il2CppClass *klass)
 {
-    return klass->initialized;
+    // Return true here as long as the size is initialized, even if we didn't fully initialize the class
+    // This API is currently used by the memory profiler and we want to report classes that we've encountered
+    // for layout and that's what's actually being asked
+    return klass->size_inited;
 }
 
 bool il2cpp_class_is_generic(const Il2CppClass *klass)

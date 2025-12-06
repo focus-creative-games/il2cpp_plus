@@ -7,6 +7,7 @@
 #include "il2cpp-tabledefs.h"
 #include "il2cpp-runtime-stats.h"
 #include "gc/GarbageCollector.h"
+#include "gc/GCHandle.h"
 #include "metadata/ArrayMetadata.h"
 #include "metadata/GenericMetadata.h"
 #include "metadata/GenericMethod.h"
@@ -301,6 +302,30 @@ void ClearImageNames()
         Il2CppImage* image = s_ImagesTable + imageIndex;
         IL2CPP_FREE((void*)image->nameNoExt);
     }
+}
+
+void il2cpp::vm::MetadataCache::AcquireMetadataLocks()
+{
+    // Acquires "all" of the metadata locks
+    // This will ensure that no other threads can be in metadata code
+    // NOTE: Some of these locks are non-reentrant reader/writer locks so not everything is safe!
+
+    g_MetadataLock.Acquire();
+    s_MetadataCache.m_PointerTypes.LockExclusive();
+    metadata::GenericMetadata::AcquireMetadataLocks();
+    metadata::ArrayMetadata::AcquireMetadataLocks();
+    metadata::GenericMethod::AcquireMetadataLocks();
+    gc::GCHandle::AcquireMetadataLocks();
+}
+
+void il2cpp::vm::MetadataCache::ReleaseMetadataLocks()
+{
+    gc::GCHandle::ReleaseMetadataLocks();
+    metadata::GenericMethod::ReleaseMetadataLocks();
+    metadata::ArrayMetadata::ReleaseMetadataLocks();
+    metadata::GenericMetadata::ReleaseMetadataLocks();
+    s_MetadataCache.m_PointerTypes.ReleaseExclusive();
+    g_MetadataLock.Release();
 }
 
 void il2cpp::vm::MetadataCache::Clear()
@@ -984,6 +1009,11 @@ Il2CppClass* il2cpp::vm::MetadataCache::GetTypeInfoFromHandle(Il2CppMetadataType
     return il2cpp::vm::GlobalMetadata::GetTypeInfoFromHandle(handle);
 }
 
+Il2CppClass* il2cpp::vm::MetadataCache::GetTypeInfoFromHandle_OnlyCached(Il2CppMetadataTypeHandle handle)
+{
+    return il2cpp::vm::GlobalMetadata::GetTypeInfoFromHandle_OnlyCached(handle);
+}
+
 Il2CppMetadataGenericContainerHandle il2cpp::vm::MetadataCache::GetGenericContainerFromGenericClass(const Il2CppImage* image, const Il2CppGenericClass* genericClass)
 {
     return il2cpp::vm::GlobalMetadata::GetGenericContainerFromGenericClass(genericClass);
@@ -1138,12 +1168,14 @@ void* il2cpp::vm::MetadataCache::InitializeRuntimeMetadata(uintptr_t* metadataPo
 
 void il2cpp::vm::MetadataCache::WalkPointerTypes(WalkTypesCallback callback, void* context)
 {
-    os::FastAutoLock lock(&g_MetadataLock);
+    s_MetadataCache.m_PointerTypes.LockShared();
 
     for (PointerTypeMap::iterator it = s_MetadataCache.m_PointerTypes.UnlockedBegin(); it != s_MetadataCache.m_PointerTypes.UnlockedEnd(); it++)
     {
         callback(it->second, context);
     }
+
+    s_MetadataCache.m_PointerTypes.ReleaseShared();
 }
 
 Il2CppMetadataTypeHandle il2cpp::vm::MetadataCache::GetTypeHandleFromIndex(const Il2CppImage* image, TypeDefinitionIndex typeIndex)

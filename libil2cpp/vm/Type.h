@@ -246,7 +246,7 @@ namespace vm
         static Il2CppClass* GetClass(const Il2CppType *type);
         static Il2CppMetadataGenericParameterHandle GetGenericParameterHandle(const Il2CppType *type);
         static Il2CppGenericParameterInfo GetGenericParameterInfo(const Il2CppType *type);
-        static const Il2CppType* GetGenericTypeDefintion(const Il2CppType* type);
+        static const Il2CppType* GetGenericTypeDefinition(const Il2CppType* type);
 
         static void ConstructDelegate(Il2CppDelegate* delegate, Il2CppObject* target, const MethodInfo* method);
         static void ConstructClosedDelegate(Il2CppDelegate* delegate, Il2CppObject* target, Il2CppMethodPointer addr, const MethodInfo* method);

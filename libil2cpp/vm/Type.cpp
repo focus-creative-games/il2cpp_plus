@@ -1279,7 +1279,7 @@ namespace vm
         return MetadataCache::GetGenericParameterInfo(MetadataCache::GetGenericParameterFromType(type));
     }
 
-    const Il2CppType* Type::GetGenericTypeDefintion(const Il2CppType* type)
+    const Il2CppType* Type::GetGenericTypeDefinition(const Il2CppType* type)
     {
         if (IsGenericInstance(type))
             return type->data.generic_class->type;

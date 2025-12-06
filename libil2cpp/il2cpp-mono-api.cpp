@@ -440,10 +440,8 @@ int32_t mono_type_is_reference(MonoType *type)
 
 int32_t mono_type_generic_inst_is_valuetype(MonoType *monoType)
 {
-    static const int kBitIsValueType = 1;
     Il2CppType *type = (Il2CppType*)monoType;
-    Il2CppMetadataTypeHandle handle = il2cpp::vm::MetadataCache::GetTypeHandleFromType(type->data.generic_class->type);
-    return il2cpp::vm::MetadataCache::TypeIsValueType(handle);
+    return il2cpp::vm::Type::IsValueType(type);
 }
 
 char* mono_type_full_name(MonoType* type)

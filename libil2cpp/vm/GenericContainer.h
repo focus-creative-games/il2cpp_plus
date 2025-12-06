@@ -5,8 +5,6 @@
 #include "il2cpp-metadata.h"
 
 struct Il2CppClass;
-struct Il2CppGenericContainer;
-struct Il2CppGenericParameter;
 
 namespace il2cpp
 {

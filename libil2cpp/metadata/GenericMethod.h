@@ -32,6 +32,9 @@ namespace metadata
         static void ClearStatics();
         static const Il2CppRGCTXData* InflateRGCTX(const MethodInfo* method);
 
+        static void AcquireMetadataLocks();
+        static void ReleaseMetadataLocks();
+
     private:
         static const MethodInfo* CreateMethodLocked(const Il2CppGenericMethod& gmethod);
         static const Il2CppRGCTXData* InflateRGCTXLocked(const Il2CppGenericMethod& gmethod, const il2cpp::os::FastAutoLock& lock);

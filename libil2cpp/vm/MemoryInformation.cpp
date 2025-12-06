@@ -298,8 +298,30 @@ namespace MemoryInformation
         uint32_t size;
     };
 
+    struct ReportIL2CppClassesFilterContext
+    {
+        ClassReportFunc func;
+        void* context;
+    };
+
+    void ReportIL2CppClassesFilter(Il2CppClass* klass, void* context)
+    {
+        // We may have classes that we have loaded only for field layout but have not fully initialized
+        // This can happen for structs types that are fields on reference types
+        // We want to report any type we've loading for layout
+        if (klass->size_inited && !vm::Class::IsGenericTypeDefinition(klass))
+        {
+            ReportIL2CppClassesFilterContext* filterContext = reinterpret_cast<ReportIL2CppClassesFilterContext*>(context);
+            filterContext->func(klass, filterContext->context);
+        }
+    }
+
     void ReportIL2CppClasses(ClassReportFunc callback, void* context)
     {
+        struct ReportIL2CppClassesFilterContext filterContext;
+        filterContext.func = callback;
+        filterContext.context = context;
+
         const AssemblyVector* allAssemblies = Assembly::GetAllAssemblies();
 
         for (AssemblyVector::const_iterator it = allAssemblies->begin(); it != allAssemblies->end(); it++)
@@ -308,16 +330,16 @@ namespace MemoryInformation
 
             for (uint32_t i = 0; i < image.typeCount; i++)
             {
-                Il2CppClass* type = MetadataCache::GetTypeInfoFromHandle(MetadataCache::GetAssemblyTypeHandle(&image, i));
-                if (type->initialized)
-                    callback(type, context);
+                Il2CppClass* klass = MetadataCache::GetTypeInfoFromHandle_OnlyCached(MetadataCache::GetAssemblyTypeHandle(&image, i));
+                if (klass)
+                    ReportIL2CppClassesFilter(klass, &filterContext);
             }
         }
 
-        metadata::ArrayMetadata::WalkArrays(callback, context);
-        metadata::ArrayMetadata::WalkSZArrays(callback, context);
-        metadata::GenericMetadata::WalkAllGenericClasses(callback, context);
-        MetadataCache::WalkPointerTypes(callback, context);
+        metadata::ArrayMetadata::WalkArrays(ReportIL2CppClassesFilter, &filterContext);
+        metadata::ArrayMetadata::WalkSZArrays(ReportIL2CppClassesFilter, &filterContext);
+        metadata::GenericMetadata::WalkAllGenericClasses(ReportIL2CppClassesFilter, &filterContext);
+        MetadataCache::WalkPointerTypes(ReportIL2CppClassesFilter, &filterContext);
     }
 
     void ReportGcHeapSection(void * context, void * start, void * end)

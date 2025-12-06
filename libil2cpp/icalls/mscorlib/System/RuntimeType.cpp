@@ -1143,7 +1143,7 @@ namespace System
 
     void RuntimeType::GetPacking(Il2CppReflectionType* type, int32_t* packing, int32_t* size)
     {
-        const Il2CppType* runtimeType = vm::Type::IsGenericInstance(type->type) ? vm::Type::GetGenericTypeDefintion(type->type) : type->type;
+        const Il2CppType* runtimeType = vm::Type::IsGenericInstance(type->type) ? vm::Type::GetGenericTypeDefinition(type->type) : type->type;
         Il2CppMetadataTypeHandle handle = il2cpp::vm::MetadataCache::GetTypeHandleFromType(runtimeType);
 
         if (vm::MetadataCache::StructLayoutPackIsDefault(handle))

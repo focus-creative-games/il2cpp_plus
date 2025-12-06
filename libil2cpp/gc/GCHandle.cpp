@@ -398,5 +398,15 @@ namespace gc
         }
         unlock_handles(handles);
     }
+
+    void GCHandle::AcquireMetadataLocks()
+    {
+        lock_handles(handles);
+    }
+
+    void GCHandle::ReleaseMetadataLocks()
+    {
+        unlock_handles(handles);
+    }
 } /* gc */
 } /* il2cpp */

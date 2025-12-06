@@ -10,6 +10,7 @@
 #include "os/Mutex.h"
 #include "vm/Array.h"
 #include "vm/Domain.h"
+#include "vm/MetadataCache.h"
 #include "vm/Profiler.h"
 #include "utils/Il2CppHashMap.h"
 #include "utils/HashUtils.h"
@@ -424,7 +425,16 @@ void* il2cpp::gc::GarbageCollector::MakeDescriptorForArray()
 
 void il2cpp::gc::GarbageCollector::StopWorld()
 {
+    // Acquire all the metadata locks before stopping the world
+    // This ensures that while the GC is stopped we can safely query
+    // internal metadata without worrying about a paused thread holding those locks
+    vm::MetadataCache::AcquireMetadataLocks();
+
     GC_stop_world_external();
+
+    // Some of these locks are not re-entrant so we want to release them here
+    // Once all threads are stopped there's no reason to keep these locked
+    vm::MetadataCache::ReleaseMetadataLocks();
 }
 
 void il2cpp::gc::GarbageCollector::StartWorld()

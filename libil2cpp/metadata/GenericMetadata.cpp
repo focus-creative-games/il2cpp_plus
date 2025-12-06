@@ -382,6 +382,16 @@ namespace metadata
         }
     }
 
+    void GenericMetadata::AcquireMetadataLocks()
+    {
+        s_GenericClassMutex.Acquire();
+    }
+
+    void GenericMetadata::ReleaseMetadataLocks()
+    {
+        s_GenericClassMutex.Release();
+    }
+
     void GenericMetadata::Clear()
     {
         for (Il2CppGenericClassSet::iterator genericClass = s_GenericClassSet.begin(); genericClass != s_GenericClassSet.end(); genericClass++)

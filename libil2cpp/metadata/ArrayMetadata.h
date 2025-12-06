@@ -17,6 +17,8 @@ namespace metadata
         typedef void(*ArrayTypeWalkCallback)(Il2CppClass* type, void* context);
         static void WalkSZArrays(ArrayTypeWalkCallback callback, void* context);
         static void WalkArrays(ArrayTypeWalkCallback callback, void* context);
+        static void AcquireMetadataLocks();
+        static void ReleaseMetadataLocks();
 
         // called as part of Class::Init with lock held
         static void SetupArrayInterfaces(Il2CppClass* klass, const il2cpp::os::FastAutoLock& lock);

@@ -11,6 +11,13 @@
 // 3. These structures should be optimized for size. Other structures are used at runtime which can
 //    be larger to store cached information
 
+// The serialized size of some indexes may be one, two, or four bytes, dependending on how many elements the index needs
+// to represent. In general, we use the smallest possible representation of an index to minimize the size of the
+// serialized metadata. The structs in this file, and the indexes they contain, represent the *deserialized* form.
+// The serialized size is known only at runtime, so it can't be expressed statically here.
+
+// Values for EncodedMethodIndex:
+
 // Encoded index (1 bit)
 // MethodDef - 0
 // MethodSpec - 1
@@ -71,7 +78,6 @@ typedef struct Il2CppTypeDefinition
 
     TypeIndex declaringTypeIndex;
     TypeIndex parentIndex;
-    TypeIndex elementTypeIndex; // we can probably remove this one. Only used for enums
 
     GenericContainerIndex genericContainerIndex;
 
@@ -187,7 +193,6 @@ typedef struct Il2CppPropertyDefinition
 
 typedef struct Il2CppStringLiteral
 {
-    uint32_t length;
     StringLiteralIndex dataIndex;
 } Il2CppStringLiteral;
 
@@ -228,6 +233,7 @@ typedef struct Il2CppAssemblyDefinition
 {
     ImageIndex imageIndex;
     uint32_t token;
+    uint32_t moduleToken;
     int32_t referencedAssemblyStart;
     int32_t referencedAssemblyCount;
     Il2CppAssemblyNameDefinition aname;
@@ -273,72 +279,49 @@ typedef struct Il2CppWindowsRuntimeTypeNamePair
     TypeIndex typeIndex;
 } Il2CppWindowsRuntimeTypeNamePair;
 
+typedef struct Il2CppSectionMetadata
+{
+    int32_t offset;
+    int32_t size;
+    int32_t count;
+} Il2CppSectionMetadata;
+
 #pragma pack(push, p1,4)
 typedef struct Il2CppGlobalMetadataHeader
 {
-    int32_t sanity;
+    uint32_t sanity;
     int32_t version;
-    int32_t stringLiteralOffset; // string data for managed code
-    int32_t stringLiteralSize;
-    int32_t stringLiteralDataOffset;
-    int32_t stringLiteralDataSize;
-    int32_t stringOffset; // string data for metadata
-    int32_t stringSize;
-    int32_t eventsOffset; // Il2CppEventDefinition
-    int32_t eventsSize;
-    int32_t propertiesOffset; // Il2CppPropertyDefinition
-    int32_t propertiesSize;
-    int32_t methodsOffset; // Il2CppMethodDefinition
-    int32_t methodsSize;
-    int32_t parameterDefaultValuesOffset; // Il2CppParameterDefaultValue
-    int32_t parameterDefaultValuesSize;
-    int32_t fieldDefaultValuesOffset; // Il2CppFieldDefaultValue
-    int32_t fieldDefaultValuesSize;
-    int32_t fieldAndParameterDefaultValueDataOffset; // uint8_t
-    int32_t fieldAndParameterDefaultValueDataSize;
-    int32_t fieldMarshaledSizesOffset; // Il2CppFieldMarshaledSize
-    int32_t fieldMarshaledSizesSize;
-    int32_t parametersOffset; // Il2CppParameterDefinition
-    int32_t parametersSize;
-    int32_t fieldsOffset; // Il2CppFieldDefinition
-    int32_t fieldsSize;
-    int32_t genericParametersOffset; // Il2CppGenericParameter
-    int32_t genericParametersSize;
-    int32_t genericParameterConstraintsOffset; // TypeIndex
-    int32_t genericParameterConstraintsSize;
-    int32_t genericContainersOffset; // Il2CppGenericContainer
-    int32_t genericContainersSize;
-    int32_t nestedTypesOffset; // TypeDefinitionIndex
-    int32_t nestedTypesSize;
-    int32_t interfacesOffset; // TypeIndex
-    int32_t interfacesSize;
-    int32_t vtableMethodsOffset; // EncodedMethodIndex
-    int32_t vtableMethodsSize;
-    int32_t interfaceOffsetsOffset; // Il2CppInterfaceOffsetPair
-    int32_t interfaceOffsetsSize;
-    int32_t typeDefinitionsOffset; // Il2CppTypeDefinition
-    int32_t typeDefinitionsSize;
-    int32_t imagesOffset; // Il2CppImageDefinition
-    int32_t imagesSize;
-    int32_t assembliesOffset; // Il2CppAssemblyDefinition
-    int32_t assembliesSize;
-    int32_t fieldRefsOffset; // Il2CppFieldRef
-    int32_t fieldRefsSize;
-    int32_t referencedAssembliesOffset; // int32_t
-    int32_t referencedAssembliesSize;
-    int32_t attributeDataOffset;
-    int32_t attributeDataSize;
-    int32_t attributeDataRangeOffset;
-    int32_t attributeDataRangeSize;
-    int32_t unresolvedIndirectCallParameterTypesOffset; // TypeIndex
-    int32_t unresolvedIndirectCallParameterTypesSize;
-    int32_t unresolvedIndirectCallParameterRangesOffset; // Il2CppMetadataRange
-    int32_t unresolvedIndirectCallParameterRangesSize;
-    int32_t windowsRuntimeTypeNamesOffset; // Il2CppWindowsRuntimeTypeNamePair
-    int32_t windowsRuntimeTypeNamesSize;
-    int32_t windowsRuntimeStringsOffset; // const char*
-    int32_t windowsRuntimeStringsSize;
-    int32_t exportedTypeDefinitionsOffset; // TypeDefinitionIndex
-    int32_t exportedTypeDefinitionsSize;
+
+    Il2CppSectionMetadata stringLiterals; // string data for managed code
+    Il2CppSectionMetadata stringLiteralData;
+    Il2CppSectionMetadata strings; // string data for metadata
+    Il2CppSectionMetadata events; // Il2CppEventDefinition
+    Il2CppSectionMetadata properties; // Il2CppPropertyDefinition
+    Il2CppSectionMetadata methods; // Il2CppMethodDefinition
+    Il2CppSectionMetadata parameterDefaultValues; // Il2CppParameterDefaultValue
+    Il2CppSectionMetadata fieldDefaultValues; // Il2CppFieldDefaultValue
+    Il2CppSectionMetadata fieldAndParameterDefaultValueData; // uint8_t
+    Il2CppSectionMetadata fieldMarshaledSizes; // Il2CppFieldMarshaledSize
+    Il2CppSectionMetadata parameters; // Il2CppParameterDefinition
+    Il2CppSectionMetadata fields; // Il2CppFieldDefinition
+    Il2CppSectionMetadata genericParameters; // Il2CppGenericParameter
+    Il2CppSectionMetadata genericParameterConstraints; // TypeIndex
+    Il2CppSectionMetadata genericContainers; // Il2CppGenericContainer
+    Il2CppSectionMetadata nestedTypes; // TypeDefinitionIndex
+    Il2CppSectionMetadata interfaces; // TypeIndex
+    Il2CppSectionMetadata vtableMethods; // EncodedMethodIndex
+    Il2CppSectionMetadata interfaceOffsets; // Il2CppInterfaceOffsetPair
+    Il2CppSectionMetadata typeDefinitions; // Il2CppTypeDefinition
+    Il2CppSectionMetadata images; // Il2CppImageDefinition
+    Il2CppSectionMetadata assemblies; // Il2CppAssemblyDefinition
+    Il2CppSectionMetadata fieldRefs; // Il2CppFieldRef
+    Il2CppSectionMetadata referencedAssemblies; // int32_t
+    Il2CppSectionMetadata attributeData;
+    Il2CppSectionMetadata attributeDataRanges;
+    Il2CppSectionMetadata unresolvedIndirectCallParameterTypes; // TypeIndex
+    Il2CppSectionMetadata unresolvedIndirectCallParameterRanges; // Il2CppMetadataRange
+    Il2CppSectionMetadata windowsRuntimeTypeNames; // Il2CppWindowsRuntimeTypeNamePair
+    Il2CppSectionMetadata windowsRuntimeStrings; // const char*
+    Il2CppSectionMetadata exportedTypeDefinitions; // TypeDefinitionIndex
 } Il2CppGlobalMetadataHeader;
 #pragma pack(pop, p1)

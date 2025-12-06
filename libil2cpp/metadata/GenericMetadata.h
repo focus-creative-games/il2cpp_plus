@@ -47,6 +47,8 @@ namespace metadata
         static int GetGenericVirtualIterations();
         static void SetGenericVirtualIterations(int iterations);
 
+        static void AcquireMetadataLocks();
+        static void ReleaseMetadataLocks();
 
         static void Clear();
     };

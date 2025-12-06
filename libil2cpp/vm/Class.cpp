@@ -1785,11 +1785,6 @@ namespace vm
         return klass->image;
     }
 
-    Il2CppMetadataGenericContainerHandle Class::GetGenericContainer(Il2CppClass *klass)
-    {
-        return klass->genericContainerHandle;
-    }
-
     const MethodInfo* Class::GetCCtor(Il2CppClass *klass)
     {
         if (!klass->has_cctor)

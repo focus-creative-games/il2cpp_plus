@@ -168,7 +168,11 @@ namespace vm
         static Il2CppClass* InflateGenericClass(Il2CppClass* klass, Il2CppGenericContext *context);
         static const Il2CppType* InflateGenericType(const Il2CppType* type, Il2CppGenericContext *context);
 
-        static Il2CppMetadataGenericContainerHandle GetGenericContainer(Il2CppClass *klass);
+        inline static Il2CppMetadataGenericContainerHandle GetGenericContainer(const Il2CppClass* klass)
+        {
+            return klass->genericContainerHandle;
+        }
+
         static const MethodInfo* GetCCtor(Il2CppClass *klass);
         static const char* GetFieldDefaultValue(const FieldInfo *field, const Il2CppType** type);
         static int GetFieldMarshaledSize(const FieldInfo *field);
@@ -215,7 +219,7 @@ namespace vm
 
             const Il2CppGenericInst* genericInst = genericClass->context.class_inst;
             const Il2CppGenericInst* oGenericInst = oGenericClass->context.class_inst;
-            Il2CppMetadataGenericContainerHandle genericContainer = MetadataCache::GetGenericContainerFromGenericClass(klass->image, klass->generic_class);
+            Il2CppMetadataGenericContainerHandle genericContainer = Class::GetGenericContainer(klass);
 
             IL2CPP_ASSERT(oGenericInst->type_argc == genericInst->type_argc);
 

@@ -71,6 +71,8 @@ namespace vm
         static bool Initialize();
         static void InitializeGCSafe();
 
+        static void AcquireMetadataLocks();
+        static void ReleaseMetadataLocks();
         static void Clear();
 
         static void ExecuteEagerStaticClassConstructors();
@@ -175,6 +177,7 @@ namespace vm
         static int16_t GetGenericConstraintCount(Il2CppMetadataGenericParameterHandle handle);
 
         static Il2CppClass* GetTypeInfoFromHandle(Il2CppMetadataTypeHandle handle);
+        static Il2CppClass* GetTypeInfoFromHandle_OnlyCached(Il2CppMetadataTypeHandle handle);
         static const MethodInfo* GetAssemblyEntryPoint(const Il2CppImage* image);
 
         static Il2CppMetadataTypeHandle GetAssemblyTypeHandle(const Il2CppImage* image, AssemblyTypeIndex index);

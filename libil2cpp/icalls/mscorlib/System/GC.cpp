@@ -34,7 +34,6 @@ namespace System
     int64_t GC::GetAllocatedBytesForCurrentThread()
     {
         IL2CPP_NOT_IMPLEMENTED_ICALL(GC::GetAllocatedBytesForCurrentThread);
-        IL2CPP_UNREACHABLE;
         return 0;
     }
 
