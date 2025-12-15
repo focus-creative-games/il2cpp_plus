@@ -61,8 +61,11 @@ namespace vm
                 if (Class::IsGenericClassAssignableFromVariance(itf, pair->interfaceType, klass))
                 {
                     IL2CPP_ASSERT(pair->offset + slot < klass->vtable_count);
-                    //return &klass->vtable[pair->offset + slot];
+#if !IL2CPP_ENABLE_LAZY_INIT
+                    return &klass->vtable[pair->offset + slot];
+#else
                     return Class::GetOrSetupOneVTableSlot(const_cast<Il2CppClass*>(klass), NULL, pair->offset + slot);
+#endif
                 }
             }
         }
@@ -115,7 +118,7 @@ namespace vm
 
         //quick pass
         Il2CppClass* klass = obj->klass;
-        if(slot < klass->vtable_count && klass->vtable[slot].method != NULL)
+        if(slot < klass->vtable_count && klass->vtable[slot].method != NULL && klass->vtable[slot].methodPtr != NULL)
             return klass->vtable[slot];
 
         return *Class::GetOrSetupOneVTableSlot(obj->klass, NULL, slot);
@@ -144,11 +147,11 @@ namespace vm
                 }
             }
         }
-
+#if IL2CPP_ENABLE_LAZY_INIT
         const VirtualInvokeData* data = Class::GetOrSetupOneVTableSlot(klass, itf, slot);
         if (data)
             return data;
-
+#endif
         return GetInterfaceInvokeDataFromVTableSlowPath(klass, itf, slot);
     }
 }

@@ -46,10 +46,11 @@ namespace metadata
         static void SetMaximumRuntimeGenericDepth(int depth);
         static int GetGenericVirtualIterations();
         static void SetGenericVirtualIterations(int iterations);
-
+#if IL2CPP_ENABLE_LAZY_INIT
         static void InflateRGCTXClass(const Il2CppRGCTXData* rgctx, RGCTXIndex index);
         static void InflateRGCTXType(const Il2CppRGCTXData* rgctx, RGCTXIndex index);
         static void InflateRGCTXMethod(const Il2CppRGCTXData* rgctx, RGCTXIndex index);
+#endif
 
         static void Clear();
     };

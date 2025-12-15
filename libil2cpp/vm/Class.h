@@ -182,7 +182,6 @@ namespace vm
         static void SetupTypeHierarchy(Il2CppClass *klass);
         static void SetupInterfaces(Il2CppClass *klass);
 
-        //[WL]
         static void SetupVTable(Il2CppClass* klass);
         static const MethodInfo* GetOrSetupOneMethod(Il2CppClass* klass, MethodIndex index);
         static const VirtualInvokeData* GetOrSetupOneVTableSlot(Il2CppClass* klass, const Il2CppClass* itf, VTableIndex index);

@@ -252,12 +252,12 @@ inline RuntimeObject* IsInstClass(RuntimeObject *obj, RuntimeClass* targetType)
 #endif
     if (!obj)
         return NULL;
-
+#if  !IL2CPP_ENABLE_LAZY_INIT
     // optimized version to compare classes
-    //return il2cpp::vm::ClassInlines::HasParentUnsafe(obj->klass, targetType) ? obj : NULL;
-
-    //[WL]
+    return il2cpp::vm::ClassInlines::HasParentUnsafe(obj->klass, targetType) ? obj : NULL;
+#else
     return il2cpp::vm::ClassInlines::HasParent(obj->klass, targetType) ? obj : NULL;
+#endif
 }
 
 // OpCode.Castclass
@@ -392,12 +392,14 @@ inline uint16_t il2cpp_codegen_method_get_slot(const RuntimeMethod* method)
 IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_virtual_invoke_data(Il2CppMethodSlot slot, const RuntimeObject* obj)
 {
     Assert(slot != kInvalidIl2CppMethodSlot && "il2cpp_codegen_get_virtual_invoke_data got called on a non-virtual method");
-    //[WL]
-    //return obj->klass->vtable[slot];
-    if (obj->klass->is_vtable_initialized && obj->klass->vtable[slot].method != NULL) {
+#if !IL2CPP_ENABLE_LAZY_INIT
+    return obj->klass->vtable[slot];
+#else
+    if (obj->klass->is_vtable_initialized || obj->klass->vtable[slot].method != NULL) {
         return obj->klass->vtable[slot];
     }else
         return il2cpp::vm::ClassInlines::GetVirtualInvokeData(slot, obj);
+#endif
 }
 
 IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_interface_invoke_data(Il2CppMethodSlot slot, RuntimeObject* obj, const RuntimeClass* declaringInterface)
@@ -411,17 +413,18 @@ const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method_internal(const Ru
 IL2CPP_FORCE_INLINE const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method(const RuntimeMethod* method, const RuntimeObject* obj)
 {
     uint16_t slot = method->slot;
-	
-	//const RuntimeMethod* methodDefinition = obj->klass->vtable[slot].method;
-    //[WL]
+#if !IL2CPP_ENABLE_LAZY_INIT
+	const RuntimeMethod* methodDefinition = obj->klass->vtable[slot].method;
+#else
     const RuntimeMethod* methodDefinition = NULL;
-    if (obj->klass->is_vtable_initialized && obj->klass->vtable[slot].method != NULL) {
+    if (obj->klass->is_vtable_initialized || obj->klass->vtable[slot].method != NULL) {
         methodDefinition = obj->klass->vtable[slot].method;
     }
     else {
         const VirtualInvokeData& data = il2cpp::vm::ClassInlines::GetVirtualInvokeData(slot, obj);
         methodDefinition = data.method;
     }
+#endif
     return il2cpp_codegen_get_generic_virtual_method_internal(methodDefinition, method);
 }
 
@@ -693,16 +696,38 @@ inline void il2cpp_codegen_runtime_class_init_inline(RuntimeClass* klass)
         il2cpp_codegen_runtime_class_init(klass);
 }
 
+
+#if !IL2CPP_ENABLE_LAZY_INIT
+inline RuntimeClass* il2cpp_rgctx_data_no_init(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    return rgctxVar[index].klass;
+}
+inline RuntimeClass* il2cpp_rgctx_data(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    return InitializedTypeInfo(rgctxVar[index].klass);
+}
+inline const Il2CppType* il2cpp_rgctx_type(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    return rgctxVar[index].type;
+}
+inline const MethodInfo* il2cpp_rgctx_method(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    return rgctxVar[index].method;
+}
+
+#else
 RuntimeClass* il2cpp_rgctx_data_no_init(const Il2CppRGCTXData* rgctxVar, int32_t index);
 
 // generic sharing
-inline RuntimeClass* il2cpp_rgctx_data(const Il2CppRGCTXData* rgctxVar, int32_t index) {
-    return InitializedTypeInfo(il2cpp_rgctx_data_no_init(rgctxVar,index));
+inline RuntimeClass* il2cpp_rgctx_data(const Il2CppRGCTXData* rgctxVar, int32_t index)
+{
+    return InitializedTypeInfo(il2cpp_rgctx_data_no_init(rgctxVar, index));
 }
-
 const Il2CppType* il2cpp_rgctx_type(const Il2CppRGCTXData* rgctxVar, int32_t index);
-
 const MethodInfo* il2cpp_rgctx_method(const Il2CppRGCTXData* rgctxVar, int32_t index);
+#endif
+
+
 
 inline FieldInfo* il2cpp_rgctx_field(RuntimeClass* klass, int32_t index)
 {
@@ -737,14 +762,17 @@ inline const RuntimeMethod* GetVirtualMethodInfo(RuntimeObject* pThis, Il2CppMet
 {
     if (!pThis)
         il2cpp_codegen_raise_null_reference_exception();
-    //[WL]
-    if (pThis->klass->is_vtable_initialized && pThis->klass->vtable[slot].method != NULL) {
+#if !IL2CPP_ENABLE_LAZY_INIT
+    return pThis->klass->vtable[slot].method;
+#else
+    if (pThis->klass->is_vtable_initialized || pThis->klass->vtable[slot].method != NULL) {
         return pThis->klass->vtable[slot].method;
     }
     else {
         const VirtualInvokeData& data = il2cpp::vm::ClassInlines::GetVirtualInvokeData(slot, pThis);
         return data.method;
     }
+#endif
 }
 
 inline const RuntimeMethod* GetInterfaceMethodInfo(RuntimeObject* pThis, Il2CppMethodSlot slot, RuntimeClass* declaringInterface)

@@ -331,9 +331,10 @@ namespace metadata
             }
 
             Class::Init(implementingInterface);
-            //[WL]
-            Class::SetupMethods(implementingInterface);
 
+#if IL2CPP_ENABLE_LAZY_INIT
+            Class::SetupMethods(implementingInterface);
+#endif
             const MethodInfo* matchingInterfacesMethod = NULL;
             for (int methodIndex = 0; methodIndex < implementingInterface->method_count; methodIndex++)
             {

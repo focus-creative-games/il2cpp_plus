@@ -466,7 +466,7 @@ typedef struct Il2CppClass
     uint8_t has_cctor : 1;
     uint8_t is_blittable : 1;
     uint8_t is_import_or_windows_runtime : 1;
-    uint8_t is_vtable_initialized : 1;
+    uint8_t is_vtable_initialized : 1; //it's set only in Class::SetupVTable,not in lazy method init
     uint8_t is_byref_like : 1;
 #if IL2CPP_SLIM_CLASS
     uint8_t cctor_finished_or_no_cctor : 1;

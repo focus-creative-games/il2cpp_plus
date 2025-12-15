@@ -1202,6 +1202,7 @@ bool il2cpp_codegen_is_unmanaged(const RuntimeMethod* method)
     return !il2cpp_codegen_is_reference_or_contains_references(method);
 }
 
+#if IL2CPP_ENABLE_LAZY_INIT
 RuntimeClass* il2cpp_rgctx_data_no_init(const Il2CppRGCTXData* rgctxVar, int32_t index)
 {
     if (rgctxVar[index].klass == NULL)
@@ -1228,6 +1229,7 @@ const MethodInfo* il2cpp_rgctx_method(const Il2CppRGCTXData* rgctxVar, int32_t i
     }
     return rgctxVar[index].method;
 }
+#endif
 
 #endif // !RUNTIME_TINY
 

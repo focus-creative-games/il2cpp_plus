@@ -225,10 +225,12 @@ namespace vm
         {
             IL2CPP_ASSERT(virtualMethod->slot < obj->klass->vtable_count);
             vtableSlotMethod = obj->klass->vtable[virtualMethod->slot].method;
+#if IL2CPP_ENABLE_LAZY_INIT
 			if(vtableSlotMethod == NULL)
 			{
 				vtableSlotMethod = Class::GetOrSetupOneVTableSlot(obj->klass, NULL, virtualMethod->slot)->method;
 			}
+#endif
         }
 
         if (Method::IsGenericInstanceMethod(virtualMethod))

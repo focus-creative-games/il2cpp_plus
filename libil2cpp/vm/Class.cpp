@@ -359,11 +359,12 @@ namespace vm
 #if IL2CPP_TINY
         IL2CPP_ASSERT(0 && "System.Object does not have a finalizer in the Tiny mscorlib, so we don't have a finalizer slot.");
 #endif
-        //[WL]
-        //Class::SetupVTable(klass);
-        //return klass->vtable[s_FinalizerSlot].method;
 
+#if !IL2CPP_ENABLE_LAZY_INIT
+        return klass->vtable[s_FinalizerSlot].method;
+#else
         return Class::GetOrSetupOneVTableSlot(klass, NULL, s_FinalizerSlot)->method;
+#endif
     }
 
     int32_t Class::GetInstanceSize(const Il2CppClass *klass)
@@ -653,7 +654,7 @@ namespace vm
     {
         if (klass->typeHierarchy == NULL)
             Class::SetupTypeHierarchy(klass);
-        if(parent->typeHierarchy == NULL)
+        if (parent->typeHierarchy == NULL)
         Class::SetupTypeHierarchy(parent);
 
         return ClassInlines::HasParentUnsafe(klass, parent);
@@ -676,7 +677,7 @@ namespace vm
             {
                 if (oklass->rank != klass->rank)
                     return false;
-                //[WL]
+#if IL2CPP_ENABLE_LAZY_INIT
                 {
                     il2cpp::os::FastAutoLock lock(&g_MetadataLock);
 
@@ -687,6 +688,7 @@ namespace vm
                         il2cpp::metadata::ArrayMetadata::SetupCastClass(oklass);
                     }
                 }
+#endif
                 if (Class::IsValuetype(oklass->castClass))
                 {
                     // Full array covariance is defined only for reference types.
@@ -716,8 +718,11 @@ namespace vm
                     return true;
             }
 
-            //[WL]
+#if !IL2CPP_ENABLE_LAZY_INIT
+            return ClassInlines::HasParentUnsafe(oklass, klass);
+#else
             return HasParent(oklass, klass);
+#endif
         }
 
         if (klass->generic_class != NULL)
@@ -725,10 +730,11 @@ namespace vm
             // checking for simple reference equality is not enough in this case because generic interface might have covariant and/or contravariant parameters
             for (Il2CppClass* iter = oklass; iter != NULL; iter = iter->parent)
             {
-				//[WL]
+#if IL2CPP_ENABLE_LAZY_INIT
                 if (iter->interfaces_count > 0 && iter->implementedInterfaces == NULL) {
                     Class::SetupInterfaces(iter);
                 }
+#endif
                 if (IsGenericClassAssignableFrom(klass, iter, oklass))
                     return true;
 
@@ -738,8 +744,9 @@ namespace vm
                         return true;
                 }
 
-				//[WL]
+#if IL2CPP_ENABLE_LAZY_INIT
                 Class::SetupInterfaceOffsets(iter);
+#endif
                 for (uint16_t i = 0; i < iter->interface_offsets_count; ++i)
                 {
                     if (IsGenericClassAssignableFrom(klass, iter->interfaceOffsets[i].interfaceType, oklass))
@@ -751,18 +758,19 @@ namespace vm
         {
             for (Il2CppClass* iter = oklass; iter != NULL; iter = iter->parent)
             {
-                //[WL]
+#if IL2CPP_ENABLE_LAZY_INIT
                 if (iter->interfaces_count > 0 && iter->implementedInterfaces == NULL) {
                     Class::SetupInterfaces(iter);
                 }
-
+#endif
                 for (uint16_t i = 0; i < iter->interfaces_count; ++i)
                 {
                     if (iter->implementedInterfaces[i] == klass)
                         return true;
                 }
-
+#if IL2CPP_ENABLE_LAZY_INIT
                 Class::SetupInterfaceOffsets(iter);
+#endif
                 // Check the interfaces we may have grafted on to the type (e.g IList,
                 // ICollection, IEnumerable for array types).
                 for (uint16_t i = 0; i < iter->interface_offsets_count; ++i)
@@ -2354,9 +2362,11 @@ namespace vm
         {
             IL2CPP_ASSERT(virtualMethod->slot < klass->vtable_count);
             vtableSlotMethod = klass->vtable[virtualMethod->slot].method;
-			if(vtableSlotMethod == NULL){
-				vtableSlotMethod = GetOrSetupOneVTableSlot(klass, NULL, virtualMethod->slot)->method;
-        }
+#if IL2CPP_ENABLE_LAZY_INIT
+            if (vtableSlotMethod == NULL) {
+                vtableSlotMethod = GetOrSetupOneVTableSlot(klass, NULL, virtualMethod->slot)->method;
+            }
+#endif
         }
 
         if (Method::IsGenericInstanceMethod(virtualMethod))

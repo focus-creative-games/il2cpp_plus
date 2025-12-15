@@ -43,11 +43,13 @@ namespace il2cpp
 {
 namespace metadata
 {
+#if IL2CPP_ENABLE_LAZY_INIT
     struct RGCTXContextCollectData {
         const Il2CppGenericContext* context;
         RGCTXCollection collection;
     };
     static Il2CppHashMap<const Il2CppRGCTXData* , RGCTXContextCollectData> s_RGCTXDataToClassMap;
+#endif
 
     const Il2CppType** GenericMetadata::InflateParameters(const Il2CppType** parameters, uint8_t parameterCount, const Il2CppGenericContext* context, bool inflateMethodVars)
     {
@@ -289,11 +291,11 @@ namespace metadata
 
         Il2CppRGCTXData* dataValues = (Il2CppRGCTXData*)MetadataCalloc(collection.count, sizeof(Il2CppRGCTXData), IL2CPP_MSTAT_RGCTX);
 
+        
+#if IL2CPP_ENABLE_LAZY_INIT
         RGCTXContextCollectData data = { context,collection };
         s_RGCTXDataToClassMap.add(dataValues, data);
-        
-        //[WL]remove here because we will do lazy init.
-        /*
+#else
         for (RGCTXIndex rgctxIndex = 0; rgctxIndex < collection.count; rgctxIndex++)
         {
             const Il2CppRGCTXDefinition* definitionData = collection.items + rgctxIndex;
@@ -304,6 +306,7 @@ namespace metadata
                     break;
                 case IL2CPP_RGCTX_DATA_CLASS:
                     dataValues[rgctxIndex].klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true));
+                    Class::InitSizeAndFieldLayoutLocked(dataValues[rgctxIndex].klass, lock);
                     break;
                 case IL2CPP_RGCTX_DATA_METHOD:
                     dataValues[rgctxIndex].method = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromRgctxDefinition(definitionData), context));
@@ -322,8 +325,6 @@ namespace metadata
                     {
                         Il2CppClass* inflatedClass = Class::FromIl2CppType(inflatedType);
                         Class::InitLocked(inflatedClass, lock);
-                        //[WL]
-                        Class::SetupVTable(inflatedClass);
                         Class::InitLocked(method->klass, lock);
                         method = Class::GetVirtualMethod(inflatedClass, method);
                     }
@@ -335,10 +336,11 @@ namespace metadata
                     IL2CPP_ASSERT(0);
             }
         }
-        */
+#endif
         return dataValues;
     }
 
+#if IL2CPP_ENABLE_LAZY_INIT
     void GenericMetadata::InflateRGCTXClass(const Il2CppRGCTXData* rgctxVar, RGCTXIndex index) 
     {
         FastAutoLock lock(&g_MetadataLock);
@@ -405,6 +407,7 @@ namespace metadata
         Il2CppRGCTXData* rgctx = const_cast<Il2CppRGCTXData*>(rgctxVar);
         rgctx[index].method = retMethod;
     }
+#endif
 
 // temporary while we generate generics
     void GenericMetadata::RegisterGenericClasses(Il2CppGenericClass* const * genericClasses, int32_t genericClassesCount)
@@ -488,7 +491,9 @@ namespace metadata
         for (Il2CppGenericClassSet::iterator genericClass = s_GenericClassSet.begin(); genericClass != s_GenericClassSet.end(); genericClass++)
             (*genericClass).key->cached_class = NULL;
         s_GenericClassSet.clear();
+#if IL2CPP_ENABLE_LAZY_INIT
         s_RGCTXDataToClassMap.clear();
+#endif
     }
 
     static int s_MaximumRuntimeGenericDepth;

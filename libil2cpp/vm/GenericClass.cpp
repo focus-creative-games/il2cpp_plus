@@ -102,9 +102,10 @@ namespace vm
             return;
         }
 
+#if IL2CPP_ENABLE_LAZY_INIT
         Class::SetupProperties(genericTypeDefinition);
+#endif
 
-        //const PropertyInfo** properties = (const PropertyInfo**)MetadataCalloc(propertyCount, sizeof(PropertyInfo*), IL2CPP_MSTAT_PROPERTY);
         if(genericInstanceType->properties == nullptr)
             genericInstanceType->properties = (const PropertyInfo**)MetadataCalloc(propertyCount, sizeof(PropertyInfo*), IL2CPP_MSTAT_PROPERTY);
         const PropertyInfo** properties = genericInstanceType->properties;
@@ -118,8 +119,6 @@ namespace vm
             InflatePropertyDefinition(genericTypeDefinition->properties[propertyIndex], property, genericInstanceType, GenericClass::GetContext(genericInstanceType->generic_class));
             properties[propertyIndex] = property;
         }
-
-        //genericInstanceType->properties = properties;
     }
 
     const PropertyInfo* GenericClass::GetOrSetupOneProperty(Il2CppClass* genericInstanceType, PropertyIndex index) 
@@ -180,9 +179,9 @@ namespace vm
             return;
         }
 
-        //[WL]
+#if IL2CPP_ENABLE_LAZY_INIT
         Class::SetupEvents(genericTypeDefinition);
-
+#endif
         EventInfo* events = (EventInfo*)MetadataCalloc(eventCount, sizeof(EventInfo), IL2CPP_MSTAT_FIELD);
         EventInfo* event = events;
 

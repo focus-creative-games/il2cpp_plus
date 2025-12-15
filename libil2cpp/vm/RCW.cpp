@@ -137,8 +137,9 @@ namespace vm
         return NULL;
 #else
         Class::Init(objectClass);
+#if IL2CPP_ENABLE_LAZY_INIT
         Class::SetupVTable(objectClass);
-
+#endif
         // Sanity checks
         IL2CPP_ASSERT(Class::IsInflated(objectClass));
         IL2CPP_ASSERT(objectClass->vtable_count == 1); // IReference`1<T> only has get_Value method
@@ -168,8 +169,9 @@ namespace vm
         return NULL;
 #else
         Class::Init(keyValuePairGenericInstance);
+#if IL2CPP_ENABLE_LAZY_INIT
         Class::SetupVTable(keyValuePairGenericInstance);
-
+#endif
         // Sanity checks
         IL2CPP_ASSERT(Class::IsInflated(keyValuePairGenericInstance));
         IL2CPP_ASSERT(il2cpp_defaults.ikey_value_pair_class != NULL);
@@ -242,11 +244,14 @@ namespace vm
         Il2CppClass* iUriRuntimeClassClass = il2cpp_defaults.windows_foundation_iuri_runtime_class_class;
 
         Class::Init(systemUriClass);
+#if IL2CPP_ENABLE_LAZY_INIT
         Class::SetupVTable(systemUriClass);
+#endif
 
         Class::Init(iUriRuntimeClassClass);
+#if IL2CPP_ENABLE_LAZY_INIT
         Class::SetupVTable(iUriRuntimeClassClass);
-
+#endif
         const int kGetRawUriMethodIndex = 10; // IUriRuntimeClass::get_RawUri
         IL2CPP_ASSERT(iUriRuntimeClassClass->vtable_count > kGetRawUriMethodIndex);
 
@@ -513,8 +518,9 @@ namespace vm
     const VirtualInvokeData* RCW::GetComInterfaceInvokeData(Il2CppClass* queriedInterface, const Il2CppClass* targetInterface, Il2CppMethodSlot slot)
     {
         Class::Init(queriedInterface);
+#if IL2CPP_ENABLE_LAZY_INIT
         Class::SetupVTable(queriedInterface);
-
+#endif
         uint16_t vtableCount = queriedInterface->vtable_count;
 
         if (targetInterface->generic_class != NULL)

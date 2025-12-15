@@ -336,8 +336,9 @@ namespace Reflection
         // when definition is false.
         const MethodInfo *method2 = method->method;
         Il2CppClass *klass = method2->klass;
+#if IL2CPP_ENABLE_LAZY_INIT
         il2cpp::vm::Class::SetupVTable(klass);
-
+#endif
         if (klass == NULL)
             return method;
 
@@ -356,7 +357,9 @@ namespace Reflection
             {
                 for (Il2CppClass* parent = klass->parent; parent != NULL; parent = parent->parent)
                 {
+#if IL2CPP_ENABLE_LAZY_INIT
                     il2cpp::vm::Class::SetupVTable(parent);
+#endif
                     if (parent->vtable_count <= method2->slot)
                         break;
 
@@ -378,9 +381,9 @@ namespace Reflection
                 return method;
 
             il2cpp::vm::Class::Init(klass);
-
+#if IL2CPP_ENABLE_LAZY_INIT
             il2cpp::vm::Class::SetupVTable(klass);
-
+#endif
             if (method2->slot >= klass->vtable_count)
                 return method;
 

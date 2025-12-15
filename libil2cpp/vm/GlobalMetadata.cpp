@@ -139,11 +139,15 @@ const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionI
     {
         const Il2CppMethodDefinition* methodDefinition = il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromIndex(index);
         Il2CppClass* typeInfo = il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(methodDefinition->declaringType);
-        //[WL]
+#if !IL2CPP_ENABLE_LAZY_INIT
+        il2cpp::vm::Class::SetupMethods(typeInfo);
+        const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(typeInfo->typeMetadataHandle);
+        return typeInfo->methods[index - typeDefinition->methodStart];
+#else
         const Il2CppTypeDefinition* typeDefinition = reinterpret_cast<const Il2CppTypeDefinition*>(typeInfo->typeMetadataHandle);
         MethodIndex indexInType = index - typeDefinition->methodStart;
-
         return il2cpp::vm::Class::GetOrSetupOneMethod(typeInfo, indexInType);
+#endif
     });
     }
 
@@ -1401,8 +1405,13 @@ Il2CppMetadataPropertyInfo il2cpp::vm::GlobalMetadata::GetPropertyInfo(const Il2
 
     return {
             GetStringFromIndex(propertyDefintion->nameIndex),
+#if !IL2CPP_ENABLE_LAZY_INIT
+            propertyDefintion->get != kMethodIndexInvalid ? klass->methods[propertyDefintion->get] : NULL,
+            propertyDefintion->set != kMethodIndexInvalid ? klass->methods[propertyDefintion->set] : NULL,
+#else
             propertyDefintion->get != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),propertyDefintion->get) : NULL,
             propertyDefintion->set != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),propertyDefintion->set) : NULL,
+#endif
             propertyDefintion->attrs,
             propertyDefintion->token,
     };
@@ -1424,9 +1433,15 @@ Il2CppMetadataEventInfo il2cpp::vm::GlobalMetadata::GetEventInfo(const Il2CppCla
     return {
             GetStringFromIndex(eventDefintion->nameIndex),
             GetIl2CppTypeFromIndex(eventDefintion->typeIndex),
+#if !IL2CPP_ENABLE_LAZY_INIT
+            eventDefintion->add != kMethodIndexInvalid ? klass->methods[eventDefintion->add] : NULL,
+            eventDefintion->remove != kMethodIndexInvalid ? klass->methods[eventDefintion->remove] : NULL,
+            eventDefintion->raise != kMethodIndexInvalid ? klass->methods[eventDefintion->raise] : NULL,
+#else
             eventDefintion->add != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),eventDefintion->add) : NULL,
             eventDefintion->remove != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),eventDefintion->remove) : NULL,
             eventDefintion->raise != kMethodIndexInvalid ? Class::GetOrSetupOneMethod(const_cast<Il2CppClass*>(klass),eventDefintion->raise) : NULL,
+#endif
             eventDefintion->token,
     };
 }
