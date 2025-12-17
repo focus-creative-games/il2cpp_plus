@@ -2186,5 +2186,32 @@ namespace vm
     {
         return klass->declaringType;
     }
+
+    const MethodInfo* Class::GetVirtualMethod(Il2CppClass* klass, const MethodInfo* virtualMethod)
+    {
+        IL2CPP_ASSERT(klass->is_vtable_initialized);
+
+        if ((virtualMethod->flags & METHOD_ATTRIBUTE_FINAL) || !(virtualMethod->flags & METHOD_ATTRIBUTE_VIRTUAL))
+            return virtualMethod;
+
+        Il2CppClass* methodDeclaringType = virtualMethod->klass;
+        const MethodInfo* vtableSlotMethod;
+        if (Class::IsInterface(methodDeclaringType))
+        {
+            const VirtualInvokeData* invokeData = ClassInlines::GetInterfaceInvokeDataFromVTable(klass, methodDeclaringType, virtualMethod->slot);
+            if (invokeData == NULL)
+                return NULL;
+            vtableSlotMethod = invokeData->method;
+        }
+        else
+        {
+            IL2CPP_ASSERT(virtualMethod->slot < klass->vtable_count);
+            vtableSlotMethod = klass->vtable[virtualMethod->slot].method;
+        }
+
+        if (Method::IsGenericInstanceMethod(virtualMethod))
+            return il2cpp::metadata::GenericMethod::GetGenericVirtualMethod(vtableSlotMethod, virtualMethod);
+        return vtableSlotMethod;
+    }
 } /* namespace vm */
 } /* namespace il2cpp */

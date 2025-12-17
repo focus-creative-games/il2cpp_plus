@@ -132,6 +132,7 @@ namespace vm
         static const Il2CppType* il2cpp_type_from_type_info(const TypeNameParseInfo& info, TypeSearchFlags searchFlags);
 
         static Il2CppClass* GetDeclaringType(Il2CppClass* klass);
+        static const MethodInfo* GetVirtualMethod(Il2CppClass* klass, const MethodInfo* virtualMethod);
 
         static void UpdateInitializedAndNoError(Il2CppClass *klass);
 
