@@ -377,6 +377,7 @@ namespace metadata
         {
         case IL2CPP_RGCTX_DATA_METHOD:
             retMethod = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromRgctxDefinition(definitionData), data.context));
+            Class::InitLocked(retMethod->klass, lock);
             break;
         case IL2CPP_RGCTX_DATA_CONSTRAINED:
         {
