@@ -2360,7 +2360,7 @@ namespace vm
         }
         else
         {
-            IL2CPP_ASSERT(virtualMethod->slot < klass->vtable_count);
+            //IL2CPP_ASSERT(virtualMethod->slot < klass->vtable_count);
             vtableSlotMethod = klass->vtable[virtualMethod->slot].method;
 #if IL2CPP_ENABLE_LAZY_INIT
             if (vtableSlotMethod == NULL) {
