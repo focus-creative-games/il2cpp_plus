@@ -1932,7 +1932,10 @@ MethodIndex il2cpp::vm::GlobalMetadata::GetMethodIndexFromMethodHandle(const Il2
 
 static const Il2CppMetadataMethodDefinitionHandle GetMethodHandleFromMethodInfo(const MethodInfo* methodInfo)
 {
-    IL2CPP_ASSERT(methodInfo != nullptr);
+    if (!methodInfo)
+    {
+        return nullptr;
+    }
     if (methodInfo->is_inflated)
     {
         methodInfo = methodInfo->genericMethod->methodDefinition;
