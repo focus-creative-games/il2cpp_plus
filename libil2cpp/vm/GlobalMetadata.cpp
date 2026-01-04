@@ -936,8 +936,12 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetNestedTypes(Il2CppMetada
 {
     if (!iter)
         return NULL;
+    if (hybridclr::metadata::IsInterpreterType(handle))
+    {
+        return hybridclr::metadata::MetadataModule::GetNestedTypes(handle, iter);
+    }
 
-    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(handle);
+    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
 
     const TypeDefinitionIndex* nestedTypeIndices = (const TypeDefinitionIndex*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->nestedTypes.offset);
 
