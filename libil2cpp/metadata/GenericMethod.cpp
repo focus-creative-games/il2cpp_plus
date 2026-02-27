@@ -345,6 +345,10 @@ namespace metadata
             {
                 newMethod->methodPointer = stubs.methodPointer;
                 newMethod->virtualMethodPointer = stubs.virtualMethodPointer;
+                if (!newMethod->methodPointer && newMethod->virtualMethodPointer && sharedMethodInfo->rawDirectMethodPointer == sharedMethodInfo->rawVirtualMethodPointer)
+                {
+                    newMethod->methodPointer = newMethod->virtualMethodPointer;
+                }
             }
             else
             {
