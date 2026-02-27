@@ -10,6 +10,7 @@
 #include "os/Mutex.h"
 #include "utils/dynamic_array.h"
 #include "vm-utils/MethodDefinitionKey.h"
+#include "GlobalMetadataFileInternals.h"
 
 struct MethodInfo;
 struct Il2CppClass;
@@ -135,6 +136,7 @@ namespace vm
         static Il2CppGenericMethod BuildGenericMethodFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
         static std::pair<const Il2CppType*, const MethodInfo*> GetConstrainedCallFromRgctxDefinition(const Il2CppRGCTXDefinition* rgctxDef);
         static Il2CppClass* GetContainerDeclaringType(Il2CppMetadataGenericContainerHandle handle);
+        static const Il2CppGenericParameter GetGenericParameterFromHandle(Il2CppMetadataGenericParameterHandle handle);
         static Il2CppClass* GetParameterDeclaringType(Il2CppMetadataGenericParameterHandle handle);
         static const MethodInfo* GetParameterDeclaringMethod(Il2CppMetadataGenericParameterHandle handle);
         static Il2CppMetadataGenericParameterHandle GetGenericParameterFromIndex(Il2CppMetadataGenericContainerHandle handle, GenericContainerParameterIndex index);

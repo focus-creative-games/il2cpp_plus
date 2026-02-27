@@ -1481,7 +1481,7 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetContainerDeclaringType(Il2CppMetadat
     return GetTypeInfoFromTypeDefinitionIndex(genericContainer->ownerIndex);
 }
 
-static const Il2CppGenericParameter GetGenericParameterFromHandle(Il2CppMetadataGenericParameterHandle handle)
+const Il2CppGenericParameter il2cpp::vm::GlobalMetadata::GetGenericParameterFromHandle(Il2CppMetadataGenericParameterHandle handle)
 {
     if (!il2cpp::vm::GlobalMetadata::IsAOTMetadata(handle))
     {
