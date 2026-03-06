@@ -1468,6 +1468,10 @@ namespace vm
         }
         else if (klass->property_count != 0)
         {
+#if !IL2CPP_ENABLE_LAZY_INIT
+            // we need methods initialized since we reference them via index below
+            SetupMethodsLocked(klass, lock);
+#endif
             // klass->properties maybe inited by GetOrSetupOnePropertyLocked
             if(klass->properties == nullptr)
                 klass->properties = (const PropertyInfo**)MetadataCalloc(klass->property_count, sizeof(PropertyInfo*), IL2CPP_MSTAT_PROPERTY);
