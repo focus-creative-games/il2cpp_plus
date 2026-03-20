@@ -34,6 +34,12 @@ namespace metadata
             {
                 return HashUtils::Combine(hash, Hash(t1->data.type));
             }
+
+            case IL2CPP_TYPE_ARRAY:
+            {
+                hash = HashUtils::Combine(hash, t1->data.array->rank);
+                return HashUtils::Combine(hash, Hash(t1->data.array->etype));
+            }
             case IL2CPP_TYPE_GENERICINST:
             {
                 const Il2CppGenericInst *inst = t1->data.generic_class->context.class_inst;
@@ -43,6 +49,11 @@ namespace metadata
                     hash = HashUtils::Combine(hash, Hash(inst->type_argv[i]));
                 }
                 return hash;
+            }
+            case IL2CPP_TYPE_VAR:
+            case IL2CPP_TYPE_MVAR:
+            {
+                return HashUtils::Combine(hash, reinterpret_cast<size_t>(t1->data.genericParameterHandle));
             }
             default:
                 return hash;
