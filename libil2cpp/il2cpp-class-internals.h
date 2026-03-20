@@ -366,6 +366,12 @@ typedef struct Il2CppRuntimeInterfaceOffsetPair
 #pragma clang diagnostic ignored "-Winvalid-offsetof"
 #endif
 
+typedef struct GenericParameterFlags
+{
+    uint32_t count;
+    uint16_t flags[IL2CPP_ZERO_LEN_ARRAY];
+} GenericParameterFlags;
+
 typedef struct Il2CppClass
 {
     // The following fields are always valid for a Il2CppClass structure
@@ -394,7 +400,13 @@ typedef struct Il2CppClass
     Il2CppClass** implementedInterfaces; // Initialized in SetupInterfaces
     Il2CppRuntimeInterfaceOffsetPair* interfaceOffsets; // Initialized in Init
     void* static_fields; // Initialized in Init
-    const Il2CppRGCTXData* rgctx_data; // Initialized in Init
+
+    union
+    {
+        const Il2CppRGCTXData* rgctx_data;                // Initialized in Init for inflated generic classes
+        const GenericParameterFlags* genericParameterFlags; // Initialized in Init for generic type definitions
+    };
+
     // used for fast parent checks
     Il2CppClass** typeHierarchy; // Initialized in SetupTypeHierachy
     // End initialization required fields

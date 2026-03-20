@@ -21,7 +21,7 @@ namespace vm
         //internal
         static Il2CppClass* GetClass(Il2CppGenericClass *gclass, bool throwOnError = true);
         static Il2CppGenericContext* GetContext(Il2CppGenericClass *gclass);
-        static Il2CppClass* GetTypeDefinition(Il2CppGenericClass *gclass);
+        static Il2CppClass* GetTypeDefinition(const Il2CppGenericClass *gclass);
         static bool IsEnum(Il2CppGenericClass *gclass);
 
         inline static bool IsValueType(Il2CppGenericClass* gclass)

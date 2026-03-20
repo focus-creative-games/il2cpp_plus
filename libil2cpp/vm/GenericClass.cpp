@@ -243,7 +243,7 @@ namespace vm
         return &gclass->context;
     }
 
-    Il2CppClass* GenericClass::GetTypeDefinition(Il2CppGenericClass *gclass)
+    Il2CppClass* GenericClass::GetTypeDefinition(const Il2CppGenericClass *gclass)
     {
         return MetadataCache::GetTypeInfoFromType(gclass->type);
     }
