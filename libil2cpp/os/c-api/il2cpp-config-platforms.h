@@ -204,12 +204,18 @@
 #define IL2CPP_USE_POSIX_SOCKET_PLATFORM_CONFIG 1
 #define IL2CPP_PLATFORM_SUPPORTS_CUSTOM_SECTIONS 0
 
+// QNX version of setlocale has limited functionality (compared to Linux) and doesn't accept NULL as an argument:
+// https://www.qnx.com/developers/docs/7.1/#com.qnx.doc.neutrino.lib_ref/topic/s/setlocale.html
+// https://www.qnx.com/developers/docs/8.0/com.qnx.doc.neutrino.lib_ref/topic/s/setlocale.html
+#define SETLOCALE_NULL_NOT_SUPPORTED 1
+#define DO_NOT_CALCULATE_DST_FOR_GMT_AND_UTC 1
+
 #if IL2CPP_PLATFORM_SUPPORTS_CUSTOM_SECTIONS
 #define IL2CPP_METHOD_ATTR __attribute__((section(IL2CPP_BINARY_SECTION_NAME)))
 #endif
 #elif defined(NN_PLATFORM_CTR)
 #define IL2CPP_TARGET_N3DS 1
-#elif defined(NN_BUILD_TARGET_PLATFORM_NX)
+#elif defined(NN_NINTENDO_SDK)
 #define IL2CPP_TARGET_SWITCH 1
 #include "il2cpp-config-switch.h"
 #elif IL2CPP_TARGET_CUSTOM
@@ -314,7 +320,7 @@
 #endif
 
 #ifndef IL2CPP_SUPPORT_THREADS
-#define IL2CPP_SUPPORT_THREADS (((!IL2CPP_TARGET_JAVASCRIPT || IL2CPP_TINY_DEBUGGER) && (!IL2CPP_TINY || IL2CPP_IL2CPP_TINY_SUPPORT_THREADS)) || IL2CPP_WEIXINMINIGAME_DEBUGGER )
+#define IL2CPP_SUPPORT_THREADS (((!IL2CPP_TARGET_JAVASCRIPT || IL2CPP_TINY_DEBUGGER) && (!IL2CPP_TINY || IL2CPP_IL2CPP_TINY_SUPPORT_THREADS)) || IL2CPP_WEIXINMINIGAME_DEBUGGER || IL2CPP_THREADS_MINIGAME )
 #endif
 
 #ifndef IL2CPP_SUPPORT_SOCKETS

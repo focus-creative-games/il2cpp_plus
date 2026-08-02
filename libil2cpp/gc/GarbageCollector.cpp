@@ -82,7 +82,7 @@ namespace gc
     static CCWCache s_CCWCache;
 #endif
 
-#if IL2CPP_SUPPORT_THREADS
+#if IL2CPP_SUPPORT_THREADS && !IL2CPP_THREADS_MINIGAME
 
     static bool s_StopFinalizer = false;
     static il2cpp::os::Thread* s_FinalizerThread;
@@ -137,7 +137,7 @@ namespace gc
     void GarbageCollector::InitializeFinalizer()
     {
         GarbageCollector::InvokeFinalizers();
-#if IL2CPP_SUPPORT_THREADS
+#if IL2CPP_SUPPORT_THREADS && !IL2CPP_THREADS_MINIGAME
         s_FinalizerThread = new il2cpp::os::Thread;
         s_FinalizerThread->Run(&FinalizerThread, NULL);
         s_FinalizersThreadStartedEvent.Wait();
@@ -146,7 +146,7 @@ namespace gc
 
     void GarbageCollector::UninitializeFinalizers()
     {
-#if IL2CPP_SUPPORT_THREADS
+#if IL2CPP_SUPPORT_THREADS && !IL2CPP_THREADS_MINIGAME
         s_StopFinalizer = true;
         NotifyFinalizers();
         s_FinalizerThread->Join();
@@ -159,7 +159,7 @@ namespace gc
 
     void GarbageCollector::NotifyFinalizers()
     {
-#if IL2CPP_SUPPORT_THREADS
+#if IL2CPP_SUPPORT_THREADS && !IL2CPP_THREADS_MINIGAME
         s_FinalizerSemaphore.Post(1, NULL);
 #endif
     }
@@ -236,7 +236,7 @@ namespace gc
         if (!GarbageCollector::HasPendingFinalizers())
             return;
 
-#if IL2CPP_SUPPORT_THREADS
+#if IL2CPP_SUPPORT_THREADS && !IL2CPP_THREADS_MINIGAME
         /* Avoid deadlocks */
         if (vm::Thread::Current() == s_FinalizerThreadObject)
             return;

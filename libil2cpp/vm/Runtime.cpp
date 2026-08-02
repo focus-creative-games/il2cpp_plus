@@ -368,11 +368,6 @@ namespace vm
 
         g_il2cpp_is_fully_initialized = true;
 
-        // Force binary serialization in Mono to use reflection instead of code generation.
-    #undef SetEnvironmentVariable // Get rid of windows.h #define.
-        os::Environment::SetEnvironmentVariable("MONO_REFLECTION_SERIALIZER", "yes");
-        os::Environment::SetEnvironmentVariable("MONO_XMLSERIALIZER_THS", "no");
-
 #if !IL2CPP_TINY
         Domain::ContextInit(domain);
         Domain::ContextSet(domain->default_context);

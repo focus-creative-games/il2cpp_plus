@@ -9,6 +9,7 @@
 #include <android/asset_manager_jni.h>
 
 jobject         sContext;
+jobject         sJavaAssetManager;
 AAssetManager*  sAssetManager;
 
 void AndroidSetContext(JNIEnv* env, jobject context)
@@ -17,9 +18,9 @@ void AndroidSetContext(JNIEnv* env, jobject context)
 
     jclass contextClass = env->FindClass("android/content/Context");
     jmethodID getAssets = env->GetMethodID(contextClass, "getAssets", "()Landroid/content/res/AssetManager;");
-    jobject assetManager = env->CallObjectMethod(context, getAssets);
-
-    sAssetManager = AAssetManager_fromJava(env, assetManager);
+    jobject assetManagerLocal = env->CallObjectMethod(context, getAssets);
+    sJavaAssetManager = env->NewGlobalRef(assetManagerLocal); 
+    sAssetManager = AAssetManager_fromJava(env, sJavaAssetManager);
 }
 
 AAssetManager* AndroidGetAssetManager()

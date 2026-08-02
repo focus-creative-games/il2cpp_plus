@@ -150,9 +150,10 @@ il2cpp::gc::GarbageCollector::Initialize()
     GC_set_finalizer_notifier(&il2cpp::gc::GarbageCollector::NotifyFinalizers);
 #endif
     // We need to call this if we want to manually register threads, i.e. GC_register_my_thread
-    #if !IL2CPP_TARGET_JAVASCRIPT
+#if !IL2CPP_TARGET_JAVASCRIPT || defined(GC_MINIGAME_THREADS)
     GC_allow_register_threads();
-    #endif
+#endif
+
 #endif
 #ifdef GC_GCJ_SUPPORT
     GC_init_gcj_malloc(0, NULL);
@@ -296,7 +297,8 @@ il2cpp::gc::GarbageCollector::SetMode(Il2CppGCMode mode)
 void
 il2cpp::gc::GarbageCollector::RegisterThread()
 {
-#if defined(GC_THREADS) && !IL2CPP_TARGET_JAVASCRIPT
+// NOTE: GC_THREADS is always 1 even on WebGL/MiniGame platform
+#if (defined(GC_THREADS) && !IL2CPP_TARGET_JAVASCRIPT) || IL2CPP_THREADS_MINIGAME
     struct GC_stack_base sb;
     int res;
 
@@ -321,7 +323,8 @@ il2cpp::gc::GarbageCollector::RegisterThread()
 bool
 il2cpp::gc::GarbageCollector::UnregisterThread()
 {
-#if defined(GC_THREADS) && !IL2CPP_TARGET_JAVASCRIPT
+// NOTE: GC_THREADS is always 1 even on WebGL/MiniGame platform
+#if (defined(GC_THREADS) && !IL2CPP_TARGET_JAVASCRIPT) || IL2CPP_THREADS_MINIGAME
     int res;
 
     res = GC_unregister_my_thread();
