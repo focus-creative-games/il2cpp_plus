@@ -52,7 +52,8 @@ namespace CompilerServices
         }
 
         size *= ARRAY_LENGTH_AS_INT32(array->max_length);
-        field_data = vm::Field::GetData(field_handle);
+        size_t field_data_size;
+        field_data = vm::Field::GetData(field_handle, &field_data_size);
 
         IL2CPP_NOT_IMPLEMENTED_ICALL_NO_ASSERT(RuntimeHelpers::InitializeArray, "Check type size");
         //int align;

@@ -80,6 +80,11 @@ namespace os
         return (intptr_t)args.hwnd;
     }
 
+    void Process::Exit(int32_t exitCode)
+    {
+        ExitProcess(exitCode);
+    }
+
 #endif
 }
 }

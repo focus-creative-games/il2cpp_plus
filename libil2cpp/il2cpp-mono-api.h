@@ -27,7 +27,6 @@ typedef struct _MonoGenericContext MonoGenericContext;
 typedef struct _MonoGenericInst MonoGenericInst;
 typedef struct _MonoGenericParam MonoGenericParam;
 typedef struct _MonoImage MonoImage;
-typedef struct _MonoInternalThread MonoInternalThread;
 typedef struct _MonoMethod MonoMethod;
 typedef struct _MonoMethodInflated MonoMethodInflated;
 typedef struct _MonoMethodHeader MonoMethodHeader;
@@ -36,7 +35,13 @@ typedef struct _MonoObject MonoObject;
 typedef struct _MonoProperty MonoProperty;
 typedef struct _MonoReflectionType MonoReflectionType;
 typedef struct _MonoString MonoString;
+#if MONO_NET8_BCL
+typedef struct _MonoInternalThread MonoThread;
+typedef struct _MonoInternalThread MonoInternalThread;
+#else
 typedef struct _MonoThread MonoThread;
+typedef struct _MonoInternalThread MonoInternalThread;
+#endif
 typedef struct _MonoType MonoType;
 typedef struct MonoVTable MonoVTable;
 typedef struct MonoTypeNameParse MonoTypeNameParse;

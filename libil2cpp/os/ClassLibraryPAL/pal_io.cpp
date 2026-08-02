@@ -48,6 +48,8 @@ extern "C"
     IL2CPP_EXPORT int32_t SystemNative_CopyFile(intptr_t sourceFd, intptr_t destinationFd); // 1251
     IL2CPP_EXPORT int32_t SystemNative_LChflags(const char* path, uint32_t flags);
     IL2CPP_EXPORT int32_t SystemNative_LChflagsCanSetHiddenFlag(); // 1482
+    IL2CPP_EXPORT int32_t SystemNative_CanGetHiddenFlag(void);
+    IL2CPP_EXPORT int32_t SystemNative_SchedGetCpu(void);
 }
 
 
@@ -705,6 +707,24 @@ int32_t SystemNative_LChflagsCanSetHiddenFlag(void)
     return true;
 #else
     return false;
+#endif
+}
+
+int32_t SystemNative_CanGetHiddenFlag(void)
+{
+#if defined(UF_HIDDEN) && defined(IL2CPP_HAVE_STAT_FLAGS)
+    return true;
+#else
+    return false;
+#endif
+}
+
+int32_t SystemNative_SchedGetCpu(void)
+{
+#if IL2CPP_HAVE_SCHED_GETCPU
+    return sched_getcpu();
+#else
+    return -1;
 #endif
 }
 

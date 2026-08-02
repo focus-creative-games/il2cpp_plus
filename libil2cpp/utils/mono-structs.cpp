@@ -2,45 +2,38 @@
 #include "os/c-api/il2cpp-config-platforms.h"
 #include "os/c-api/Allocator.h"
 
-MonoGPtrArray* void_ptr_array_to_gptr_array(const VoidPtrArray& array)
+static const MonoGPtrArray g_empty_gptr_array = { NULL, 0 };
+
+template<typename T>
+static size_t align_up_to(size_t size)
 {
-    MonoGPtrArray *pRetVal;
+    // assumes alignof(T) is a power of 2
+    return (size + alignof(T) - 1) & ~(alignof(T) - 1);
+}
 
-    pRetVal = (MonoGPtrArray*)Allocator::Allocate(sizeof(MonoGPtrArray));
+MonoGPtrArray* gptr_array_of_size(size_t size)
+{
+    // Assumes that a zero sized array will never be written to
+    if (size == 0) return const_cast<MonoGPtrArray*>(empty_gptr_array());
 
-    pRetVal->len = (unsigned int)array.size();
-    if (pRetVal->len > 0)
-    {
-        size_t numBytes = sizeof(void*) * pRetVal->len;
-        pRetVal->pdata = Allocator::Allocate(numBytes);
-        memcpy(pRetVal->pdata, array.data(), numBytes);
-    }
-    else
-    {
-        pRetVal->pdata = NULL;
-    }
+    // Allocate a single buffer large enough to hold both the MonoGPtrArray and the array of pointers
+    uint8_t* buffer = (uint8_t*)IL2CPP_MALLOC(align_up_to<void*>(sizeof(MonoGPtrArray)) + sizeof(void*) * size);
+    MonoGPtrArray* pRetVal = (MonoGPtrArray*)buffer;
+    pRetVal->len = (unsigned int)size;
+    pRetVal->pdata = (void**)(buffer + align_up_to<void*>(sizeof(MonoGPtrArray)));
 
     return pRetVal;
 }
 
-MonoGPtrArray* empty_gptr_array()
+const MonoGPtrArray* empty_gptr_array()
 {
-    MonoGPtrArray *pRetVal = (MonoGPtrArray*)Allocator::Allocate(sizeof(MonoGPtrArray));
-    pRetVal->len = 0;
-    pRetVal->pdata = NULL;
-    return pRetVal;
+    return &g_empty_gptr_array;
 }
 
-void free_gptr_array(MonoGPtrArray *pArray)
+void free_gptr_array(const MonoGPtrArray *pArray)
 {
-    if (!pArray)
+    if (!pArray || pArray == &g_empty_gptr_array)
         return;
 
-    if (pArray->pdata)
-    {
-        IL2CPP_FREE(pArray->pdata);
-        pArray->pdata = NULL;
-    }
-
-    IL2CPP_FREE(pArray);
+    IL2CPP_FREE((void*)pArray);
 }

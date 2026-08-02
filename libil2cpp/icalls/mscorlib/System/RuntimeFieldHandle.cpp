@@ -40,7 +40,7 @@ namespace System
         if (vm::Type::IsReference(f->type))
             vm::Field::SetValueRaw(f->type, (uint8_t*)typedRef->value + f->offset - sizeof(Il2CppObject), value, false);
         else
-            vm::Field::SetValueRaw(f->type, (uint8_t*)typedRef->value + f->offset - sizeof(Il2CppObject), vm::Object::Unbox(value), false);
+            vm::Field::SetValueRaw(f->type, (uint8_t*)typedRef->value + f->offset - sizeof(Il2CppObject), vm::Object::GetRawData(value), false);
     }
 
     void RuntimeFieldHandle::SetValueInternal(Il2CppReflectionField* fi, Il2CppObject* obj, Il2CppObject* value)

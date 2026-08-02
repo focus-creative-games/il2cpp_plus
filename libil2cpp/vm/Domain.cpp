@@ -48,12 +48,21 @@ namespace vm
 
     void Domain::ContextSet(Il2CppAppContext* context)
     {
+#if MONO_NET8_BCL
+        // TODO: AppDomain not implemented
+#else
         IL2CPP_OBJECT_SETREF(il2cpp::vm::Thread::Current()->GetInternalThread(), current_appcontext, (Il2CppObject*)context);
+#endif
     }
 
     Il2CppAppContext* Domain::ContextGet()
     {
+#if MONO_NET8_BCL
+        // TODO: AppDomain not implemented
+        return NULL;
+#else
         return (Il2CppAppContext*)il2cpp::vm::Thread::Current()->GetInternalThread()->current_appcontext;
+#endif
     }
 } /* namespace vm */
 } /* namespace il2cpp */

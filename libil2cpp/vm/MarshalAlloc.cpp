@@ -13,29 +13,53 @@ namespace il2cpp
 namespace vm
 {
 #if _DEBUG
+
+    struct TrackedAllocation
+    {
+        TrackedAllocation(void* ptr, size_t size) : ptr(ptr), size(size)
+        {
+        }
+
+        void* ptr;
+        size_t size;
+    };
+
     static os::ThreadLocalValue s_Allocations;
 
     static baselib::ReentrantLock s_AllocationStorageMutex;
-    static std::deque<std::vector<std::map<void*, size_t> > > s_AllocationStorage;
+    static std::deque<std::vector<std::vector<TrackedAllocation> > > s_AllocationStorage;
 
-    static std::vector<std::map<void*, size_t> >& GetAllocationsForCurrentThread()
+    std::vector<TrackedAllocation>::iterator FindTrackedAllocation(std::vector<TrackedAllocation>& allocations, void* ptr)
     {
-        std::vector<std::map<void*, size_t> >* ptr = NULL;
+        for (auto iter = allocations.begin(); iter != allocations.end(); ++iter)
+        {
+            if (iter->ptr == ptr)
+                return iter;
+        }
+
+        return allocations.end();
+    }
+
+    static std::vector<std::vector<TrackedAllocation> >& GetAllocationsForCurrentThread()
+    {
+        std::vector<std::vector<TrackedAllocation> >* ptr = NULL;
         s_Allocations.GetValue(reinterpret_cast<void**>(&ptr));
         if (ptr == NULL)
         {
             os::FastAutoLock lock(&s_AllocationStorageMutex);
-            s_AllocationStorage.push_back(std::vector<std::map<void*, size_t> >());
+            s_AllocationStorage.push_back(std::vector<std::vector<TrackedAllocation> >());
             ptr = &s_AllocationStorage.back();
+            // Reserve some frames to prevent allocations when pushing a frame
+            ptr->reserve(4);
             s_Allocations.SetValue(ptr);
         }
 
         return *ptr;
     }
 
-    static std::map<void*, size_t>* GetAllocationsForCurrentFrame()
+    static std::vector<TrackedAllocation>* GetAllocationsForCurrentFrame()
     {
-        std::vector<std::map<void*, size_t> >& currentThreadAllocations = GetAllocationsForCurrentThread();
+        std::vector<std::vector<TrackedAllocation> >& currentThreadAllocations = GetAllocationsForCurrentThread();
         if (currentThreadAllocations.size() > 0)
             return &currentThreadAllocations.back();
 
@@ -49,9 +73,9 @@ namespace vm
         void* ptr = os::MarshalAlloc::Allocate(size);
 
 #if _DEBUG
-        std::map<void*, size_t>* allocations = GetAllocationsForCurrentFrame();
+        std::vector<TrackedAllocation>* allocations = GetAllocationsForCurrentFrame();
         if (allocations != NULL)
-            (*allocations)[ptr] = size;
+            allocations->emplace_back(TrackedAllocation(ptr, size));
 #endif
 
         return ptr;
@@ -62,17 +86,14 @@ namespace vm
         void* realloced = os::MarshalAlloc::ReAlloc(ptr, size);
 
 #if _DEBUG
-        std::map<void*, size_t>* allocations = GetAllocationsForCurrentFrame();
-        if (allocations != NULL)
+        std::vector<TrackedAllocation>* allocations = GetAllocationsForCurrentFrame();
+        if (allocations != NULL && ptr != realloced && ptr != NULL)
         {
-            if (ptr != NULL && ptr != realloced)
-            {
-                std::map<void*, size_t>::iterator found = allocations->find(ptr);
-                IL2CPP_ASSERT(found != allocations->end() && "Invalid call to MarshalAlloc::ReAlloc. The pointer is not in the allocation list.");
-                allocations->erase(found);
-            }
+            auto found = FindTrackedAllocation(*allocations, ptr);
+            IL2CPP_ASSERT(found != allocations->end() && "Invalid call to MarshalAlloc::ReAlloc. The pointer is not in the allocation list.");
 
-            (*allocations)[realloced] = size;
+            if (found != allocations->end())
+                allocations->erase(found);
         }
 #endif
 
@@ -82,10 +103,10 @@ namespace vm
     void MarshalAlloc::Free(void* ptr)
     {
 #if _DEBUG
-        std::map<void*, size_t>* allocations = GetAllocationsForCurrentFrame();
+        std::vector<TrackedAllocation>* allocations = GetAllocationsForCurrentFrame();
         if (allocations != NULL)
         {
-            std::map<void*, size_t>::iterator found = allocations->find(ptr);
+            auto found = FindTrackedAllocation(*allocations, ptr);
             if (found != allocations->end()) // It might not be necessarily allocated by us, e.g. we might be freeing memory that's returned from native P/Invoke call
                 allocations->erase(found);
         }
@@ -113,7 +134,9 @@ namespace vm
 
     void MarshalAlloc::PushAllocationFrame()
     {
-        GetAllocationsForCurrentThread().push_back(std::map<void*, size_t>());
+        // Push an empty std::vector to track the allocation frame
+        // This may not allocate but initializes an empty slot
+        GetAllocationsForCurrentThread().emplace_back();
     }
 
     void MarshalAlloc::PopAllocationFrame()
@@ -123,13 +146,13 @@ namespace vm
 
     bool MarshalAlloc::HasUnfreedAllocations()
     {
-        std::map<void*, size_t>* allocations = GetAllocationsForCurrentFrame();
+        std::vector<TrackedAllocation>* allocations = GetAllocationsForCurrentFrame();
         return allocations != NULL && allocations->size() > 0;
     }
 
     void MarshalAlloc::ClearAllTrackedAllocations()
     {
-        std::map<void*, size_t>* allocations = GetAllocationsForCurrentFrame();
+        std::vector<TrackedAllocation>* allocations = GetAllocationsForCurrentFrame();
         if (allocations != NULL)
             allocations->clear();
     }

@@ -30,7 +30,7 @@ namespace metadata
         static const Il2CppGenericMethod Inflate(const Il2CppGenericMethod& genericMethod, const Il2CppGenericContext* context);
         static const Il2CppGenericInst* GetInflatedGenericIntance(const Il2CppGenericInst* inst, const Il2CppGenericContext* context, bool inflatMethodVars);
 
-        static Il2CppRGCTXData* InflateRGCTXLocked(const Il2CppImage* image, uint32_t token, const Il2CppGenericContext* context, const il2cpp::os::FastAutoLock& lock);
+        static Il2CppRGCTXData* InflateRGCTXLocked(const Il2CppImage* image, uint32_t token, const Il2CppGenericContext* context, const il2cpp::os::FastAutoLock& lock, Il2CppException** exc);
         static void RegisterGenericClasses(Il2CppGenericClass* const* genericClasses, int32_t genericClassesCount);
         static bool ContainsGenericParameters(const Il2CppClass* klass);
         static bool ContainsGenericParameters(const MethodInfo* method);

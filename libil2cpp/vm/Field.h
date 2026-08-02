@@ -27,15 +27,23 @@ namespace vm
         static bool IsDeleted(FieldInfo *field);
         static void SetValue(Il2CppObject *obj, const FieldInfo *field, void *value);
         static void StaticGetValue(FieldInfo *field, void *value);
+#if MONO_NET8_BCL
+        static void StaticGetValueForThread(FieldInfo *field, void *value, Il2CppThread *thread);
+#else
         static void StaticGetValueForThread(FieldInfo *field, void *value, Il2CppInternalThread *thread);
+#endif
         static void StaticSetValue(FieldInfo *field, void *value);
         static void SetInstanceFieldValueObject(Il2CppObject* objectInstance, FieldInfo* field, Il2CppObject* value);
 
     public:
         // internal
-        static const char* GetData(FieldInfo *field);
+        static const char* GetData(FieldInfo *field, size_t* size);
         static void GetDefaultFieldValue(FieldInfo *field, void *value);
+#if MONO_NET8_BCL
+        static void StaticGetValueInternal(FieldInfo *field, void *value, Il2CppThread* thread);
+#else
         static void StaticGetValueInternal(FieldInfo *field, void *value, Il2CppInternalThread* thread);
+#endif
 
         static bool IsInstance(FieldInfo* field);
         static bool IsNormalStatic(FieldInfo* field);

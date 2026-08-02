@@ -9,7 +9,7 @@
 #include "utils/HashUtils.h"
 
 #include "Baselib.h"
-#include "Cpp/ReentrantLock.h"
+#include "C/Baselib_Atomic_TypeSafe.h"
 
 #include "vm/CCW.h"
 #include "vm/Class.h"
@@ -63,16 +63,16 @@ namespace gc
 //    but instead we'll find the object in the CCW cache and RegisterFinalizer will
 //    set "hasFinalizer" field to true, while SuppressFinalizer will set it to false
 //
-// Any methods that interact with s_CCWCache have to lock s_CCWCacheMutex.
+// Any methods that interact with s_CCWCache have to lock s_CCWCacheLock.
     struct CachedCCW
     {
         Il2CppIManagedObjectHolder* managedObjectHolder;
-        bool hasFinalizer;
+        int8_t hasFinalizer;
     };
 
     typedef Il2CppHashMap<Il2CppObject*, CachedCCW, utils::PointerHash<Il2CppObject> > CCWCache;
 
-    static baselib::ReentrantLock s_CCWCacheMutex;
+    static os::FastReaderReaderWriterLock s_CCWCacheLock;
     static CCWCache s_CCWCache;
 
 #if IL2CPP_SUPPORT_THREADS
@@ -123,10 +123,13 @@ namespace gc
         return s_GarbageCollectorContext->m_FinalizerThreadObject == thread;
     }
 
+#if !MONO_NET8_BCL
     bool GarbageCollector::IsFinalizerInternalThread(Il2CppInternalThread *thread)
     {
         return s_GarbageCollectorContext->m_FinalizerThreadObject->GetInternalThread() == thread;
     }
+
+#endif
 
 #else
 
@@ -135,10 +138,13 @@ namespace gc
         return false;
     }
 
+#if !MONO_NET8_BCL
     bool GarbageCollector::IsFinalizerInternalThread(Il2CppInternalThread *thread)
     {
         return false;
     }
+
+#endif
 
 #endif
 
@@ -204,36 +210,36 @@ namespace gc
 
     void GarbageCollector::RegisterFinalizer(Il2CppObject* obj)
     {
+#if IL2CPP_SUPPORTS_COM_INTEROP
         // Slow path
         // Check in CCW cache first
-        os::FastAutoLock lock(&s_CCWCacheMutex);
+        os::FastReaderReaderWriterAutoSharedLock lock(&s_CCWCacheLock);
         CCWCache::iterator it = s_CCWCache.find(obj);
 
         if (it != s_CCWCache.end())
         {
-            it->second.hasFinalizer = true;
+            Baselib_atomic_store_8_relaxed(&it->second.hasFinalizer, true);
+            return;
         }
-        else
-        {
-            RegisterFinalizerWithCallback(obj, &GarbageCollector::RunFinalizer);
-        }
+#endif
+        RegisterFinalizerWithCallback(obj, &GarbageCollector::RunFinalizer);
     }
 
     void GarbageCollector::SuppressFinalizer(Il2CppObject* obj)
     {
+#if IL2CPP_SUPPORTS_COM_INTEROP
         // Slow path
         // Check in CCW cache first
-        os::FastAutoLock lock(&s_CCWCacheMutex);
+        os::FastReaderReaderWriterAutoSharedLock lock(&s_CCWCacheLock);
         CCWCache::iterator it = s_CCWCache.find(obj);
 
         if (it != s_CCWCache.end())
         {
-            it->second.hasFinalizer = false;
+            Baselib_atomic_store_8_relaxed(&it->second.hasFinalizer, false);
+            return;
         }
-        else
-        {
-            RegisterFinalizerWithCallback(obj, NULL);
-        }
+#endif
+        RegisterFinalizerWithCallback(obj, NULL);
     }
 
     void GarbageCollector::WaitForPendingFinalizers()
@@ -262,7 +268,7 @@ namespace gc
         // In cases it does revive it, it's also possible for it to hit CCW cache, and in that case we'd want to create a new CCW object
         // rather than returning the one that we're about to destroy here
         {
-            os::FastAutoLock lock(&s_CCWCacheMutex);
+            os::FastReaderReaderWriterAutoExclusiveLock lock(&s_CCWCacheLock);
             CCWCache::iterator it = s_CCWCache.find(static_cast<Il2CppObject*>(obj));
             IL2CPP_ASSERT(it != s_CCWCache.end());
 
@@ -308,7 +314,19 @@ namespace gc
             return result;
         }
 
-        os::FastAutoLock lock(&s_CCWCacheMutex);
+        {
+            os::FastReaderReaderWriterAutoSharedLock lock(&s_CCWCacheLock);
+            CCWCache::iterator it = s_CCWCache.find(obj);
+            if (it != s_CCWCache.end())
+            {
+                Il2CppIUnknown* result;
+                il2cpp_hresult_t hr = it->second.managedObjectHolder->QueryInterface(iid, reinterpret_cast<void**>(&result));
+                vm::Exception::RaiseIfFailed(hr, true);
+                return result;
+            }
+        }
+
+        os::FastReaderReaderWriterAutoExclusiveLock lock(&s_CCWCacheLock);
         CCWCache::iterator it = s_CCWCache.find(obj);
         Il2CppIUnknown* comCallableWrapper;
 

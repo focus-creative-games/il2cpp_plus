@@ -5,6 +5,7 @@
 #include "os/Memory.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 namespace il2cpp
 {
@@ -41,6 +42,13 @@ namespace Memory
     void AlignedFree(void* memory)
     {
         free(memory);
+    }
+
+    int32_t GetPageSize()
+    {
+        static int64_t page_size = getpagesize();
+
+        return (int32_t)page_size;
     }
 }
 }

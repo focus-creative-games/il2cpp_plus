@@ -28,6 +28,8 @@ namespace vm
 
         static il2cpp_hresult_t HandleInvalidIPropertyArrayConversion(const char* fromArrayType, const char* fromElementType, const char* toElementType, il2cpp_array_size_t index);
         static il2cpp_hresult_t HandleInvalidIPropertyArrayConversion(Il2CppObject* value, const char* fromArrayType, const char* fromElementType, const char* toElementType, il2cpp_array_size_t index);
+
+        static Il2CppIUnknown* GetCCW(Il2CppObject* o, Il2CppReflectionType* T);
     };
 } /* namespace vm */
 } /* namespace il2cpp */

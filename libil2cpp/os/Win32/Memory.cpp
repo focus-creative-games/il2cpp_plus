@@ -3,6 +3,8 @@
 
 #if IL2CPP_TARGET_WINDOWS
 
+#include "WindowsHeaders.h"
+
 namespace il2cpp
 {
 namespace os
@@ -22,6 +24,19 @@ namespace Memory
     void AlignedFree(void* memory)
     {
         return _aligned_free(memory);
+    }
+
+    int32_t GetPageSize()
+    {
+        static int32_t pageSize = 0;
+        if (pageSize == 0)
+        {
+            SYSTEM_INFO si;
+            GetSystemInfo(&si);
+            pageSize = si.dwPageSize;
+        }
+
+        return pageSize;
     }
 }
 }

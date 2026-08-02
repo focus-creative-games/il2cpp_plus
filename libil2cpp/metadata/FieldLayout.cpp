@@ -3,6 +3,7 @@
 #include "vm/Class.h"
 #include "vm/GenericClass.h"
 #include "vm/GlobalMetadata.h"
+#include "vm/MetadataCache.h"
 #include "vm/Type.h"
 #include "vm/Field.h"
 #include "metadata/FieldLayout.h"
@@ -150,7 +151,7 @@ namespace metadata
 
     void FieldLayout::LayoutInstanceFields(const Il2CppClass* klass, size_t parentSize, size_t actualParentSize, size_t parentAlignment, uint8_t packing, FieldLayoutData& data)
     {
-        LayoutFields(klass, vm::Field::IsInstance, parentSize, actualParentSize, parentAlignment, packing, klass->flags & TYPE_ATTRIBUTE_EXPLICIT_LAYOUT && klass->generic_class == NULL, data);
+        LayoutFields(klass, vm::Field::IsInstance, parentSize, actualParentSize, parentAlignment, packing, klass->flags & TYPE_ATTRIBUTE_EXPLICIT_LAYOUT, data);
     }
 
     void FieldLayout::LayoutStaticFields(const Il2CppClass* klass, FieldLayoutData& data)
@@ -175,6 +176,18 @@ namespace metadata
                 continue;
 
             SizeAndAlignment sa = GetTypeSizeAndAlignment(klass->fields[i].type);
+
+            if (i == 0 && klass->has_inline_array && filter == &vm::Field::IsInstance)
+            {
+                const Il2CppClass* definitionClass = klass;
+                if (Class::IsInflated(klass))
+                    definitionClass = GenericClass::GetTypeDefinition(klass->generic_class);
+
+                int32_t inlineArrayLength = vm::MetadataCache::GetInlineArrayLengthForType(vm::Class::GetType(definitionClass));
+                IL2CPP_ASSERT(inlineArrayLength >= 0);
+                sa.size *= inlineArrayLength;
+            }
+
             uint8_t alignment = sa.alignment;
             if (packing > 0)
                 alignment = std::min(sa.alignment, packing);

@@ -127,8 +127,8 @@ namespace vm
             size -= nullableShift;
         }
 
-        memcpy(((char*)obj) + sizeof(Il2CppObject), valueStart, size);
-        gc::GarbageCollector::SetWriteBarrier((void**)(((char*)obj) + sizeof(Il2CppObject)), size);
+        memcpy(GetRawData(obj), valueStart, size);
+        gc::GarbageCollector::SetWriteBarrier((void**)GetRawData(obj), size);
         return obj;
     }
 
@@ -146,9 +146,9 @@ namespace vm
         size = obj->klass->instance_size;
         o = Allocate(size, obj->klass);
         /* do not copy the sync state */
-        memcpy((char*)o + sizeof(Il2CppObject), (char*)obj + sizeof(Il2CppObject), size - sizeof(Il2CppObject));
+        memcpy(GetRawData(o), GetRawData(obj), size - sizeof(Il2CppObject));
 
-        gc::GarbageCollector::SetWriteBarrier((void**)(((char*)o) + sizeof(Il2CppObject)), size);
+        gc::GarbageCollector::SetWriteBarrier((void**)GetRawData(o), size);
 
 //#ifdef HAVE_SGEN_GC
 //  if (obj->vtable->klass->has_references)
@@ -164,11 +164,6 @@ namespace vm
 #endif
 
         return o;
-    }
-
-    Il2CppClass* Object::GetClass(Il2CppObject* obj)
-    {
-        return obj->klass;
     }
 
 #if IL2CPP_SIZEOF_VOID_P == 8
@@ -214,6 +209,8 @@ namespace vm
     {
         if ((virtualMethod->flags & METHOD_ATTRIBUTE_FINAL) || !(virtualMethod->flags & METHOD_ATTRIBUTE_VIRTUAL))
             return virtualMethod;
+
+        IL2CPP_ASSERT(obj->klass->is_vtable_initialized);
 
         Il2CppClass* methodDeclaringType = virtualMethod->klass;
         const MethodInfo* vtableSlotMethod;
@@ -262,7 +259,13 @@ namespace vm
     Il2CppObject* Object::New(Il2CppClass *klass)
     {
         // same as NewAllocSpecific as we only support a single domain
-        return NewAllocSpecific(klass);
+        return NewAllocSpecific(klass, false);
+    }
+
+    Il2CppObject* Object::NewBoxedNullable(Il2CppClass *klass)
+    {
+        // same as NewAllocSpecific as we only support a single domain
+        return NewAllocSpecific(klass, true);
     }
 
     Il2CppObject* Object::NewPinned(Il2CppClass *klass)
@@ -274,14 +277,14 @@ namespace vm
 #endif
     }
 
-    Il2CppObject * Object::NewAllocSpecific(Il2CppClass *klass)
+    Il2CppObject * Object::NewAllocSpecific(Il2CppClass *klass, bool allowBoxToNullable)
     {
         Il2CppObject *o = NULL;
 
         IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(Object::NewAllocSpecific, "We really shouldn't need this initialization");
-        Class::Init(klass);
+        ClassInlines::InitFromCodegen(klass);
 
-        if (Class::IsNullable(klass))
+        if (Class::IsNullable(klass) && !allowBoxToNullable)
             klass = il2cpp::vm::Class::GetNullableArgument(klass);
 
         if (!klass->has_references)
@@ -306,7 +309,8 @@ namespace vm
             Profiler::Allocation(o, klass);
 #endif
 
-        Runtime::ClassInit(klass);
+        if (!klass->cctor_finished_or_no_cctor)
+            Runtime::ClassInit(klass);
         return o;
     }
 
@@ -326,7 +330,7 @@ namespace vm
         {
             void* *p, *end;
             end = (void**)((char*)obj + klass->instance_size);
-            p = (void**)((char*)obj + sizeof(Il2CppObject));
+            p = (void**)vm::Object::GetRawData(obj);
             while (p < end)
             {
                 *p = NULL;
@@ -335,19 +339,13 @@ namespace vm
         }
         else
         {
-            memset((char*)obj + sizeof(Il2CppObject), 0, klass->instance_size - sizeof(Il2CppObject));
+            memset(GetRawData(obj), 0, klass->instance_size - sizeof(Il2CppObject));
         }
 #endif
 
         ++il2cpp_runtime_stats.new_object_count;
 
         return obj;
-    }
-
-    void* Object::Unbox(Il2CppObject* obj)
-    {
-        void* val = (void*)(((char*)obj) + sizeof(Il2CppObject));
-        return val;
     }
 
     void Object::UnboxNullable(Il2CppObject* obj, Il2CppClass* nullableClass, void* storage)
@@ -380,7 +378,7 @@ namespace vm
         IL2CPP_ASSERT(metadata::Il2CppTypeEqualityComparer::AreEqual(nullableClass->fields[0].type, &il2cpp_defaults.boolean_class->byval_arg));
         IL2CPP_ASSERT(obj == NULL || metadata::Il2CppTypeEqualityComparer::AreEqual(nullableClass->fields[1].type, &obj->klass->byval_arg));
 
-        void* valueField = Field::GetInstanceFieldDataPointer(storage, &nullableClass->fields[1]);
+        void* valueField = NullableGetValue(nullableClass, storage);
         uint32_t valueSize = Class::GetNullableArgument(nullableClass)->instance_size - sizeof(Il2CppObject);
 
         if (obj == NULL)
@@ -390,25 +388,39 @@ namespace vm
         }
         else
         {
-            memcpy(valueField, Unbox(obj), valueSize);
+            memcpy(valueField, GetRawData(obj), valueSize);
             *(static_cast<uint8_t*>(storage)) = true;
         }
 
         return valueSize;
     }
 
-    void Object::NullableInit(uint8_t* buf, Il2CppObject* value, Il2CppClass* klass)
+    void Object::NullableInit(uint8_t* nullable, Il2CppObject* value, Il2CppClass* klass)
+    {
+        NullableInit(nullable, value ? GetRawData(value) : NULL, klass);
+    }
+
+    void Object::NullableInit(uint8_t* nullable, void* data, Il2CppClass* klass)
     {
         Il2CppClass *parameterClass = klass->castClass;
 
         IL2CPP_ASSERT(Class::FromIl2CppType(klass->fields[0].type) == il2cpp_defaults.boolean_class);
         IL2CPP_ASSERT(Class::FromIl2CppType(klass->fields[1].type) == parameterClass);
 
-        *(uint8_t*)(buf + klass->fields[0].offset - sizeof(Il2CppObject)) = value ? 1 : 0;
-        if (value)
-            memcpy(buf + klass->fields[1].offset - sizeof(Il2CppObject), Object::Unbox(value), Class::GetValueSize(parameterClass, NULL));
+        *(uint8_t*)(nullable + klass->fields[0].offset - sizeof(Il2CppObject)) = data ? 1 : 0;
+        if (data)
+            memcpy(nullable + klass->fields[1].offset - sizeof(Il2CppObject), data, Class::GetValueSize(parameterClass, NULL));
         else
-            memset(buf + klass->fields[1].offset - sizeof(Il2CppObject), 0, Class::GetValueSize(parameterClass, NULL));
+            memset(nullable + klass->fields[1].offset - sizeof(Il2CppObject), 0, Class::GetValueSize(parameterClass, NULL));
+
+        if (Class::HasReferences(klass))
+            gc::GarbageCollector::SetWriteBarrier(reinterpret_cast<void**>(nullable));
+    }
+
+    void* Object::NullableGetValue(Il2CppClass* klass, void* data)
+    {
+        IL2CPP_ASSERT(Class::IsNullable(klass));
+        return Field::GetInstanceFieldDataPointer(data, &klass->fields[1]);
     }
 } /* namespace vm */
 } /* namespace il2cpp */

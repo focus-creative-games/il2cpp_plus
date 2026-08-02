@@ -55,7 +55,7 @@ namespace Reflection
         else
         {
             aname = (Il2CppMonoAssemblyName*)IL2CPP_MALLOC_ZERO(sizeof(Il2CppMonoAssemblyName));
-            il2cpp::vm::AssemblyName::FillNativeAssemblyName(assembly->aname, aname);
+            il2cpp::vm::AssemblyName::FillNativeAssemblyName(assembly->aname, aname, false);
 
             il2cpp::vm::Reflection::SetMonoAssemblyName(assembly, aname);
             return aname;

@@ -42,6 +42,9 @@ typedef int32_t GenericContainerParameterIndex;
 typedef int32_t AssemblyTypeIndex;
 typedef int32_t AssemblyExportedTypeIndex;
 
+// Custom indexes - see GlobalMetadataFileInternals.h
+typedef uint32_t EncodedMethodIndex;
+
 static const TypeIndex kTypeIndexInvalid = -1;
 static const TypeDefinitionIndex kTypeDefinitionIndexInvalid = -1;
 static const DefaultValueDataIndex kDefaultValueIndexNull = -1;

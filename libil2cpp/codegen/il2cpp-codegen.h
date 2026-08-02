@@ -3,17 +3,21 @@
 #include "il2cpp-config.h"
 
 #include "il2cpp-codegen-metadata.h"
+#include "il2cpp-codegen-oldintrinsics.h"
 #include "il2cpp-class-internals.h"
 #include "il2cpp-object-internals.h"
 #include "il2cpp-pinvoke-support.h"
 #include "il2cpp-tabledefs.h"
-#include "icalls/mscorlib/System.Runtime.InteropServices/Marshal.h"
-#include "vm-utils/icalls/mscorlib/System.Threading/Interlocked.h"
+#if !MONO_NET8_BCL
+#include "icalls/mscorlib/System.Threading/Interlocked.h"
+#endif
 #include "vm-utils/VmThreadUtils.h"
 #include "vm-utils/Debugger.h"
 #include "vm-utils/Finally.h"
 
+#include "vm/Array.h"
 #include "vm/ClassInlines.h"
+#include "vm/ObjectInlines.h"
 #include "vm/ScopedThreadAttacher.h"
 #include "vm/Il2CppHStringReference.h"
 #include "vm/String.h"
@@ -26,6 +30,14 @@
 #include <cstddef>
 #include <limits>
 #include <type_traits>
+
+#if IL2CPP_USE_SSE2_FP_CASTS
+#include "xmmintrin.h"
+#endif
+
+#if IL2CPP_USE_SATURATING_FP_CAST_INTRINSICS
+#include <intrin.h>
+#endif
 
 struct Il2CppStringBuilder;
 typedef Il2CppStringBuilder RuntimeStringBuilder;
@@ -137,40 +149,187 @@ inline void il2cpp_codegen_initobj(uintptr_t value, size_t size)
     memset((void*)value, 0, size);
 }
 
-template<typename TInput, typename TOutput, typename TFloat>
-inline TOutput il2cpp_codegen_cast_floating_point(TFloat value)
+template<typename TOutput, typename TFloat>
+struct ConvFloatingPoint
 {
-    // In release builds and on ARM, a cast from a floating point to
-    // integer value will use the min or max value if the cast is out
-    // of range (instead of overflowing like x86/x64 debug builds).
-    // So first do a cast to the output type (which is signed in
-    // .NET - the value stack does not have unsigned types) to try to
-    // get the value into a range that will actually be cast the way .NET does.
-    if (value < 0)
-        return (TOutput)((TInput)(TOutput)value);
-    return (TOutput)((TInput)value);
-}
-
-// ARM targets handle a cast of floating point positive infinity (0x7F800000)
-// differently from Intel targets. The expected behavior for .NET is from Intel,
-// where the cast to a 32-bit int produces the value 0x80000000. On ARM, the sign
-// is unchanged, producing 0x7FFFFFFF. To work around this change the positive
-// infinity value to negative infinity.
-template<typename T>
-inline T il2cpp_codegen_cast_double_to_int(double value)
-{
-#if IL2CPP_TARGET_ARM64 || IL2CPP_TARGET_ARMV7
-    if (value == HUGE_VAL)
+    inline static TOutput Conv(TFloat value)
     {
-        if (std::is_same<T, int64_t>::value)
-            return INT64_MIN;
-        if (std::is_same<T, int32_t>::value)
-            return INT32_MIN;
-        return 0;
-    }
+#if IL2CPP_EMULATE_X86_FP_UNSIGNED_OVERFLOW
+        // In release builds and on ARM, a cast from a floating point to
+        // integer value will use the min or max value if the cast is out
+        // of range (instead of overflowing like x86/x64 debug builds).
+        // So first do a cast to the output type (which is signed in
+        // .NET - the value stack does not have unsigned types) to try to
+        // get the value into a range that will actually be cast the way .NET does.
+        if (value < 0 && std::is_unsigned<TOutput>::value)
+        {
+            // Conversion for a negative to an unsigned value of the same size is UB in C++
+            // The memcpy ensures that the optimizer doesn't optimize this out
+            auto t = (typename std::make_signed<TOutput>::type)value;
+            TOutput output;
+            memcpy(&output, &t, sizeof(TOutput));
+            return output;
+        }
 #endif
-    return (T)value;
-}
+        // All casts to <int32 are done as if they are cast to int32 followed by a cast to actual type
+        if (sizeof(TOutput) < sizeof(int32_t))
+            return (TOutput)(int32_t)value;
+        return (TOutput)value;
+    }
+};
+
+
+#if IL2CPP_USE_SSE2_FP_CASTS
+
+template<typename TOutput>
+struct ConvFloatingPoint<TOutput, float>
+{
+    inline static TOutput Conv(float value)
+    {
+        return (TOutput)_mm_cvttss_si32(_mm_set_ss(value));
+    }
+};
+
+template<typename TOutput>
+struct ConvFloatingPoint<TOutput, double>
+{
+    inline static int32_t Conv(double value)
+    {
+        return (TOutput)_mm_cvttsd_si32(_mm_set_sd(value));
+    }
+};
+
+template<>
+struct ConvFloatingPoint<int64_t, float>
+{
+    inline static int64_t Conv(float value)
+    {
+        return _mm_cvttss_si64(_mm_set_ss(value));
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint64_t, float>
+{
+    inline static uint64_t Conv(float value)
+    {
+        return (uint64_t)_mm_cvttss_si64(_mm_set_ss(value));
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint32_t, float>
+{
+    inline static uint32_t Conv(float value)
+    {
+        return (uint32_t)_mm_cvttss_si64(_mm_set_ss(value));
+    }
+};
+
+template<>
+struct ConvFloatingPoint<int64_t, double>
+{
+    inline static int64_t Conv(double value)
+    {
+        return _mm_cvttsd_si64(_mm_set_sd(value));
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint64_t, double>
+{
+    inline static uint64_t Conv(double value)
+    {
+        return (uint64_t)_mm_cvttsd_si64(_mm_set_sd(value));
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint32_t, double>
+{
+    inline static uint32_t Conv(double value)
+    {
+        return (uint32_t)_mm_cvttsd_si64(_mm_set_sd(value));
+    }
+};
+
+#endif // IL2CPP_USE_SSE2_FP_CASTS
+
+#if IL2CPP_USE_SATURATING_FP_CAST_INTRINSICS
+
+template<typename TOutput>
+struct ConvFloatingPoint<TOutput, float>
+{
+    inline static TOutput Conv(float value)
+    {
+        return (TOutput)_cvt_ftoi_sat(value);
+    }
+};
+
+template<typename TOutput>
+struct ConvFloatingPoint<TOutput, double>
+{
+    inline static TOutput Conv(double value)
+    {
+        return (TOutput)_cvt_dtoi_sat(value);
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint32_t, float>
+{
+    inline static uint32_t Conv(float value)
+    {
+        return _cvt_ftoui_sat(value);
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint32_t, double>
+{
+    inline static uint32_t Conv(double value)
+    {
+        return _cvt_dtoui_sat(value);
+    }
+};
+
+template<>
+struct ConvFloatingPoint<int64_t, float>
+{
+    inline static int64_t Conv(float value)
+    {
+        return _cvt_ftoll_sat(value);
+    }
+};
+
+template<>
+struct ConvFloatingPoint<int64_t, double>
+{
+    inline static int64_t Conv(double value)
+    {
+        return _cvt_dtoll_sat(value);
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint64_t, float>
+{
+    inline static uint64_t Conv(float value)
+    {
+        return _cvt_ftoull_sat(value);
+    }
+};
+
+template<>
+struct ConvFloatingPoint<uint64_t, double>
+{
+    inline static uint64_t Conv(double value)
+    {
+        return _cvt_dtoull_sat(value);
+    }
+};
+
+#endif // IL2CPP_USE_SATURATING_FP_CAST_INTRINSICS
 
 template<bool, class T, class U>
 struct pick_first;
@@ -217,17 +376,7 @@ inline bool il2cpp_codegen_enum_has_flag(T enumValue, T flag)
     return (enumValue & flag) == flag;
 }
 
-NORETURN void il2cpp_codegen_raise_exception(Exception_t* ex, RuntimeMethod* lastManagedFrame = NULL);
-
-// NativeArray macros
-#define IL2CPP_NATIVEARRAY_GET_ITEM(TElementType, TTField, TIndex) \
-    *(reinterpret_cast<TElementType*>(TTField) + TIndex)
-
-#define IL2CPP_NATIVEARRAY_SET_ITEM(TElementType, TTField, TIndex, TValue) \
-   *(reinterpret_cast<TElementType*>(TTField) + TIndex) = TValue;
-
-#define IL2CPP_NATIVEARRAY_GET_LENGTH(TLengthField) \
-   (TLengthField)
+NORETURN void il2cpp_codegen_raise_exception(Exception_t* ex, const RuntimeMethod* lastManagedFrame = NULL);
 
 inline bool il2cpp_codegen_is_little_endian()
 {
@@ -239,8 +388,19 @@ inline bool il2cpp_codegen_is_little_endian()
 }
 
 NORETURN void il2cpp_codegen_raise_index_out_of_range_exception(const RuntimeMethod* method);
-
 NORETURN void il2cpp_codegen_raise_invalid_unmanaged_callers_usage(const RuntimeMethod* method, const char* msg);
+NORETURN void il2cpp_codegen_raise_abstract_method_load_exception(const RuntimeMethod* method, const RuntimeClass* klass);
+NORETURN void il2cpp_codegen_raise_platform_not_supported_exception(const RuntimeMethod* method);
+NORETURN void il2cpp_codegen_raise_argument_out_of_range_exception(const RuntimeMethod* method);
+NORETURN void il2cpp_codegen_raise_invalid_offset_type_load_exception(const uint8_t* utf8Name, size_t nameLength, size_t invalidFieldOffset);
+
+inline void il2cpp_codegen_check_ldftn_constrained(const void* method, const RuntimeClass* klass)
+{
+    if (((const MethodInfo*)method)->flags & METHOD_ATTRIBUTE_ABSTRACT)
+        il2cpp_codegen_raise_abstract_method_load_exception((const MethodInfo*)method, klass);
+}
+
+NORETURN void il2cpp_codegen_raise_overflow_exception(const RuntimeMethod* method);
 
 template<typename T>
 constexpr bool il2cpp_codegen_is_floating_point_type()
@@ -270,16 +430,16 @@ struct ConvImpl<TDest, TSource, TILStackType, checkOverflow, treatInputAsUnsigne
             if (!treatInputAsUnsigned && !std::is_unsigned<TDest>::value)
             {
                 if ((CompType)ilStackValue > (CompType)std::numeric_limits<TDest>::max())
-                    il2cpp_codegen_raise_index_out_of_range_exception(method);
+                    il2cpp_codegen_raise_overflow_exception(method);
                 if ((CompType)ilStackValue < (CompType)std::numeric_limits<TDest>::min())
-                    il2cpp_codegen_raise_index_out_of_range_exception(method);
+                    il2cpp_codegen_raise_overflow_exception(method);
             }
             if (treatInputAsUnsigned || std::is_unsigned<TDest>::value)
             {
                 if ((typename std::make_unsigned<TILStackType>::type)ilStackValue > (typename std::make_unsigned<TDest>::type) std::numeric_limits<TDest>::max())
-                    il2cpp_codegen_raise_index_out_of_range_exception(method);
+                    il2cpp_codegen_raise_overflow_exception(method);
                 if (!treatInputAsUnsigned && ilStackValue < 0)
-                    il2cpp_codegen_raise_index_out_of_range_exception(method);
+                    il2cpp_codegen_raise_overflow_exception(method);
             }
         }
 
@@ -311,16 +471,14 @@ struct ConvImpl<TDest, TSource, TILStackType, checkOverflow, treatInputAsUnsigne
         if (checkOverflow)
         {
             if (ilStackValue > (TILStackType)std::numeric_limits<TDest>::max())
-                il2cpp_codegen_raise_index_out_of_range_exception(method);
+                il2cpp_codegen_raise_overflow_exception(method);
             if (std::is_signed<TDest>::value && ilStackValue < (TILStackType)std::numeric_limits<TDest>::min())
-                il2cpp_codegen_raise_index_out_of_range_exception(method);
+                il2cpp_codegen_raise_overflow_exception(method);
             if (std::is_unsigned<TDest>::value && ilStackValue < 0)
-                il2cpp_codegen_raise_index_out_of_range_exception(method);
+                il2cpp_codegen_raise_overflow_exception(method);
         }
 
-        if (std::is_same<TDest, typename std::make_unsigned<TDest>::type>::value)
-            return il2cpp_codegen_cast_floating_point<typename std::make_signed<TDest>::type, TDest, TSource>(ilStackValue);
-        return il2cpp_codegen_cast_double_to_int<TDest>(ilStackValue);
+        return ConvFloatingPoint<TDest, TSource>::Conv(ilStackValue);
     }
 };
 
@@ -356,8 +514,6 @@ TDest il2cpp_codegen_conv(TSource srcValue, const RuntimeMethod* method)
 }
 
 REAL_NORETURN IL2CPP_NO_INLINE void il2cpp_codegen_no_return();
-
-NORETURN void il2cpp_codegen_raise_exception(Exception_t *ex, MethodInfo* lastManagedFrame);
 
 NORETURN void il2cpp_codegen_rethrow_exception(Exception_t *ex);
 
@@ -457,11 +613,11 @@ struct Il2CppFakeBox : RuntimeObject
 {
     T m_Value;
 
-    Il2CppFakeBox(RuntimeClass* boxedType, T* value)
+    Il2CppFakeBox(RuntimeClass* boxedType, const T& value)
     {
         klass = boxedType;
         monitor = IL2CPP_FAKE_BOX_SENTRY;
-        m_Value = *value;
+        m_Value = value;
     }
 };
 
@@ -519,6 +675,8 @@ NORETURN void il2cpp_codegen_raise_null_reference_exception();
 NORETURN void il2cpp_codegen_raise_divide_by_zero_exception();
 
 NORETURN void il2cpp_codegen_raise_index_out_of_range_exception();
+
+NORETURN void il2cpp_codegen_raise_not_supported_exception();
 
 Exception_t* il2cpp_codegen_get_argument_exception(const char* param, const char* msg);
 
@@ -587,6 +745,7 @@ inline RuntimeObject* IsInstClass(RuntimeObject *obj, RuntimeClass* targetType)
 
 // OpCode.Castclass
 
+NORETURN void RaiseInvalidCastException(RuntimeClass* sourceType, RuntimeClass* targetType);
 NORETURN void RaiseInvalidCastException(RuntimeObject* obj, RuntimeClass* targetType);
 
 inline RuntimeObject* Castclass(RuntimeObject *obj, RuntimeClass* targetType)
@@ -642,12 +801,16 @@ RuntimeObject* Box(RuntimeClass* type, void* data);
 
 // OpCode.UnBox
 
-void* Unbox_internal(Il2CppObject* obj);
+template<typename T>
+inline T* il2cpp_codegen_get_raw_data(Il2CppObject* obj)
+{
+    return reinterpret_cast<T*>(il2cpp::vm::ObjectInlines::GetRawData(obj));
+}
 
 inline void* UnBox(RuntimeObject* obj)
 {
     NullCheck(obj);
-    return Unbox_internal(obj);
+    return il2cpp_codegen_get_raw_data<void>(obj);
 }
 
 inline void* UnBox(RuntimeObject* obj, RuntimeClass* expectedBoxedClass)
@@ -655,7 +818,7 @@ inline void* UnBox(RuntimeObject* obj, RuntimeClass* expectedBoxedClass)
     NullCheck(obj);
 
     if (obj->klass->element_class == expectedBoxedClass->element_class)
-        return Unbox_internal(obj);
+        return il2cpp_codegen_get_raw_data<void>(obj);
 
     RaiseInvalidCastException(obj, expectedBoxedClass);
     return NULL;
@@ -683,6 +846,36 @@ void* UnBox_Any(RuntimeObject* obj, RuntimeClass* expectedBoxedClass, void* unbo
 
 // objBuffer is a pointer to the obj - either a pointer to a value type or a pointer to a reference type
 bool il2cpp_codegen_would_box_to_non_null(RuntimeClass* klass, void* objBuffer);
+
+// objBuffer is a pointer to the obj - either a pointer to a value type or a pointer to a reference type
+RuntimeObject* il2cpp_codegen_isinst_runtime(RuntimeClass* fromClass, RuntimeClass* toClass, void* objBuffer);
+RuntimeObject* il2cpp_codegen_isinst_runtime_sealed(RuntimeClass* fromClass, RuntimeClass* toClass, void* objBuffer);
+RuntimeObject* il2cpp_codegen_isinst_runtime_class(RuntimeClass* fromClass, RuntimeClass* toClass, void* objBuffer);
+
+// objBuffer is a pointer to the obj - either a pointer to a value type or a pointer to a reference type
+bool il2cpp_codegen_isinst_runtime_check(RuntimeClass* fromClass, RuntimeClass* toClass, void* objBuffer);
+bool il2cpp_codegen_isinst_runtime_check_sealed(RuntimeClass* fromClass, RuntimeClass* toClass, void* objBuffer);
+bool il2cpp_codegen_isinst_runtime_check_class(RuntimeClass* fromClass, RuntimeClass* toClass, void* objBuffer);
+
+inline RuntimeClass* il2cpp_codegen_object_get_class(RuntimeObject* object)
+{
+    NullCheck(object);
+    return object->klass;
+}
+
+RuntimeClass* il2cpp_codegen_object_get_class_constrained(void* objectBuffer, RuntimeClass* klass);
+
+void il2cpp_codegen_box_unbox_change_class(void* from, void* to, size_t size, RuntimeClass* fromClass, RuntimeClass* toClass);
+
+inline void il2cpp_codegen_box_unbox(void* from, void* to, size_t size, RuntimeClass* fromClass, RuntimeClass* toClass)
+{
+    IL2CPP_ASSERT_STACK_PTR(to); // This method doesn't do any write barriers - in current usage to is always on the stack
+
+    if (fromClass != toClass)
+        il2cpp_codegen_box_unbox_change_class(from, to, size, fromClass, toClass);
+    else
+        il2cpp_codegen_memcpy(to, from, size);
+}
 
 int32_t il2cpp_codgen_class_get_instance_size(RuntimeClass* klass);
 
@@ -714,10 +907,15 @@ inline uint16_t il2cpp_codegen_method_get_slot(const RuntimeMethod* method)
     return method->slot;
 }
 
-IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_virtual_invoke_data(Il2CppMethodSlot slot, const RuntimeObject* obj)
+IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_virtual_invoke_data(Il2CppMethodSlot slot, const RuntimeClass* klass)
 {
     Assert(slot != kInvalidIl2CppMethodSlot && "il2cpp_codegen_get_virtual_invoke_data got called on a non-virtual method");
-    return obj->klass->vtable[slot];
+    return klass->vtable[slot];
+}
+
+IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_virtual_invoke_data(Il2CppMethodSlot slot, const RuntimeObject* obj)
+{
+    return il2cpp_codegen_get_virtual_invoke_data(slot, obj->klass);
 }
 
 IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_interface_invoke_data(Il2CppMethodSlot slot, RuntimeObject* obj, const RuntimeClass* declaringInterface)
@@ -726,26 +924,55 @@ IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_interface_invoke
     return il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTable(obj, declaringInterface, slot);
 }
 
+IL2CPP_FORCE_INLINE const VirtualInvokeData& il2cpp_codegen_get_interface_invoke_data(Il2CppMethodSlot slot, const RuntimeClass* klass, const RuntimeClass* declaringInterface)
+{
+    Assert(slot != kInvalidIl2CppMethodSlot && "il2cpp_codegen_get_interface_invoke_data got called on a non-virtual method");
+    return il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTable(klass, declaringInterface, slot);
+}
+
 const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method_internal(const RuntimeMethod* methodDefinition, const RuntimeMethod* inflatedMethod);
+
+IL2CPP_FORCE_INLINE const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method(const RuntimeMethod* method, const RuntimeClass* klass)
+{
+    uint16_t slot = method->slot;
+    const RuntimeMethod* methodDefinition = klass->vtable[slot].method;
+    return il2cpp_codegen_get_generic_virtual_method_internal(methodDefinition, method);
+}
 
 IL2CPP_FORCE_INLINE const RuntimeMethod* il2cpp_codegen_get_generic_virtual_method(const RuntimeMethod* method, const RuntimeObject* obj)
 {
-    uint16_t slot = method->slot;
-    const RuntimeMethod* methodDefinition = obj->klass->vtable[slot].method;
-    return il2cpp_codegen_get_generic_virtual_method_internal(methodDefinition, method);
+    return il2cpp_codegen_get_generic_virtual_method(method, obj->klass);
+}
+
+IL2CPP_FORCE_INLINE void il2cpp_codegen_get_generic_virtual_invoke_data(const RuntimeMethod* method, const RuntimeClass* klass, VirtualInvokeData* invokeData)
+{
+    invokeData->method = il2cpp_codegen_get_generic_virtual_method(method, klass);
+    invokeData->methodPtr = invokeData->method->virtualMethodPointer;
+    IL2CPP_ASSERT(invokeData->method);
 }
 
 IL2CPP_FORCE_INLINE void il2cpp_codegen_get_generic_virtual_invoke_data(const RuntimeMethod* method, const RuntimeObject* obj, VirtualInvokeData* invokeData)
 {
-    invokeData->method = il2cpp_codegen_get_generic_virtual_method(method, obj);
-    invokeData->methodPtr = invokeData->method->virtualMethodPointer;
-    IL2CPP_ASSERT(invokeData->method);
+    return il2cpp_codegen_get_generic_virtual_invoke_data(method, obj->klass, invokeData);
+}
+
+IL2CPP_FORCE_INLINE const RuntimeMethod* il2cpp_codegen_get_generic_interface_method(const RuntimeMethod* method, const RuntimeClass* klass)
+{
+    const RuntimeMethod* methodDefinition = il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTable(klass, method->klass, method->slot).method;
+    return il2cpp_codegen_get_generic_virtual_method_internal(methodDefinition, method);
 }
 
 IL2CPP_FORCE_INLINE const RuntimeMethod* il2cpp_codegen_get_generic_interface_method(const RuntimeMethod* method, RuntimeObject* obj)
 {
     const RuntimeMethod* methodDefinition = il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTable(obj, method->klass, method->slot).method;
     return il2cpp_codegen_get_generic_virtual_method_internal(methodDefinition, method);
+}
+
+IL2CPP_FORCE_INLINE void il2cpp_codegen_get_generic_interface_invoke_data(const RuntimeMethod* method, const RuntimeClass* klass, VirtualInvokeData* invokeData)
+{
+    invokeData->method = il2cpp_codegen_get_generic_interface_method(method, klass);
+    invokeData->methodPtr = invokeData->method->virtualMethodPointer;
+    IL2CPP_ASSERT(invokeData->method);
 }
 
 IL2CPP_FORCE_INLINE void il2cpp_codegen_get_generic_interface_invoke_data(const RuntimeMethod* method, RuntimeObject* obj, VirtualInvokeData* invokeData)
@@ -772,15 +999,14 @@ inline const RuntimeType* il2cpp_codegen_type_from_class(RuntimeClass *klass)
     return &klass->byval_arg;
 }
 
-inline void* InterlockedExchangeImplRef(void** location, void* value)
-{
-    return il2cpp::icalls::mscorlib::System::Threading::Interlocked::ExchangePointer(location, value);
-}
+void* InterlockedExchangeImplRef(void** location, void* value);
+
+void* InterlockedCompareExchangeImpl(void** location, void* value, void* comparand);
 
 template<typename T>
 inline T InterlockedCompareExchangeImpl(T* location, T value, T comparand)
 {
-    return (T)il2cpp::icalls::mscorlib::System::Threading::Interlocked::CompareExchange_T((void**)location, value, comparand);
+    return (T)InterlockedCompareExchangeImpl((void**)location, value, comparand);
 }
 
 template<typename T>
@@ -790,15 +1016,6 @@ inline T InterlockedExchangeImpl(T* location, T value)
 }
 
 void il2cpp_codegen_memory_barrier();
-
-inline void GetGenericValueImpl(RuntimeArray* thisPtr, int32_t pos, void* value)
-{
-    // GetGenericValueImpl is only called from the class libs internally and T is never a field
-    IL2CPP_ASSERT_STACK_PTR(value);
-    memcpy(value, il2cpp_array_addr_with_size(thisPtr, thisPtr->klass->element_size, pos), thisPtr->klass->element_size);
-}
-
-void SetGenericValueImpl(RuntimeArray* thisPtr, int32_t pos, void* value);
 
 RuntimeArray* SZArrayNew(RuntimeClass* arrayType, uint32_t length);
 
@@ -924,11 +1141,11 @@ inline T* il2cpp_codegen_marshal_function_ptr_to_delegate(Il2CppMethodPointer fu
 void il2cpp_codegen_marshal_store_last_error();
 
 template<typename R, typename S>
-inline R il2cpp_codegen_cast_struct(S* s)
+inline R il2cpp_codegen_cast_struct(const S& s)
 {
     static_assert(sizeof(S) == sizeof(R), "Types with different sizes passed to il2cpp_codegen_cast_struct");
     R r;
-    il2cpp_codegen_memcpy(&r, s, sizeof(R));
+    il2cpp_codegen_memcpy(&r, &s, sizeof(R));
     return r;
 }
 
@@ -1056,12 +1273,22 @@ inline const RuntimeMethod* GetVirtualMethodInfo(RuntimeObject* pThis, Il2CppMet
     return pThis->klass->vtable[slot].method;
 }
 
+inline const RuntimeMethod* GetVirtualMethodInfo(RuntimeClass* klass, Il2CppMethodSlot slot)
+{
+    return klass->vtable[slot].method;
+}
+
 inline const RuntimeMethod* GetInterfaceMethodInfo(RuntimeObject* pThis, Il2CppMethodSlot slot, RuntimeClass* declaringInterface)
 {
     if (!pThis)
         il2cpp_codegen_raise_null_reference_exception();
 
     return il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTable(pThis, declaringInterface, slot).method;
+}
+
+inline const RuntimeMethod* GetInterfaceMethodInfo(const RuntimeClass* klass, Il2CppMethodSlot slot, RuntimeClass* declaringInterface)
+{
+    return il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTable(klass, declaringInterface, slot).method;
 }
 
 void il2cpp_codegen_initialize_runtime_metadata(uintptr_t* metadataPointer);
@@ -1078,7 +1305,18 @@ inline bool il2cpp_codegen_class_is_value_type(RuntimeClass* type)
     return il2cpp_codegen_type_is_value_type(&type->byval_arg);
 }
 
+inline bool il2cpp_codegen_class_is_enum(RuntimeClass* type)
+{
+    return type->enumtype;
+}
+
+inline bool il2cpp_codegen_class_is_byref_like(RuntimeClass* type)
+{
+    return type->is_byref_like;
+}
+
 bool il2cpp_codegen_class_is_nullable(RuntimeClass* type);
+bool il2cpp_codegen_class_is_primitive(RuntimeClass* type);
 
 inline bool il2cpp_codegen_type_implements_virtual_method(RuntimeClass* type, const RuntimeMethod* method)
 {
@@ -1091,19 +1329,6 @@ MethodBase_t* il2cpp_codegen_get_method_object_internal(const RuntimeMethod* met
 const RuntimeClass* il2cpp_codegen_get_generic_type_definition(const RuntimeClass* klass);
 const RuntimeMethod* il2cpp_codegen_get_generic_method_definition(const RuntimeMethod* method);
 const RuntimeMethod* il2cpp_codegen_get_generic_instance_method_from_method_definition(RuntimeClass* genericInstanceClass, const RuntimeMethod* methodDefinition);
-
-inline MethodBase_t* il2cpp_codegen_get_method_object(const RuntimeMethod* method)
-{
-    if (method->is_inflated)
-        method = il2cpp_codegen_get_generic_method_definition(method);
-    return il2cpp_codegen_get_method_object_internal(method, method->klass);
-}
-
-Type_t* il2cpp_codegen_get_type(String_t* typeName, const RuntimeMethod* getTypeMethod, const RuntimeMethod* callingMethod);
-Type_t* il2cpp_codegen_get_type(String_t* typeName, bool throwOnError, const RuntimeMethod* getTypeMethod, const RuntimeMethod* callingMethod);
-Type_t* il2cpp_codegen_get_type(String_t* typeName, bool throwOnError, bool ignoreCase, const RuntimeMethod* getTypeMethod, const RuntimeMethod* callingMethod);
-
-Assembly_t* il2cpp_codegen_get_executing_assembly(const RuntimeMethod* method);
 
 // Atomic
 
@@ -1179,11 +1404,6 @@ template<typename InterfaceType>
 inline InterfaceType* il2cpp_codegen_com_get_or_create_ccw(RuntimeObject* obj)
 {
     return static_cast<InterfaceType*>(il2cpp_codegen_com_get_or_create_ccw_internal(obj, InterfaceType::IID));
-}
-
-inline intptr_t il2cpp_codegen_com_get_iunknown_for_object(RuntimeObject* obj)
-{
-    return reinterpret_cast<intptr_t>(il2cpp_codegen_com_get_or_create_ccw_internal(obj, Il2CppIUnknown::IID));
 }
 
 Il2CppObject* il2cpp_codegen_com_unpack_ccw(Il2CppIUnknown* obj);
@@ -1341,11 +1561,6 @@ inline bool il2cpp_codegen_is_import_or_windows_runtime(const RuntimeObject *obj
     return object->klass->is_import_or_windows_runtime;
 }
 
-inline intptr_t il2cpp_codegen_get_com_interface_for_object(Il2CppObject* object, Type_t* type)
-{
-    return il2cpp::icalls::mscorlib::System::Runtime::InteropServices::Marshal::GetCCW(object, reinterpret_cast<Il2CppReflectionType*>(type));
-}
-
 NORETURN void il2cpp_codegen_raise_profile_exception(const RuntimeMethod* method);
 
 void il2cpp_codegen_array_unsafe_mov(RuntimeClass * destClass, void* dest, RuntimeClass * srcClass, void* src);
@@ -1442,15 +1657,21 @@ TDest il2cpp_codegen_conv(const RuntimeClass* srcType, void* src, const RuntimeM
     return 0;
 }
 
-// objBuffer is a pointer to the obj, either a pointer to a struct's data or a pointer to a reference type pointer
-void il2cpp_codegen_runtime_constrained_call(RuntimeClass* type, const RuntimeMethod* constrainedMethod, void* boxBuffer, void* objBuffer, void** args, void* retVal);
-
-void* il2cpp_codegen_runtime_box_constrained_this(RuntimeClass* type, const RuntimeMethod* constrainedMethod, void* obj);
-
-template<typename T>
-inline void* il2cpp_codegen_unsafe_cast(T* ptr)
+struct Il2CppConstrainedCallData
 {
-    return reinterpret_cast<void*>(ptr);
+    const RuntimeMethod* method;
+    void* thisPtr;
+};
+
+// objBuffer is a pointer to the obj, either a pointer to a struct's data or a pointer to a reference type pointer
+Il2CppMethodPointer il2cpp_codegen_get_runtime_constrained_call_data(RuntimeClass* type, const RuntimeMethod* constrainedMethod, void* objBuffer, Il2CppConstrainedCallData* data, void* boxBuffer);
+
+Il2CppMethodPointer il2cpp_codegen_get_runtime_static_constrained_call_data(RuntimeClass* type, const RuntimeMethod* constrainedMethod, const RuntimeMethod** resolvedMethod);
+
+inline Il2CppMethodPointer il2cpp_codegen_get_runtime_static_constrained_call_data(const RuntimeMethod* constrainedMethod)
+{
+    il2cpp_codegen_runtime_class_init_inline(constrainedMethod->klass);
+    return constrainedMethod->methodPointer;
 }
 
 inline void il2cpp_codegen_by_reference_constructor(Il2CppByReference* byReference, void* value)
@@ -1468,8 +1689,8 @@ inline intptr_t il2cpp_codegen_by_reference_get_value(Il2CppByReference* byRefer
 
 bool il2cpp_codegen_is_reference_or_contains_references(const RuntimeMethod* method);
 
-bool il2cpp_codegen_is_unmanaged(const RuntimeMethod* method);
-
+// Can't move to il2cpp-codegen-intrinsics.h because it needs `IL2CPP_ARRAY_BOUNDS_CHECK`
+#if !MONO_NET8_BCL
 template<typename T>
 inline T* il2cpp_span_get_item(T* refPtrValue, int32_t index, int32_t length)
 {
@@ -1481,6 +1702,25 @@ template<typename T>
 inline T* il2cpp_unsafe_unbox(RuntimeObject* obj, RuntimeClass* klass)
 {
     return reinterpret_cast<T*>(UnBox(obj, klass));
+}
+
+#endif
+
+template<typename T>
+inline void il2cpp_unsafe_copy_from_ptr(T* dest, void* src)
+{
+    *dest = *reinterpret_cast<T*>(src);
+}
+
+template<typename T>
+inline void il2cpp_unsafe_copy_to_ptr(void* dest, T* src)
+{
+    *reinterpret_cast<T*>(dest) = *src;
+}
+
+inline void il2cpp_unsafe_copy_block(void* dest, void* src, size_t size)
+{
+    memcpy(dest, src, size);
 }
 
 #if IL2CPP_COMPILER_MSVC
@@ -1563,22 +1803,13 @@ inline int32_t il2cpp_codegen_abs(uint32_t value)
     return abs(static_cast<int32_t>(value));
 }
 
-inline int32_t il2cpp_codegen_abs(int32_t value)
-{
-    return abs(value);
-}
-
 inline int64_t il2cpp_codegen_abs(uint64_t value)
 {
     return llabs(static_cast<int64_t>(value));
 }
 
-inline int64_t il2cpp_codegen_abs(int64_t value)
-{
-    return llabs(value);
-}
-
 void il2cpp_codegen_memory_barrier();
+void il2cpp_codegen_read_memory_barrier();
 
 template<typename T>
 inline T VolatileRead(T* location)
@@ -1697,147 +1928,83 @@ public:
 #define IL2CPP_ARRAY_UNSAFE_LOAD(TArray, TIndex) \
     (TArray)->GetAtUnchecked(static_cast<il2cpp_array_size_t>(TIndex))
 
-inline bool il2cpp_codegen_object_reference_equals(const RuntimeObject *obj1, const RuntimeObject *obj2)
-{
-    return obj1 == obj2;
-}
-
-inline bool il2cpp_codegen_platform_is_osx_or_ios()
-{
-    return IL2CPP_TARGET_OSX != 0 || IL2CPP_TARGET_IOS != 0;
-}
-
-inline bool il2cpp_codegen_platform_is_freebsd()
-{
-    // we don't currently support FreeBSD
-    return false;
-}
-
-inline bool il2cpp_codegen_platform_is_uwp()
-{
-    return IL2CPP_TARGET_WINRT != 0;
-}
-
-inline bool il2cpp_codegen_platform_disable_libc_pinvoke()
-{
-    return IL2CPP_PLATFORM_DISABLE_LIBC_PINVOKE;
-}
-
-template<typename T>
-inline T il2cpp_unsafe_read_unaligned(void* location)
-{
-    T result;
-#if IL2CPP_TARGET_ARMV7 || IL2CPP_TARGET_JAVASCRIPT
-    memcpy(&result, location, sizeof(T));
-#else
-    result = *((T*)location);
-#endif
-    return result;
-}
-
-template<typename T>
-inline void il2cpp_unsafe_write_unaligned(void* location, T value)
-{
-#if IL2CPP_TARGET_ARMV7 || IL2CPP_TARGET_JAVASCRIPT
-    memcpy(location, &value, sizeof(T));
-#else
-    *((T*)location) = value;
-#endif
-}
-
-template<typename T>
-inline T il2cpp_unsafe_read(void* location)
-{
-    return *((T*)location);
-}
-
-template<typename T>
-inline void il2cpp_unsafe_write(void* location, T value)
-{
-    *((T*)location) = value;
-}
-
-template<typename T, typename TOffset>
-inline T* il2cpp_unsafe_add(void* source, TOffset offset)
-{
-    return reinterpret_cast<T*>(source) + offset;
-}
-
-template<typename T, typename TOffset>
-inline T* il2cpp_unsafe_add_byte_offset(void* source, TOffset offset)
-{
-    return reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(source) + offset);
-}
-
-template<typename T, typename TOffset>
-inline T* il2cpp_unsafe_subtract(void* source, TOffset offset)
-{
-    return reinterpret_cast<T*>(source) - offset;
-}
-
-template<typename T, typename TOffset>
-inline T* il2cpp_unsafe_subtract_byte_offset(void* source, TOffset offset)
-{
-    return reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(source) - offset);
-}
-
-template<typename T>
-inline T il2cpp_unsafe_as(void* source)
-{
-    return reinterpret_cast<T>(source);
-}
-
-template<typename T>
-inline T* il2cpp_unsafe_as_ref(void* source)
-{
-    return reinterpret_cast<T*>(source);
-}
-
-inline void* il2cpp_unsafe_as_pointer(void* source)
-{
-    return source;
-}
-
-template<typename T>
-inline T* il2cpp_unsafe_null_ref()
-{
-    return reinterpret_cast<T*>(NULL);
-}
-
-inline bool il2cpp_unsafe_are_same(void* left, void* right)
-{
-    return left == right;
-}
-
-inline bool il2cpp_unsafe_is_addr_gt(void* left, void* right)
-{
-    return left > right;
-}
-
-inline bool il2cpp_unsafe_is_addr_lt(void* left, void* right)
-{
-    return left < right;
-}
-
-inline bool il2cpp_unsafe_is_null_ref(void* source)
-{
-    return source == NULL;
-}
-
-template<typename T>
-inline int32_t il2cpp_unsafe_sizeof()
-{
-    return sizeof(T);
-}
-
-inline intptr_t il2cpp_unsafe_byte_offset(void* origin, void* target)
-{
-    return reinterpret_cast<uint8_t*>(target) - reinterpret_cast<uint8_t*>(origin);
-}
-
 #ifdef GC_H
 #error It looks like this codegen only header ends up including gc.h from the boehm gc. We should not expose boehmgc to generated code
 #endif
 #ifdef MONO_CONFIG_H_WAS_INCLUDED
 #error It looks like this codegen only header ends up including headers from libmono. We should not expose those to generated code
 #endif
+
+template<typename THandleOnStack>
+Il2CppObjectHandleOnStack& ToIl2CppObjectHandleOnStack(THandleOnStack& handle)
+{
+    static_assert(sizeof(THandleOnStack) == sizeof(Il2CppObjectHandleOnStack), "sizeof(Il2CppObjectHandleOnStack) does not match classlib size");
+    return (Il2CppObjectHandleOnStack&)handle;
+}
+
+template<typename THandleOnStack, typename TValue>
+void il2cpp_codegen_get_generic_value_icall(THandleOnStack handle, int index, TValue* value)
+{
+    RuntimeArray* arr = (RuntimeArray*)ToIl2CppObjectHandleOnStack(handle);
+
+    IL2CPP_ASSERT_STACK_PTR(value);
+    IL2CPP_ASSERT(sizeof(TValue) == arr->klass->element_size);
+
+    *value = il2cpp_array_get(arr, TValue, index);
+}
+
+template<typename THandleOnStack>
+void il2cpp_codegen_get_generic_value_icall(THandleOnStack handle, int index, void* value, size_t elementSize)
+{
+    RuntimeArray* arr = (RuntimeArray*)ToIl2CppObjectHandleOnStack(handle);
+
+    IL2CPP_ASSERT_STACK_PTR(value);
+    IL2CPP_ASSERT(elementSize == arr->klass->element_size);
+
+    memcpy(value, il2cpp_array_addr_with_size(arr, elementSize, index), elementSize);
+}
+
+template<typename THandleOnStack, typename TValue>
+void il2cpp_codegen_set_generic_value_icall(THandleOnStack handle, int index, TValue* value)
+{
+    RuntimeArray* arr = (RuntimeArray*)ToIl2CppObjectHandleOnStack(handle);
+
+    IL2CPP_ASSERT(sizeof(TValue) == arr->klass->element_size);
+
+    il2cpp_array_set(arr, TValue, index, *value);
+}
+
+template<typename THandleOnStack, typename TValue>
+void il2cpp_codegen_set_generic_value_icall_with_barrier(THandleOnStack handle, int index, TValue* value)
+{
+    RuntimeArray* arr = (RuntimeArray*)ToIl2CppObjectHandleOnStack(handle);
+    IL2CPP_ASSERT(sizeof(TValue) == arr->klass->element_size);
+
+    il2cpp_array_setrefwithsize(arr, sizeof(TValue), index, value);
+}
+
+template<typename THandleOnStack>
+void il2cpp_codegen_set_generic_value_icall(THandleOnStack handle, int index, void* value, size_t elementSize)
+{
+    RuntimeArray* arr = (RuntimeArray*)ToIl2CppObjectHandleOnStack(handle);
+
+    IL2CPP_ASSERT(elementSize == arr->klass->element_size);
+
+    void *dest = il2cpp_array_addr_with_size(arr, elementSize, index);
+    memcpy(dest, value, elementSize);
+    il2cpp::gc::GarbageCollector::SetWriteBarrier((void**)dest, elementSize);
+}
+
+template<typename T>
+inline void il2cpp_codegen_stind(T* dest, T source)
+{
+    memcpy(dest, &source, sizeof(T));
+}
+
+template<typename TStorage, typename TSource>
+inline TStorage il2cpp_codegen_ldind(const TSource* source)
+{
+    TSource dest;
+    memcpy(&dest, source, sizeof(TSource));
+    return (TStorage)dest;
+}

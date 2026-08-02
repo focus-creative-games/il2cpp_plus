@@ -22,57 +22,57 @@ namespace vm
         if (obj->klass == il2cpp_defaults.sbyte_class)
         {
             variant->n1.n2.type = IL2CPP_VT_I1;
-            variant->n1.n2.n3.cVal = *static_cast<int8_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.cVal = *static_cast<int8_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.byte_class)
         {
             variant->n1.n2.type = IL2CPP_VT_UI1;
-            variant->n1.n2.n3.bVal = *static_cast<uint8_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.bVal = *static_cast<uint8_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.int16_class)
         {
             variant->n1.n2.type = IL2CPP_VT_I2;
-            variant->n1.n2.n3.iVal = *static_cast<int16_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.iVal = *static_cast<int16_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.uint16_class)
         {
             variant->n1.n2.type = IL2CPP_VT_UI2;
-            variant->n1.n2.n3.uiVal = *static_cast<uint16_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.uiVal = *static_cast<uint16_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.int32_class)
         {
             variant->n1.n2.type = IL2CPP_VT_I4;
-            variant->n1.n2.n3.lVal = *static_cast<int32_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.lVal = *static_cast<int32_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.uint32_class)
         {
             variant->n1.n2.type = IL2CPP_VT_UI4;
-            variant->n1.n2.n3.ulVal = *static_cast<uint32_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.ulVal = *static_cast<uint32_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.int64_class)
         {
             variant->n1.n2.type = IL2CPP_VT_I8;
-            variant->n1.n2.n3.llVal = *static_cast<int64_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.llVal = *static_cast<int64_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.uint64_class)
         {
             variant->n1.n2.type = IL2CPP_VT_UI8;
-            variant->n1.n2.n3.ullVal = *static_cast<uint64_t*>(Object::Unbox(obj));
+            variant->n1.n2.n3.ullVal = *static_cast<uint64_t*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.single_class)
         {
             variant->n1.n2.type = IL2CPP_VT_R4;
-            variant->n1.n2.n3.fltVal = *static_cast<float*>(Object::Unbox(obj));
+            variant->n1.n2.n3.fltVal = *static_cast<float*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.double_class)
         {
             variant->n1.n2.type = IL2CPP_VT_R8;
-            variant->n1.n2.n3.dblVal = *static_cast<double*>(Object::Unbox(obj));
+            variant->n1.n2.n3.dblVal = *static_cast<double*>(Object::GetRawData(obj));
         }
         else if (obj->klass == il2cpp_defaults.boolean_class)
         {
             variant->n1.n2.type = IL2CPP_VT_BOOL;
-            variant->n1.n2.n3.boolVal = *static_cast<bool*>(Object::Unbox(obj)) ? IL2CPP_VARIANT_TRUE : IL2CPP_VARIANT_FALSE;
+            variant->n1.n2.n3.boolVal = *static_cast<bool*>(Object::GetRawData(obj)) ? IL2CPP_VARIANT_TRUE : IL2CPP_VARIANT_FALSE;
         }
         else if (obj->klass == il2cpp_defaults.string_class)
         {

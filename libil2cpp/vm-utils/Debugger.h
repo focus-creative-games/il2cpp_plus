@@ -73,6 +73,7 @@ extern "C"
 #include <stdint.h>
 #include "os/Atomic.h"
 #include "os/ThreadLocalValue.h"
+#include "vm/LastError.h"
 
 #undef IsLoggingEnabled
 
@@ -101,6 +102,8 @@ namespace utils
 
         static inline Il2CppThreadUnwindState* PushExecutionContext(Il2CppSequencePointExecutionContext* executionContext)
         {
+            vm::LastOsErrorPreserver lastErrorPreserver;
+
             Il2CppThreadUnwindState* unwindState;
             s_ExecutionContexts.GetValue(reinterpret_cast<void**>(&unwindState));
 

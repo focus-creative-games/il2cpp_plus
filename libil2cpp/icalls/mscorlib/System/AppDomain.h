@@ -38,6 +38,7 @@ namespace System
         static bool InternalIsFinalizingForUnload(int32_t domain_id);
         static int32_t ExecuteAssembly(Il2CppObject* thisPtr, Il2CppObject* a, Il2CppArray* args);
         static Il2CppObject* GetData(Il2CppAppDomain* thisPtr, Il2CppString* name);
+        static void ClearData();
         static Il2CppReflectionAssembly* LoadAssembly(Il2CppAppDomain* thisPtr, Il2CppString* assemblyRef, Il2CppObject* securityEvidence, bool refOnly, int32_t* stackMark);
         static Il2CppObject* LoadAssemblyRaw(Il2CppObject* thisPtr, Il2CppArray* rawAssembly, Il2CppArray* rawSymbolStore, Il2CppObject* securityEvidence, bool refonly);
         static Il2CppArray* GetAssemblies(Il2CppObject* thisPtr, bool refOnly);

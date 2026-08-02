@@ -135,3 +135,13 @@ typedef struct Il2CppGenericParameterInfo
     uint16_t num;
     uint16_t flags;
 } Il2CppGenericParameterInfo;
+
+typedef struct Il2CppTypeNameInfo
+{
+    const Il2CppImage* image;
+    const char* namespaze;
+    const char* name;
+    const Il2CppType* declaringType;
+    Il2CppMetadataGenericContainerHandle genericContainerHandle;
+    bool isGeneric;
+} Il2CppTypeNameInfo;

@@ -3,6 +3,7 @@
 #include "vm/Exception.h"
 #include "vm/Method.h"
 #include "vm/RCW.h"
+#include "vm/Runtime.h"
 #include "gc/GCHandle.h"
 #include "metadata/GenericMethod.h"
 
@@ -12,8 +13,6 @@ namespace vm
 {
     Il2CppClass* ClassInlines::InitFromCodegenSlow(Il2CppClass *klass)
     {
-        IL2CPP_ASSERT(klass != il2cpp_defaults.il2cpp_fully_shared_type);
-
         Class::Init(klass);
 
         if (klass->initializationExceptionGCHandle)
@@ -22,36 +21,36 @@ namespace vm
         return klass;
     }
 
-    Il2CppClass* ClassInlines::InitFromCodegenSlow(Il2CppClass *klass, bool throwOnError)
-    {
-        IL2CPP_ASSERT(klass != il2cpp_defaults.il2cpp_fully_shared_type);
-
-        if (throwOnError)
-            return InitFromCodegenSlow(klass);
-
-        Class::Init(klass);
-
-        if (klass->initializationExceptionGCHandle)
-            return NULL;
-
-        return klass;
-    }
-
     const MethodInfo* ClassInlines::InitRgctxFromCodegenSlow(const MethodInfo* method)
     {
-        il2cpp::metadata::GenericMethod::InflateRGCTX(method);
+        Il2CppException* exc = NULL;
+        il2cpp::metadata::GenericMethod::InflateRGCTX(method, &exc);
+        if (exc)
+            il2cpp::vm::Exception::Raise(exc);
+
         return method;
     }
 
     NORETURN static void RaiseExceptionForNotFoundInterface(const Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot)
     {
-        std::string message;
-        message = "Attempt to access method '" + Type::GetName(&itf->byval_arg, IL2CPP_TYPE_NAME_FORMAT_IL) + "." + Method::GetName(itf->methods[slot])
-            + "' on type '" + Type::GetName(&klass->byval_arg, IL2CPP_TYPE_NAME_FORMAT_IL) + "' failed.";
-        Exception::Raise(il2cpp::vm::Exception::GetMethodAccessException(message.c_str()));
+        if (il2cpp::vm::Method::IsAmbiguousMethodClass(itf))
+        {
+            il2cpp::vm::Runtime::RaiseAmbiguousImplementationException(NULL, klass);
+        }
+        else if (il2cpp::vm::Method::IsEntryPointNotFoundMethodClass(itf))
+        {
+            il2cpp::vm::Runtime::RaiseEntryPointNotFoundException(NULL, klass);
+        }
+        else
+        {
+            std::string message;
+            message = "Attempt to access method '" + Type::GetName(&itf->byval_arg, IL2CPP_TYPE_NAME_FORMAT_IL) + "." + Method::GetName(itf->methods[slot])
+                + "' on type '" + Type::GetName(&klass->byval_arg, IL2CPP_TYPE_NAME_FORMAT_IL) + "' failed.";
+            Exception::Raise(il2cpp::vm::Exception::GetMethodAccessException(message.c_str()));
+        }
     }
 
-    const VirtualInvokeData* ClassInlines::GetInterfaceInvokeDataFromVTableSlowPath(const Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot)
+    const VirtualInvokeData* ClassInlines::GetInterfaceInvokeDataFromVTableSlowPathMaybeNull(const Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot)
     {
         if (itf->generic_class != NULL)
         {
@@ -69,12 +68,22 @@ namespace vm
         return NULL;
     }
 
+    const VirtualInvokeData& ClassInlines::GetInterfaceInvokeDataFromVTableSlowPath(const Il2CppClass* klass, const Il2CppClass* itf, Il2CppMethodSlot slot)
+    {
+        const VirtualInvokeData* data = GetInterfaceInvokeDataFromVTableSlowPathMaybeNull(klass, itf, slot);
+        if (data)
+            return *data;
+
+        RaiseExceptionForNotFoundInterface(klass, itf, slot);
+        IL2CPP_UNREACHABLE;
+    }
+
     const VirtualInvokeData& ClassInlines::GetInterfaceInvokeDataFromVTableSlowPath(Il2CppObject* obj, const Il2CppClass* itf, Il2CppMethodSlot slot)
     {
         const Il2CppClass* klass = obj->klass;
         const VirtualInvokeData* data;
 
-        data = GetInterfaceInvokeDataFromVTableSlowPath(klass, itf, slot);
+        data = GetInterfaceInvokeDataFromVTableSlowPathMaybeNull(klass, itf, slot);
         if (data)
             return *data;
 

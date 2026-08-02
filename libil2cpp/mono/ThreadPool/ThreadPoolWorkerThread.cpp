@@ -248,7 +248,7 @@ static void worker_thread(void* data)
         il2cpp::os::FastAutoUnlock domainUnlock(&g_ThreadPool->domains_lock);
 
         Il2CppObject* res = il2cpp::vm::Runtime::InvokeWithThrow(il2cpp_defaults.threadpool_perform_wait_callback_method, NULL, NULL);
-        if (res && *(bool*)il2cpp::vm::Object::Unbox(res) == false)
+        if (res && *(bool*)il2cpp::vm::Object::GetRawData(res) == false)
             workerThreadState.retire = true;
 
         il2cpp::vm::Thread::ClrState(workerThreadState.thread, static_cast<il2cpp::vm::ThreadState>(~il2cpp::vm::kThreadStateBackground));

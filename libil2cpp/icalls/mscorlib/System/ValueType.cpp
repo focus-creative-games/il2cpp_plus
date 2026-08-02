@@ -40,8 +40,8 @@ namespace System
 
         klass = vm::Object::GetClass(thisPtr);
 
-        if (klass->enumtype && vm::Class::GetEnumBaseType(klass) && vm::Class::GetEnumBaseType(klass)->type == IL2CPP_TYPE_I4)
-            return (*(int32_t*)((uint8_t*)thisPtr + sizeof(Il2CppObject)) == *(int32_t*)((uint8_t*)that + sizeof(Il2CppObject)));
+        if (klass->enumtype && vm::Class::GetEnumBaseType(klass)->type == IL2CPP_TYPE_I4)
+            return *(int32_t*)vm::Object::GetRawData(thisPtr) == *(int32_t*)vm::Object::GetRawData(that);
 
         /*
          * Do the comparison for fields of primitive type and return a result if

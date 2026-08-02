@@ -22,8 +22,8 @@ namespace vm
     public:
         static Il2CppException* Get(il2cpp_hresult_t hresult, bool defaultToCOMException);
 
-        static void PrepareExceptionForThrow(Il2CppException* ex, MethodInfo* lastManagedFrame = NULL);
-        static NORETURN void Raise(Il2CppException* ex, MethodInfo* lastManagedFrame = NULL);
+        static void PrepareExceptionForThrow(Il2CppException* ex, const MethodInfo* lastManagedFrame = NULL);
+        static NORETURN void Raise(Il2CppException* ex, const MethodInfo* lastManagedFrame = NULL);
         static NORETURN void Rethrow(Il2CppException* ex);
         static NORETURN void RaiseOutOfMemoryException();
         static NORETURN void RaiseOutOfMemoryException(const utils::StringView<Il2CppChar>& msg);
@@ -62,8 +62,10 @@ namespace vm
         static Il2CppException* GetInvalidCastException(const utils::StringView<Il2CppChar>& msg);
         static Il2CppException* GetTypeLoadException();
         static Il2CppException* GetTypeLoadException(const TypeNameParseInfo& typeNameParseInfo);
+        static Il2CppException* GetTypeLoadException(const Il2CppAssembly* assembly, const TypeNameParseInfo& info);
         static Il2CppException* GetTypeLoadException(const utils::StringView<char>& namespaze, const utils::StringView<char>& typeName, const utils::StringView<char>& assemblyName);
         static Il2CppException* GetTypeLoadExceptionForWindowsRuntimeType(const utils::StringView<char>& namespaze, const utils::StringView<char>& typeName);
+        static Il2CppException* GetTypeLoadExceptionForInvalidOffset(const utils::StringView<char>& typeName, size_t invalidOffset);
         static Il2CppException* GetOutOfMemoryException(const utils::StringView<Il2CppChar>& msg);
         static Il2CppException* GetOverflowException();
         static Il2CppException* GetOverflowException(const char* msg);
@@ -89,6 +91,7 @@ namespace vm
         static Il2CppException* GetUnauthorizedAccessException(const char* msg);
         static Il2CppException* GetDivideByZeroException();
         static Il2CppException* GetPlatformNotSupportedException(const utils::StringView<Il2CppChar>& msg);
+        static Il2CppException* GetPlatformNotSupportedException(const char* msg);
         static Il2CppException* GetFileLoadException(const char* msg);
         static Il2CppException* GetFileNotFoundException(const utils::StringView<Il2CppChar>& msg);
         static Il2CppException* GetCustomAttributeFormatException(const char* msg);

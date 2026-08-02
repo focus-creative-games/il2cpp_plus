@@ -27,15 +27,15 @@ namespace System
         int32_t size = vm::Class::GetValueSize(enumClass, NULL);
         uint64_t a_val = 0, b_val = 0;
 
-        memcpy(&a_val, vm::Object::Unbox(thisPtr), size);
-        memcpy(&b_val, vm::Object::Unbox(flags), size);
+        memcpy(&a_val, vm::Object::GetRawData(thisPtr), size);
+        memcpy(&b_val, vm::Object::GetRawData(flags), size);
 
         return (a_val & b_val) == b_val;
     }
 
     int32_t Enum::get_hashcode(Il2CppObject* thisPtr)
     {
-        void* data = (char*)thisPtr + sizeof(Il2CppObject);
+        void* data = vm::Object::GetRawData(thisPtr);
         Il2CppClass *basetype = thisPtr->klass->element_class;
         IL2CPP_ASSERT(basetype);
 
@@ -71,8 +71,8 @@ namespace System
         if (vm::Object::GetClass(o1) != vm::Object::GetClass(o2))
             return retIncompatibleMethodTables;
 
-        void* tdata = (char*)o1 + sizeof(Il2CppObject);
-        void* odata = (char*)o2 + sizeof(Il2CppObject);
+        void* tdata = vm::Object::GetRawData(o1);
+        void* odata = vm::Object::GetRawData(o2);
         const Il2CppType* basetype = vm::Class::GetEnumBaseType(vm::Object::GetClass(o1));
         IL2CPP_ASSERT(basetype);
 
@@ -126,8 +126,8 @@ namespace System
 
         Il2CppClass* enumClass = vm::Class::FromIl2CppType(vm::Class::GetEnumBaseType(thisPtr->klass));
         Il2CppObject* res = vm::Object::New(enumClass);
-        void* dst = (char*)res + sizeof(Il2CppObject);
-        void* src = (char*)thisPtr + sizeof(Il2CppObject);
+        void* dst = vm::Object::GetRawData(res);
+        void* src = vm::Object::GetRawData(thisPtr);
         int32_t size = vm::Class::GetValueSize(enumClass, NULL);
 
         memcpy(dst, src, size);

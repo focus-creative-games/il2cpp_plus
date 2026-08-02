@@ -5,6 +5,7 @@
 #include "il2cpp-api.h"
 #include "gc/WriteBarrierValidation.h"
 #include "gc/GarbageCollector.h"
+#include "os/Console.h"
 #include "os/Mutex.h"
 #include "vm/StackTrace.h"
 #include <algorithm>
@@ -428,7 +429,7 @@ namespace gc
         }
         msg += "]]>\n</TestResult>\n";
         if (errors > 0)
-            printf("%s", msg.c_str());
+            il2cpp_console_printf_error("%s", msg.c_str());
     }
 } /* gc */
 } /* il2cpp */

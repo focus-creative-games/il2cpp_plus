@@ -34,5 +34,15 @@ namespace vm
         if (s_LastErrorThreadLocalStorageOffset == -1)
             s_LastErrorThreadLocalStorageOffset = Thread::AllocThreadStaticData(sizeof(uint32_t));
     }
+
+    LastOsErrorPreserver::LastOsErrorPreserver()
+    {
+        m_LastError = os::LastError::GetLastError();
+    }
+
+    LastOsErrorPreserver::~LastOsErrorPreserver()
+    {
+        os::LastError::SetLastError(m_LastError);
+    }
 } /* namespace vm */
 } /* namespace il2cpp */

@@ -37,8 +37,8 @@
 // An example format is:
 //
 // 0x02         - Count of custom attribute constructors (compressed uint32_t)
-// 0x0010023f   - Method definition index for ctor1
-// 0x02001fc1   - Method definition index for ctor2
+// 0x0010023f   - Encoded method index for ctor1
+// 0x02001fc1   - Encoded method index for ctor2
 // 0x02         - Constructor argument count for ctor1 (compressed uint32_t)
 // 0x04 (2)     - argument 1 type code (compressed int32_t)
 // 0x00         - Field for ctor1 (compressed uint32_t)
@@ -149,8 +149,8 @@ namespace metadata
     {
         if (*ctorBuffer < GetDataBufferStart())
         {
-            MethodIndex ctorIndex = utils::Read32(ctorBuffer);
-            *attributeCtor = il2cpp::vm::MetadataCache::GetMethodInfoFromMethodDefinitionIndex(image, ctorIndex);
+            EncodedMethodIndex ctorIndex = utils::Read32(ctorBuffer);
+            *attributeCtor = il2cpp::vm::MetadataCache::GetMethodInfoFromEncodedIndex(image, ctorIndex);
             return true;
         }
 
@@ -207,7 +207,7 @@ namespace metadata
         return false;
     }
 
-    static std::tuple<const Il2CppClass*, int32_t> ReadCustomAttributeNamedArgumentClassAndIndex(const char** dataBuffer, const Il2CppClass* attrClass)
+    static std::tuple<Il2CppClass*, int32_t> ReadCustomAttributeNamedArgumentClassAndIndex(const char** dataBuffer, Il2CppClass* attrClass)
     {
         int32_t memberIndex = utils::ReadCompressedInt32(dataBuffer);
         if (memberIndex >= 0)
@@ -215,8 +215,8 @@ namespace metadata
 
         memberIndex = -(memberIndex + 1);
 
-        TypeDefinitionIndex typeIndex = utils::ReadCompressedUInt32(dataBuffer);
-        Il2CppClass* declaringClass = il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(typeIndex);
+        TypeIndex typeIndex = utils::ReadCompressedUInt32(dataBuffer);
+        Il2CppClass* declaringClass = il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(typeIndex);
 
         IL2CPP_ASSERT(declaringClass == attrClass || il2cpp::vm::Class::IsSubclassOf(const_cast<Il2CppClass*>(attrClass), declaringClass, false));
 
@@ -301,14 +301,15 @@ namespace metadata
             if (!ReadAttributeDataValue(image, &iter->dataBuffer, &propArg.arg, exc, deserializedManagedObjects))
                 return false;
 
-            const Il2CppClass* klass;
+            Il2CppClass* klass;
             TypePropertyIndex propertyIndex;
             std::tie(klass, propertyIndex) = ReadCustomAttributeNamedArgumentClassAndIndex(&iter->dataBuffer, attrClass);
 
             IL2CPP_ASSERT(iter->dataBuffer <= bufferEnd);
             IL2CPP_ASSERT(propertyIndex < klass->property_count);
 
-            propArg.prop = &klass->properties[propertyIndex];
+            const PropertyInfo* properties = il2cpp::vm::Class::GetProperties(klass);
+            propArg.prop = &properties[propertyIndex];
             visitor->VisitProperty(propArg, i);
         }
 

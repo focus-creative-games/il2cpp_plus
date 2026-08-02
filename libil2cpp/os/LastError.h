@@ -8,6 +8,7 @@ namespace os
     {
     public:
         static uint32_t GetLastError();
+        static void SetLastError(uint32_t error);
     };
 } /* namespace os */
 } /* namespace il2cpp*/

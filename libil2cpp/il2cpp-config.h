@@ -107,11 +107,6 @@ typedef void (STDCALL *CultureInfoChangedCallback)(const Il2CppChar* arg);
 #endif
 #endif
 
-#define IL2CPP_PAGE_SIZE 4096
-
-// 64-bit types are aligned to 8 bytes on 64-bit platforms
-#define IL2CPP_ENABLE_INTERLOCKED_64_REQUIRED_ALIGNMENT (IL2CPP_SIZEOF_VOID_P == 8)
-
 /* Debugging */
 #ifndef IL2CPP_DEBUG
 #define IL2CPP_DEBUG 0
@@ -225,6 +220,7 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #define $Line                   MAKE_STRING( STRINGIZE, __LINE__ )
 #define FIXME                   "FIXME: "
 #define ICALLMESSAGE(name)      __FILE_UTF8__ "(" $Line ") : FIXME: Missing internal call implementation: " name
+#define INTRINSICMESSAGE(name)      __FILE_UTF8__ "(" $Line ") : FIXME: Missing intrinsic implementation: " name
 #define RUNTIMEMESSAGE(name)    __FILE_UTF8__ "(" $Line ") : FIXME: Missing runtime implementation: " name
 #define NOTSUPPORTEDICALLMESSAGE(target, name, reason)  __FILE_UTF8__ "(" $Line ") : Unsupported internal call for " target ":" name " - " reason
 
@@ -245,6 +241,17 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #define IL2CPP_NOT_IMPLEMENTED_ICALL_NO_ASSERT(func, reason) \
     PRAGMA_MESSAGE(ICALLMESSAGE(#func))
 
+#define IL2CPP_NOT_IMPLEMENTED_INTRINSIC(func) \
+    PRAGMA_MESSAGE(INTRINSICMESSAGE(#func)) \
+    IL2CPP_ASSERT(0 && #func)
+
+#if MONO_BCL_NET8_FIXME
+#define IL2CPP_NOT_IMPLEMENTED_INTRINSIC_OPTIONAL_FIXME(func) \
+    IL2CPP_NOT_IMPLEMENTED_INTRINSIC(#func)
+#else
+#define IL2CPP_NOT_IMPLEMENTED_INTRINSIC_OPTIONAL_FIXME(func)
+#endif
+
 #define IL2CPP_NOT_IMPLEMENTED(func) \
     PRAGMA_MESSAGE(RUNTIMEMESSAGE(#func)) \
     IL2CPP_ASSERT(0 && #func)
@@ -257,15 +264,27 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #include <emscripten/emscripten.h>
 // emscripten's assert will throw an exception in js.
 // For now, we don't want that, so just printf and move on.
-    #define IL2CPP_NOT_IMPLEMENTED_ICALL(func) \
+#define IL2CPP_NOT_IMPLEMENTED_ICALL(func) \
     PRAGMA_MESSAGE(message(ICALLMESSAGE(#func))) \
     emscripten_log(EM_LOG_NO_PATHS | EM_LOG_CONSOLE | EM_LOG_ERROR | EM_LOG_JS_STACK, "Not implemented icall: %s\n", #func);
 #define IL2CPP_NOT_IMPLEMENTED_ICALL_NO_ASSERT(func, reason) \
     PRAGMA_MESSAGE(message(ICALLMESSAGE(#func)))
 
+#define IL2CPP_NOT_IMPLEMENTED_INTRINSIC(func) \
+    PRAGMA_MESSAGE(message(INTRINSICMESSAGE(#func))) \
+    emscripten_log(EM_LOG_NO_PATHS | EM_LOG_CONSOLE | EM_LOG_ERROR | EM_LOG_JS_STACK, "Not implemented intrinsic: %s\n", #func);
+#if MONO_BCL_NET8_FIXME
+#define IL2CPP_NOT_IMPLEMENTED_INTRINSIC_OPTIONAL_FIXME(func) \
+    IL2CPP_NOT_IMPLEMENTED_INTRINSIC(#func)
+#else
+#define IL2CPP_NOT_IMPLEMENTED_INTRINSIC_OPTIONAL_FIXME(func)
+#endif
+
+IL2CPP_EXTERN_C void il2cpp_console_printf_error(const char*, ...);
+
 #define IL2CPP_NOT_IMPLEMENTED(func) \
     PRAGMA_MESSAGE(message(RUNTIMEMESSAGE(#func))) \
-    printf("Not implemented: %s\n", #func);
+    il2cpp_console_printf_error("Not implemented: %s\n", #func);
 #define IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(func, reason) \
     PRAGMA_MESSAGE(message(RUNTIMEMESSAGE(#func)))
 
@@ -279,6 +298,9 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 
 #define NOT_SUPPORTED_REMOTING(func) \
     il2cpp::vm::Exception::Raise (il2cpp::vm::Exception::GetNotSupportedException ( NOTSUPPORTEDICALLMESSAGE ("IL2CPP", #func, "System.Runtime.Remoting is not supported.") ))
+
+#define NOT_SUPPORTED_DYNAMIC_CODE(func) \
+    il2cpp::vm::Exception::Raise (il2cpp::vm::Exception::GetPlatformNotSupportedException ( NOTSUPPORTEDICALLMESSAGE ("IL2CPP", #func, "Dynamic code is not supported.") ))
 
 #if IL2CPP_TARGET_JAVASCRIPT
 #define NOT_SUPPORTED_WEBGL(func, reason) \
@@ -307,8 +329,7 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 #define IL2CPP_USE_GENERIC_SOCKET_BRIDGE !IL2CPP_TARGET_JAVASCRIPT
 #endif
 
-/* Set by platforms that require special handling of SIGPIPE signalling during socket sends. */
-/* Is redefined by platform specific headers. Enabled for common Linux desktop platforms. */
+/* set by platforms that require special handling of SIGPIPE signalling during socket sends */
 #ifndef IL2CPP_USE_SEND_NOSIGNAL
     #define IL2CPP_USE_SEND_NOSIGNAL IL2CPP_TARGET_LINUX
 #endif
@@ -347,6 +368,14 @@ static const uint16_t kInvalidIl2CppMethodSlot = 65535;
 
 #ifndef IL2CPP_USE_GENERIC_THREAD
 #define IL2CPP_USE_GENERIC_THREAD (!IL2CPP_TARGET_WINDOWS && !IL2CPP_TARGET_POSIX && !IL2CPP_TARGET_DARWIN)
+#endif
+
+#ifndef IL2CPP_ENABLE_PLATFORM_THREAD_RENAME
+#define IL2CPP_ENABLE_PLATFORM_THREAD_RENAME 0
+#endif
+
+#ifndef IL2CPP_ENABLE_PLATFORM_MAX_STACKSIZE
+#define IL2CPP_ENABLE_PLATFORM_MAX_STACKSIZE 0
 #endif
 
 #define IL2CPP_SIZEOF_STRUCT_WITH_NO_INSTANCE_FIELDS 1
@@ -554,4 +583,61 @@ extern void il2cpp_assert(const char* assertion, const char* file, unsigned int 
 
 #if !defined(IL2CPP_SUPPORTS_BROKERED_FILESYSTEM)
 #define IL2CPP_SUPPORTS_BROKERED_FILESYSTEM IL2CPP_TARGET_WINRT
+#endif
+
+#define IL2CPP_USE_PLATFORM_SPECIFIC_PRINTF IL2CPP_TARGET_IOS
+
+#if !defined(MONO_NET8_BCL)
+#define MONO_NET8_BCL 0
+#endif
+
+#if IL2CPP_SANITIZE_ADDRESS
+#ifndef IL2CPP_ENABLE_RELOAD
+#define IL2CPP_ENABLE_RELOAD 1
+#endif
+#endif
+
+#ifndef IL2CPP_SYSTEM_GLOBALIZATION_INVARIANT
+#define IL2CPP_SYSTEM_GLOBALIZATION_INVARIANT 0
+#endif
+
+#ifndef IL2CPP_STATIC_ICU
+#define IL2CPP_STATIC_ICU 0
+#endif
+
+// TODO: Enable at .NET 9 - All FP casts become saturating instead of being architecture dependent
+#define IL2CPP_FLOATING_POINT_CAST_IS_SATURATING 0
+
+
+#if IL2CPP_FLOATING_POINT_CAST_IS_SATURATING
+
+// MSVC requires us to use intrinsics to enable saturating FP casts
+// clang has a compiler flag -fno-strict-float-cast-overflow
+#if defined(_MSC_VER)
+#define IL2CPP_USE_SATURATING_FP_CAST_INTRINSICS 1
+#endif
+
+#else // IL2CPP_FLOATING_POINT_CAST_IS_SATURATING
+
+// On clang we've always enabled -fno-strict-float-cast-overflow so that overflowing casts are well defined
+// But this makes casts on x86/x64 saturating, which we don't want, so we call SSE2 casts explicitly
+// But the 64 bit integer casts we want are only on x64 - use the compat fall back for x86
+#if defined(__clang__)
+#define IL2CPP_USE_SSE2_FP_CASTS IL2CPP_TARGET_X64
+#define IL2CPP_EMULATE_X86_FP_UNSIGNED_OVERFLOW IL2CPP_TARGET_X86
+#endif // defined(__clang__)
+
+#endif  //IL2CPP_FLOATING_POINT_CAST_SATURATING
+
+#ifndef IL2CPP_USE_SATURATING_FP_CAST_INTRINSICS
+#define IL2CPP_USE_SATURATING_FP_CAST_INTRINSICS 0
+#endif
+
+#ifndef IL2CPP_USE_SSE2_FP_CASTS
+#define IL2CPP_USE_SSE2_FP_CASTS 0
+#endif
+
+// On the legacy NetStandard 2.1 Mono builds we made FP overflow work like x86 even on ARM
+#ifndef IL2CPP_EMULATE_X86_FP_UNSIGNED_OVERFLOW
+#define IL2CPP_EMULATE_X86_FP_UNSIGNED_OVERFLOW (!MONO_NET8_BCL && (IL2CPP_TARGET_ARMV7 || IL2CPP_TARGET_ARM64) && !IL2CPP_FLOATING_POINT_CAST_IS_SATURATING)
 #endif

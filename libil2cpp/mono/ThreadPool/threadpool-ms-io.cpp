@@ -423,6 +423,7 @@ static void selector_thread (void* data)
 				/*if (mono_g_hash_table_lookup_extended (states, int_TO_POINTER (fd), &k, (void**) &list))*/
 				if (exists)
 				{
+					delete iter->second;
 					states->erase(ThreadPoolStateHash::key_type(fd));
 					//mono_g_hash_table_remove (states, int_TO_POINTER (fd));
 
@@ -484,6 +485,8 @@ static void selector_thread (void* data)
 			break;
 	}
 
+    for (auto it : *states)
+        delete it.second;
 	delete states;
 
 	io_selector_running = false;

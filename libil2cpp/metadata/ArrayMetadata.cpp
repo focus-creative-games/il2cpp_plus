@@ -1,5 +1,6 @@
 #include "il2cpp-config.h"
 #include "il2cpp-runtime-stats.h"
+#include "os/Atomic.h"
 #include "os/Mutex.h"
 #include "vm/Class.h"
 #include "vm/GenericClass.h"
@@ -39,7 +40,17 @@ using std::vector;
 using std::pair;
 
 
-const size_t kImplicitArrayInterfaceCount = 5;
+static size_t ImplilcitArrayInterfaceCount()
+{
+    size_t count = 0;
+    if (il2cpp_defaults.generic_ilist_class) count++;
+    if (il2cpp_defaults.generic_icollection_class) count++;
+    if (il2cpp_defaults.generic_ienumerable_class) count++;
+    if (il2cpp_defaults.generic_ireadonlylist_class) count++;
+    if (il2cpp_defaults.generic_ireadonlycollection_class) count++;
+
+    return count;
+}
 
 namespace il2cpp
 {
@@ -101,11 +112,11 @@ namespace metadata
     static GenericArrayMethods s_GenericArrayMethods;
 
     static size_t GetArrayGenericMethodsCount();
-    static void PopulateArrayGenericMethods(Il2CppClass* klass, uint16_t offset);
+    static void PopulateArrayGenericMethods(Il2CppClass* klass, const MethodInfo** methodTable, uint16_t offset);
 
     static void CollectImplicitArrayInterfaces(Il2CppClass* elementClass, ::std::vector<Il2CppClass*>& interfaces);
 
-    static void SetupArrayMethods(Il2CppClass* arrayClass)
+    static const MethodInfo** CreateArrayMethods(Il2CppClass* arrayClass)
     {
         size_t methodIndex = 0;
         uint8_t rank = arrayClass->rank;
@@ -115,19 +126,20 @@ namespace metadata
         size_t methodCount = 3 + (rank > 1 ? 2 : 1) + interfaces.size() * GetArrayGenericMethodsCount();
         IL2CPP_ASSERT(methodCount <= std::numeric_limits<uint16_t>::max());
         arrayClass->method_count = static_cast<uint16_t>(methodCount);
-        arrayClass->methods = (const MethodInfo**)MetadataCalloc(methodCount, sizeof(MethodInfo*));
+
+        const MethodInfo** methodTable = (const MethodInfo**)MetadataCalloc(methodCount, sizeof(MethodInfo*));
 
         const Il2CppType** parameters = (const Il2CppType**)alloca(rank * sizeof(Il2CppType*));
         for (uint8_t i = 0; i < rank; i++)
             parameters[i] = &il2cpp_defaults.int32_class->byval_arg;
-        arrayClass->methods[methodIndex++] = ConstructArrayMethod(arrayClass, ".ctor", &il2cpp_defaults.void_class->byval_arg, rank, parameters);
+        methodTable[methodIndex++] = ConstructArrayMethod(arrayClass, ".ctor", &il2cpp_defaults.void_class->byval_arg, rank, parameters);
 
         if (rank > 1)
         {
             parameters = (const Il2CppType**)alloca(2 * rank * sizeof(Il2CppType*));
             for (uint8_t i = 0; i < 2 * rank; i++)
                 parameters[i] = &il2cpp_defaults.int32_class->byval_arg;
-            arrayClass->methods[methodIndex++] = ConstructArrayMethod(arrayClass, ".ctor", &il2cpp_defaults.void_class->byval_arg, 2 * rank, parameters);
+            methodTable[methodIndex++] = ConstructArrayMethod(arrayClass, ".ctor", &il2cpp_defaults.void_class->byval_arg, 2 * rank, parameters);
         }
 
         parameters = (const Il2CppType**)alloca((rank + 1) * sizeof(Il2CppType*));
@@ -136,24 +148,26 @@ namespace metadata
         parameters[rank] = &arrayClass->element_class->byval_arg;
         MethodInfo* setMethod = ConstructArrayMethod(arrayClass, "Set", &il2cpp_defaults.void_class->byval_arg, rank + 1, parameters);
         setMethod->invoker_method = vm::Runtime::GetArraySetInvoker();
-        arrayClass->methods[methodIndex++] = setMethod;
+        methodTable[methodIndex++] = setMethod;
 
         parameters = (const Il2CppType**)alloca(rank * sizeof(Il2CppType*));
         for (uint8_t i = 0; i < rank; i++)
             parameters[i] = &il2cpp_defaults.int32_class->byval_arg;
         MethodInfo* addressMethod = ConstructArrayMethod(arrayClass, "Address", &arrayClass->element_class->this_arg, rank, parameters);
         addressMethod->invoker_method = vm::Runtime::GetMissingMethodInvoker();
-        arrayClass->methods[methodIndex++] = addressMethod;
+        methodTable[methodIndex++] = addressMethod;
 
         parameters = (const Il2CppType**)alloca(rank * sizeof(Il2CppType*));
         for (uint8_t i = 0; i < rank; i++)
             parameters[i] = &il2cpp_defaults.int32_class->byval_arg;
         MethodInfo* getMethod = ConstructArrayMethod(arrayClass, "Get", &arrayClass->element_class->byval_arg, rank, parameters);
         getMethod->invoker_method = vm::Runtime::GetArrayGetInvoker();
-        arrayClass->methods[methodIndex++] = getMethod;
+        methodTable[methodIndex++] = getMethod;
 
         IL2CPP_ASSERT(methodIndex <= std::numeric_limits<uint16_t>::max());
-        PopulateArrayGenericMethods(arrayClass, static_cast<uint16_t>(methodIndex));
+        PopulateArrayGenericMethods(arrayClass, methodTable, static_cast<uint16_t>(methodIndex));
+
+        return methodTable;
     }
 
     static void CollectImplicitArrayInterfacesFromElementClass(Il2CppClass* elementClass, ::std::vector<Il2CppClass*>& interfaces)
@@ -177,12 +191,11 @@ namespace metadata
                 {
                     const Il2CppType* genericArgument = &(*iter)->byval_arg;
 
-                    interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ilist_class, &genericArgument, 1));
-                    interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_icollection_class, &genericArgument, 1));
-                    interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ienumerable_class, &genericArgument, 1));
-
-                    interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlylist_class, &genericArgument, 1));
-                    interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlycollection_class, &genericArgument, 1));
+                    if (il2cpp_defaults.generic_ilist_class) interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ilist_class, &genericArgument, 1));
+                    if (il2cpp_defaults.generic_icollection_class) interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_icollection_class, &genericArgument, 1));
+                    if (il2cpp_defaults.generic_ienumerable_class) interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ienumerable_class, &genericArgument, 1));
+                    if (il2cpp_defaults.generic_ireadonlylist_class) interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlylist_class, &genericArgument, 1));
+                    if (il2cpp_defaults.generic_ireadonlycollection_class) interfaces.push_back(Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlycollection_class, &genericArgument, 1));
                 }
             }
 
@@ -298,7 +311,7 @@ namespace metadata
         return inflatedMethod;
     }
 
-    static void PopulateArrayGenericMethods(Il2CppClass* klass, uint16_t offset)
+    static void PopulateArrayGenericMethods(Il2CppClass* klass, const MethodInfo** methodTable, uint16_t offset)
     {
         for (int i = 0; i < klass->interface_offsets_count; i++)
         {
@@ -317,7 +330,7 @@ namespace metadata
                     continue;
 
                 MethodInfo* arrayMethod = ConstructGenericArrayMethod(*iter, klass, &context);
-                klass->methods[offset++] = arrayMethod;
+                methodTable[offset++] = arrayMethod;
 
                 size_t vtableIndex = klass->interfaceOffsets[i].offset + iter->interfaceMethodDefinition->slot;
                 klass->vtable[vtableIndex].method = arrayMethod;
@@ -338,44 +351,72 @@ namespace metadata
             CollectImplicitArrayInterfaces(klass, interfaces);
         }
 
-        Il2CppRuntimeInterfaceOffsetPair* newInterfaceOffsets = (Il2CppRuntimeInterfaceOffsetPair*)MetadataMalloc((arrayInterfacesCount + kImplicitArrayInterfaceCount * interfaces.size()) * sizeof(Il2CppRuntimeInterfaceOffsetPair));
+        Il2CppRuntimeInterfaceOffsetPair* newInterfaceOffsets = (Il2CppRuntimeInterfaceOffsetPair*)MetadataMalloc((arrayInterfacesCount + ImplilcitArrayInterfaceCount() * interfaces.size()) * sizeof(Il2CppRuntimeInterfaceOffsetPair));
         memcpy(newInterfaceOffsets, arrayClass->interfaceOffsets, (arrayInterfacesCount) * sizeof(Il2CppRuntimeInterfaceOffsetPair));
 
         int32_t arrayVTableSlot = arrayClass->vtable_count;
-        size_t slots = arrayVTableSlot + interfaces.size() * (il2cpp_defaults.generic_ilist_class->method_count + il2cpp_defaults.generic_icollection_class->method_count + il2cpp_defaults.generic_ienumerable_class->method_count);
 
-        slots += interfaces.size() * (il2cpp_defaults.generic_ireadonlylist_class->method_count + il2cpp_defaults.generic_ireadonlycollection_class->method_count);
+        size_t implicitIntefaceMethodCount = 0;
+        if (il2cpp_defaults.generic_ilist_class)               implicitIntefaceMethodCount += il2cpp_defaults.generic_ilist_class->method_count;
+        if (il2cpp_defaults.generic_icollection_class)         implicitIntefaceMethodCount += il2cpp_defaults.generic_icollection_class->method_count;
+        if (il2cpp_defaults.generic_ienumerable_class)         implicitIntefaceMethodCount += il2cpp_defaults.generic_ienumerable_class->method_count;
+        if (il2cpp_defaults.generic_ireadonlylist_class)       implicitIntefaceMethodCount += il2cpp_defaults.generic_ireadonlylist_class->method_count;
+        if (il2cpp_defaults.generic_ireadonlycollection_class) implicitIntefaceMethodCount += il2cpp_defaults.generic_ireadonlycollection_class->method_count;
+
+        size_t slots = arrayVTableSlot + interfaces.size() * implicitIntefaceMethodCount;
 
         memcpy(klass->vtable, arrayClass->vtable, arrayVTableSlot * sizeof(VirtualInvokeData));
 
         size_t index = arrayInterfacesCount;
         int32_t vtableSlot = arrayVTableSlot;
-        for (::std::vector<Il2CppClass*>::iterator iter = interfaces.begin(); iter != interfaces.end(); iter++, index += kImplicitArrayInterfaceCount)
+        for (::std::vector<Il2CppClass*>::iterator iter = interfaces.begin(); iter != interfaces.end(); iter++, index += ImplilcitArrayInterfaceCount())
         {
             const Il2CppType* genericArgument = &(*iter)->byval_arg;
 
-            newInterfaceOffsets[index].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ilist_class, &genericArgument, 1);
-            newInterfaceOffsets[index].offset = vtableSlot;
-            vtableSlot += newInterfaceOffsets[index].interfaceType->method_count;
+            size_t interfaceIndex = index;
 
-            newInterfaceOffsets[index + 1].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_icollection_class, &genericArgument, 1);
-            newInterfaceOffsets[index + 1].offset = vtableSlot;
-            vtableSlot += newInterfaceOffsets[index + 1].interfaceType->method_count;
+            if (il2cpp_defaults.generic_ilist_class)
+            {
+                newInterfaceOffsets[interfaceIndex].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ilist_class, &genericArgument, 1);
+                newInterfaceOffsets[interfaceIndex].offset = vtableSlot;
+                vtableSlot += newInterfaceOffsets[interfaceIndex].interfaceType->method_count;
+                interfaceIndex++;
+            }
 
-            newInterfaceOffsets[index + 2].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ienumerable_class, &genericArgument, 1);
-            newInterfaceOffsets[index + 2].offset = vtableSlot;
-            vtableSlot += newInterfaceOffsets[index + 2].interfaceType->method_count;
+            if (il2cpp_defaults.generic_icollection_class)
+            {
+                newInterfaceOffsets[interfaceIndex].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_icollection_class, &genericArgument, 1);
+                newInterfaceOffsets[interfaceIndex].offset = vtableSlot;
+                vtableSlot += newInterfaceOffsets[interfaceIndex].interfaceType->method_count;
+                interfaceIndex++;
+            }
 
-            newInterfaceOffsets[index + 3].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlylist_class, &genericArgument, 1);
-            newInterfaceOffsets[index + 3].offset = vtableSlot;
-            vtableSlot += newInterfaceOffsets[index + 3].interfaceType->method_count;
+            if (il2cpp_defaults.generic_ienumerable_class)
+            {
+                newInterfaceOffsets[interfaceIndex].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ienumerable_class, &genericArgument, 1);
+                newInterfaceOffsets[interfaceIndex].offset = vtableSlot;
+                vtableSlot += newInterfaceOffsets[interfaceIndex].interfaceType->method_count;
+                interfaceIndex++;
+            }
 
-            newInterfaceOffsets[index + 4].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlycollection_class, &genericArgument, 1);
-            newInterfaceOffsets[index + 4].offset = vtableSlot;
-            vtableSlot += newInterfaceOffsets[index + 4].interfaceType->method_count;
+            if (il2cpp_defaults.generic_ireadonlylist_class)
+            {
+                newInterfaceOffsets[interfaceIndex].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlylist_class, &genericArgument, 1);
+                newInterfaceOffsets[interfaceIndex].offset = vtableSlot;
+                vtableSlot += newInterfaceOffsets[interfaceIndex].interfaceType->method_count;
+                interfaceIndex++;
+            }
+
+            if (il2cpp_defaults.generic_ireadonlycollection_class)
+            {
+                newInterfaceOffsets[interfaceIndex].interfaceType = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlycollection_class, &genericArgument, 1);
+                newInterfaceOffsets[interfaceIndex].offset = vtableSlot;
+                vtableSlot += newInterfaceOffsets[interfaceIndex].interfaceType->method_count;
+                interfaceIndex++;
+            }
         }
 
-        size_t interfaceOffsetsCount = arrayInterfacesCount + kImplicitArrayInterfaceCount * interfaces.size();
+        size_t interfaceOffsetsCount = arrayInterfacesCount + ImplilcitArrayInterfaceCount() * interfaces.size();
         IL2CPP_ASSERT(interfaceOffsetsCount <= std::numeric_limits<uint16_t>::max());
         klass->interface_offsets_count = static_cast<uint16_t>(interfaceOffsetsCount);
         klass->interfaceOffsets = newInterfaceOffsets;
@@ -389,27 +430,54 @@ namespace metadata
         arrayType->has_references = Type::IsReference(&elementType->byval_arg) || elementType->has_references;
     }
 
-    void ArrayMetadata::SetupArrayInterfaces(Il2CppClass* klass, const FastAutoLock& lock)
+    Il2CppClass** ArrayMetadata::CreateArrayInterfacesLocked(Il2CppClass* klass, const FastAutoLock& lock)
     {
+        Il2CppClass** implementedInterfaces = NULL;
+
         if (klass->byval_arg.type == IL2CPP_TYPE_SZARRAY)
         {
             IL2CPP_ASSERT(klass->implementedInterfaces == NULL);
 
             const Il2CppType* genericArguments = &klass->element_class->byval_arg;
 
-            IL2CPP_ASSERT(klass->interfaces_count == kImplicitArrayInterfaceCount);
-            klass->implementedInterfaces = (Il2CppClass**)MetadataMalloc(klass->interfaces_count * sizeof(Il2CppClass*));
-            klass->implementedInterfaces[0] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ilist_class, &genericArguments, 1);
-            IL2CPP_ASSERT(klass->implementedInterfaces[0]);
-            klass->implementedInterfaces[1] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_icollection_class, &genericArguments, 1);
-            IL2CPP_ASSERT(klass->implementedInterfaces[1]);
-            klass->implementedInterfaces[2] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ienumerable_class, &genericArguments, 1);
-            IL2CPP_ASSERT(klass->implementedInterfaces[2]);
-            klass->implementedInterfaces[3] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlylist_class, &genericArguments, 1);
-            IL2CPP_ASSERT(klass->implementedInterfaces[3]);
-            klass->implementedInterfaces[4] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlycollection_class, &genericArguments, 1);
-            IL2CPP_ASSERT(klass->implementedInterfaces[4]);
+            IL2CPP_ASSERT(klass->interfaces_count == ImplilcitArrayInterfaceCount());
+            implementedInterfaces = (Il2CppClass**)MetadataMalloc(klass->interfaces_count * sizeof(Il2CppClass*));
+
+            size_t interfaceIndex = 0;
+
+            if (il2cpp_defaults.generic_ilist_class)
+            {
+                implementedInterfaces[interfaceIndex] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ilist_class, &genericArguments, 1);
+                IL2CPP_ASSERT(implementedInterfaces[interfaceIndex]);
+                interfaceIndex++;
+            }
+            if (il2cpp_defaults.generic_icollection_class)
+            {
+                implementedInterfaces[interfaceIndex] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_icollection_class, &genericArguments, 1);
+                IL2CPP_ASSERT(implementedInterfaces[interfaceIndex]);
+                interfaceIndex++;
+            }
+            if (il2cpp_defaults.generic_ienumerable_class)
+            {
+                implementedInterfaces[interfaceIndex] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ienumerable_class, &genericArguments, 1);
+                IL2CPP_ASSERT(implementedInterfaces[interfaceIndex]);
+                interfaceIndex++;
+            }
+            if (il2cpp_defaults.generic_ireadonlylist_class)
+            {
+                implementedInterfaces[interfaceIndex] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlylist_class, &genericArguments, 1);
+                IL2CPP_ASSERT(implementedInterfaces[interfaceIndex]);
+                interfaceIndex++;
+            }
+            if (il2cpp_defaults.generic_ireadonlycollection_class)
+            {
+                implementedInterfaces[interfaceIndex] = Class::GetInflatedGenericInstanceClass(il2cpp_defaults.generic_ireadonlycollection_class, &genericArguments, 1);
+                IL2CPP_ASSERT(implementedInterfaces[interfaceIndex]);
+                interfaceIndex++;
+            }
         }
+
+        return implementedInterfaces;
     }
 
     void ArrayMetadata::SetupArrayVTable(Il2CppClass* klass, const FastAutoLock& lock)
@@ -419,7 +487,7 @@ namespace metadata
 
         SetupCastClass(klass);
         SetupArrayVTableAndInterfaceOffsets(klass);
-        SetupArrayMethods(klass);
+        il2cpp::os::Atomic::PublishPointer(&klass->methods, CreateArrayMethods(klass));
     }
 
     struct SZArrayClassHash
@@ -462,12 +530,14 @@ namespace metadata
 
     void ArrayMetadata::Clear()
     {
-        s_SZArrayClassMap.Clear();
-        s_ArrayClassMap.Clear();
+        WalkArrays([](Il2CppClass* arrayClass, void* ctx) { IL2CPP_FREE(const_cast<char*>(arrayClass->name)); }, NULL);
+        WalkSZArrays([](Il2CppClass* arrayClass, void* ctx) { IL2CPP_FREE(const_cast<char*>(arrayClass->name)); }, NULL);
 
         for (auto genericArrayMethod : s_GenericArrayMethods)
             IL2CPP_FREE((void*)genericArrayMethod.name);
 
+        s_SZArrayClassMap.Clear();
+        s_ArrayClassMap.Clear();
         s_GenericArrayMethods.clear();
     }
 
@@ -516,9 +586,14 @@ namespace metadata
         if (rank <= 1 && !bounded)
             CollectImplicitArrayInterfacesFromElementClass(elementClass, interfaces);
 
-        size_t slots = arrayClass->vtable_count + interfaces.size() * (il2cpp_defaults.generic_ilist_class->method_count + il2cpp_defaults.generic_icollection_class->method_count + il2cpp_defaults.generic_ienumerable_class->method_count);
+        size_t implicitIntefaceMethodCount = 0;
+        if (il2cpp_defaults.generic_ilist_class)               implicitIntefaceMethodCount += il2cpp_defaults.generic_ilist_class->method_count;
+        if (il2cpp_defaults.generic_icollection_class)         implicitIntefaceMethodCount += il2cpp_defaults.generic_icollection_class->method_count;
+        if (il2cpp_defaults.generic_ienumerable_class)         implicitIntefaceMethodCount += il2cpp_defaults.generic_ienumerable_class->method_count;
+        if (il2cpp_defaults.generic_ireadonlylist_class)       implicitIntefaceMethodCount += il2cpp_defaults.generic_ireadonlylist_class->method_count;
+        if (il2cpp_defaults.generic_ireadonlycollection_class) implicitIntefaceMethodCount += il2cpp_defaults.generic_ireadonlycollection_class->method_count;
 
-        slots += interfaces.size() * (il2cpp_defaults.generic_ireadonlylist_class->method_count + il2cpp_defaults.generic_ireadonlycollection_class->method_count);
+        size_t slots = arrayClass->vtable_count + interfaces.size() * implicitIntefaceMethodCount;
 
         Il2CppClass* klass = (Il2CppClass*)MetadataCalloc(1, sizeof(Il2CppClass) + (slots * sizeof(VirtualInvokeData)));
         klass->klass = klass;
@@ -572,7 +647,7 @@ namespace metadata
         }
         else
         {
-            klass->interfaces_count = kImplicitArrayInterfaceCount;
+            klass->interfaces_count = (uint16_t)ImplilcitArrayInterfaceCount();
         }
 
         klass->interopData = MetadataCache::GetInteropDataForType(&klass->byval_arg);
@@ -587,6 +662,9 @@ namespace metadata
             s_ArrayClassMap.Add(ArrayClassMap::key_type(std::make_pair(klass->element_class, klass->rank)), klass);
         else
             s_SZArrayClassMap.Add(klass->element_class, klass);
+
+        // This is intentionally after adding to the map so debug name can find the cached class
+        Class::SetDebugName(klass);
 
         return klass;
     }

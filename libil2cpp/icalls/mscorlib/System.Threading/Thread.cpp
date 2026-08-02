@@ -64,7 +64,7 @@ namespace Threading
                 if (exc)
                     vm::Runtime::UnhandledException(exc);
             }
-            catch (il2cpp::vm::Thread::NativeThreadAbortException)
+            catch (Il2CppNativeThreadAbortException&)
             {
                 // Nothing to do. We've successfully aborted the thread.
                 il2cpp::vm::Thread::SetState(startData->m_Thread, vm::kThreadStateAborted);

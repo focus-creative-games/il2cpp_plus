@@ -20,6 +20,7 @@ namespace vm
     public:
         //internal
         static Il2CppClass* GetClass(Il2CppGenericClass *gclass, bool throwOnError = true);
+        static Il2CppClass* GetClass_CachedOnly(Il2CppGenericClass *gclass);
         static Il2CppGenericContext* GetContext(Il2CppGenericClass *gclass);
         static Il2CppClass* GetTypeDefinition(const Il2CppGenericClass *gclass);
         static bool IsEnum(Il2CppGenericClass *gclass);
@@ -29,10 +30,10 @@ namespace vm
             return Type::IsValueType(gclass->type);
         }
 
-        static void SetupEvents(Il2CppClass* genericInstanceType);
-        static void SetupFields(Il2CppClass* genericInstanceType);
-        static void SetupMethods(Il2CppClass* genericInstanceType);
-        static void SetupProperties(Il2CppClass* genericInstanceType);
+        static EventInfo* CreateEvents(Il2CppClass* genericInstanceType);
+        static FieldInfo* CreateFields(Il2CppClass* genericInstanceType);
+        static const MethodInfo** CreateMethods(Il2CppClass * genericInstanceType);
+        static PropertyInfo* CreateProperties(Il2CppClass* genericInstanceType);
 
         static bool HasSameGenericTypeDefinition(const Il2CppGenericClass* gclass1, const Il2CppGenericClass* gclass2)
         {

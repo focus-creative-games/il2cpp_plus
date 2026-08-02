@@ -151,8 +151,8 @@ namespace Image
         if (dladdr(anySymbol, &info))
         {
             size_t nameSize = strlen(info.dli_fname);
-            char* imageName = (char*)IL2CPP_MALLOC(nameSize);
-            strncpy(imageName, info.dli_fname, nameSize);
+            char* imageName = (char*)IL2CPP_MALLOC(nameSize + 1);
+            strncpy(imageName, info.dli_fname, nameSize + 1);
             return imageName;
         }
         else

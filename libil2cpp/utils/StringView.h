@@ -1,6 +1,7 @@
 #pragma once
 #include "il2cpp-config.h"
 #include <limits.h>
+#include <string>
 #if IL2CPP_TARGET_WINDOWS
 #include <malloc.h>
 #else
@@ -45,10 +46,14 @@ namespace utils
         }
 
         inline StringView(const StringView<CharType>& str, size_t startIndex, size_t length) :
-            m_String(str.Str() + startIndex),
-            m_Length(length)
+            m_String(str.Str() + startIndex), m_Length(length)
         {
             IL2CPP_ASSERT(startIndex + length <= str.Length());
+        }
+
+        inline StringView(const std::basic_string<CharType>& str) :
+            m_String(str.c_str()), m_Length(str.size())
+        {
         }
 
 // This is to work around a bug in gcc (24666) where arrays decay to pointers too fast

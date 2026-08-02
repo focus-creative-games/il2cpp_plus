@@ -25,12 +25,14 @@ namespace vm
         static std::string GetFullName(const MethodInfo* method);
         static bool IsGeneric(const MethodInfo *method);
         static bool IsInflated(const MethodInfo *method);
+        static bool IsStatic(const MethodInfo *method);
         static bool IsInstance(const MethodInfo *method);
+        static bool IsVirtual(const MethodInfo *method);
         static bool IsGenericInstance(const MethodInfo *method);
         static bool IsGenericInstanceMethod(const MethodInfo *method);
         static bool IsDefaultInterfaceMethodOnGenericInstance(const MethodInfo* method);
         static uint32_t GetParamCount(const MethodInfo *method);
-        static uint32_t GetGenericParamCount(const MethodInfo *method);
+        static uint16_t GetGenericParamCount(const MethodInfo *method);
         static const Il2CppType* GetParam(const MethodInfo *method, uint32_t index);
         static Il2CppClass* GetClass(const MethodInfo *method);
         static bool HasAttribute(const MethodInfo *method, Il2CppClass *attr_class);
@@ -42,13 +44,20 @@ namespace vm
         static bool IsSameOverloadSignature(const MethodInfo* method1, const MethodInfo* method2);
         static bool IsSameOverloadSignature(const PropertyInfo* property1, const PropertyInfo* property2);
         static int CompareOverloadSignature(const PropertyInfo* property1, const PropertyInfo* property2);
-        static const char* GetParameterDefaultValue(const MethodInfo *method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue);
+        static const char* GetParameterDefaultValue(const MethodInfo *method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitlySetNullDefaultValue);
         static uint32_t GetParameterToken(const MethodInfo* method, int32_t parameterPosition);
         static const MethodInfo* GetAmbiguousMethodInfo();
+        static const MethodInfo* GetStaticAmbiguousMethodInfo();
         static const MethodInfo* GetEntryPointNotFoundMethodInfo();
+        static const MethodInfo* GetStaticEntryPointNotFoundMethodInfo();
+        static const MethodInfo* GetEntryPointNotFoundMethodInfoForMethod(const MethodInfo* method);
         static bool IsAmbiguousMethodInfo(const MethodInfo* method);
+        static bool IsAmbiguousMethodClass(const Il2CppClass* klass);
         static bool IsEntryPointNotFoundMethodInfo(const MethodInfo* method);
+        static bool IsEntryPointNotFoundMethodClass(const Il2CppClass* klass);
+
         static bool HasFullGenericSharingSignature(const MethodInfo* method);
+        static bool RequiresAdjustorThunk(const MethodInfo* method);
     };
 } /* namespace vm */
 } /* namespace il2cpp */

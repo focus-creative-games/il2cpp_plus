@@ -192,6 +192,8 @@ namespace os
         m_CurrentWaitObject = waitObject;
     }
 
+    static void __stdcall NativeAPCCallback(ULONG_PTR context) {}
+
     void ThreadImpl::QueueUserAPC(Thread::APCFunc func, void* context)
     {
         IL2CPP_ASSERT(func != NULL);
@@ -208,6 +210,11 @@ namespace os
         {
             m_ConditionSemaphore.Release(1);
         }
+
+        // Wake up any threads blocked on alertable waits. We do this after adding to pending APCs
+        // above so that after the thread wakes up, it calls CheckForUserAPCAndHandle, and finds
+        // the pending APC.
+        ::QueueUserAPC(NativeAPCCallback, m_ThreadHandle, 0);
     }
 
     int ThreadImpl::GetMaxStackSize()

@@ -12,6 +12,7 @@
 
 #include "il2cpp-runtime-metadata.h"
 #include "os/LibraryLoader.h"
+#include "os/Path.h"
 #include "utils/PathUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/Environment.h"
@@ -94,7 +95,7 @@ namespace os
 
 #endif
 
-    static Baselib_DynamicLibrary_Handle CheckLibraryVariations(const char* name, std::string& detailedError)
+    static Baselib_DynamicLibrary_Handle CheckLibraryVariations(const std::string& name, std::string& detailedError)
     {
         const int numberOfVariations = sizeof(LibraryNamePrefixAndSuffixVariations) / sizeof(LibraryNamePrefixAndSuffixVariations[0]);
         for (int i = 0; i < numberOfVariations; ++i)
@@ -114,35 +115,51 @@ namespace os
         return Baselib_DynamicLibrary_Handle_Invalid;
     }
 
-    Baselib_DynamicLibrary_Handle LibraryLoader::ProbeForLibrary(const Il2CppNativeChar* libraryName, const size_t libraryNameLength, std::string& detailedError)
+    static Baselib_DynamicLibrary_Handle ProbeForLibraryImpl(const std::string& libraryName, std::string& detailedError)
     {
         auto handle = Baselib_DynamicLibrary_Handle_Invalid;
 
 #if IL2CPP_TARGET_LINUX
         // Workaround the fact that on Linux, libc is actually named libc.so.6 instead of libc.so.
         // mscorlib P/Invokes into plain libc, so we need this for those P/Invokes to succeed
-        if (strncasecmp(libraryName, "libc", libraryNameLength) == 0)
+        if (strncasecmp(libraryName.c_str(), "libc", libraryName.size()) == 0)
             handle = LoadLibraryWithName(LIBC_SO, detailedError);
 #endif
 
         if (handle == Baselib_DynamicLibrary_Handle_Invalid)
-            handle = LoadLibraryWithName(libraryName, detailedError);
+            handle = LoadLibraryWithName(libraryName.c_str(), detailedError);
 
         if (handle == Baselib_DynamicLibrary_Handle_Invalid)
-            handle = CheckLibraryVariations(libraryName, detailedError);
+            handle = CheckLibraryVariations(libraryName.c_str(), detailedError);
 
         if (handle == Baselib_DynamicLibrary_Handle_Invalid)
         {
-            const size_t lengthWithoutDotDll = libraryNameLength - 4;
-            if (strncmp(libraryName + lengthWithoutDotDll, ".dll", 4) == 0)
+            const size_t lengthWithoutDotDll = libraryName.size() - 4;
+            if (strncmp(libraryName.c_str() + lengthWithoutDotDll, ".dll", 4) == 0)
             {
                 char* nativeDynamicLibraryWithoutExtension = static_cast<char*>(alloca((lengthWithoutDotDll + 1) * sizeof(char)));
-                memcpy(nativeDynamicLibraryWithoutExtension, libraryName, lengthWithoutDotDll);
+                memcpy(nativeDynamicLibraryWithoutExtension, libraryName.c_str(), lengthWithoutDotDll);
                 nativeDynamicLibraryWithoutExtension[lengthWithoutDotDll] = 0;
 
                 handle = CheckLibraryVariations(nativeDynamicLibraryWithoutExtension, detailedError);
             }
         }
+
+        return handle;
+    }
+
+    Baselib_DynamicLibrary_Handle LibraryLoader::ProbeForLibrary(const Il2CppNativeChar* libraryName, const size_t libraryNameLength, std::string& detailedError)
+    {
+        std::string libraryNameStr = utils::StringUtils::NativeStringToUtf8(libraryName, libraryNameLength);
+
+        // Probe the application directory first - this matches the expected P/Invoke behavior from Win32
+        std::string applicationDir = os::Path::GetApplicationFolder();
+        std::string libraryPath = utils::PathUtils::Combine(applicationDir, libraryNameStr);
+        Baselib_DynamicLibrary_Handle handle = ProbeForLibraryImpl(libraryPath, detailedError);
+
+        // Otherwise use the OS's search paths
+        if (handle == Baselib_DynamicLibrary_Handle_Invalid)
+            handle = ProbeForLibraryImpl(libraryNameStr, detailedError);
 
         return handle;
     }

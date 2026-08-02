@@ -50,6 +50,7 @@ typedef struct Il2CppDefaults
     Il2CppClass *object_class;
     Il2CppClass *byte_class;
     Il2CppClass *void_class;
+    Il2CppClass *void_ptr_class;
     Il2CppClass *boolean_class;
     Il2CppClass *sbyte_class;
     Il2CppClass *int16_class;
@@ -68,7 +69,9 @@ typedef struct Il2CppDefaults
     Il2CppClass *array_class;
     Il2CppClass *delegate_class;
     Il2CppClass *multicastdelegate_class;
+#if !MONO_NET8_BCL
     Il2CppClass *asyncresult_class;
+#endif
     Il2CppClass *manualresetevent_class;
     Il2CppClass *typehandle_class;
     Il2CppClass *fieldhandle_class;
@@ -78,74 +81,67 @@ typedef struct Il2CppDefaults
     Il2CppClass *exception_class;
     Il2CppClass *threadabortexception_class;
     Il2CppClass *thread_class;
+#if !MONO_NET8_BCL
     Il2CppClass *internal_thread_class;
-    /*Il2CppClass *transparent_proxy_class;
-    Il2CppClass *real_proxy_class;
-    Il2CppClass *mono_method_message_class;*/
+#endif
     Il2CppClass *appdomain_class;
     Il2CppClass *appdomain_setup_class;
+#if MONO_NET8_BCL
+    Il2CppClass* app_context_class;
+    Il2CppClass* assembly_load_context_class;
+#endif
     Il2CppClass *member_info_class;
     Il2CppClass *field_info_class;
     Il2CppClass *method_info_class;
     Il2CppClass *property_info_class;
     Il2CppClass *event_info_class;
     Il2CppClass *stringbuilder_class;
-    /*Il2CppClass *math_class;*/
-    Il2CppClass *stack_frame_class;
+#if MONO_NET8_BCL
+    Il2CppClass* mono_stack_frame_class;
     Il2CppClass *stack_trace_class;
+#endif
+    Il2CppClass *stack_frame_class;
     Il2CppClass *marshal_class;
-    /*Il2CppClass *iserializeable_class;
-    Il2CppClass *serializationinfo_class;
-    Il2CppClass *streamingcontext_class;*/
     Il2CppClass *typed_reference_class;
-    /*Il2CppClass *argumenthandle_class;*/
-    Il2CppClass *marshalbyrefobject_class;
-    /*Il2CppClass *monitor_class;
-    Il2CppClass *iremotingtypeinfo_class;
-    Il2CppClass *runtimesecurityframe_class;
-    Il2CppClass *executioncontext_class;
-    Il2CppClass *internals_visible_class;*/
     Il2CppClass *generic_ilist_class;
     Il2CppClass *generic_icollection_class;
     Il2CppClass *generic_ienumerable_class;
     Il2CppClass *generic_ireadonlylist_class;
     Il2CppClass *generic_ireadonlycollection_class;
+    Il2CppClass* generic_readonlycollection_class;
     Il2CppClass *runtimetype_class;
     Il2CppClass *generic_nullable_class;
-    /*Il2CppClass *variant_class;
-    Il2CppClass *com_object_class;*/
     Il2CppClass *il2cpp_com_object_class;
-    /*Il2CppClass *com_interop_proxy_class;
-    Il2CppClass *iunknown_class;
-    Il2CppClass *idispatch_class;
-    Il2CppClass *safehandle_class;
-    Il2CppClass *handleref_class;*/
     Il2CppClass *attribute_class;
+#if MONO_NET8_BCL
+    Il2CppClass *runtime_customattribute_data_class;
+#else
     Il2CppClass *customattribute_data_class;
+#endif
     Il2CppClass *customattribute_typed_argument_class;
     Il2CppClass *customattribute_named_argument_class;
-    //Il2CppClass *critical_finalizer_object;
     Il2CppClass *version;
     Il2CppClass *culture_info;
+#if !MONO_NET8_BCL
     Il2CppClass *async_call_class;
+#endif
     Il2CppClass *assembly_class;
     Il2CppClass *assembly_name_class;
+    Il2CppClass *mono_assembly_name_class;
     Il2CppClass *parameter_info_class;
     Il2CppClass *module_class;
-    Il2CppClass *system_exception_class;
-    Il2CppClass *argument_exception_class;
-    Il2CppClass *wait_handle_class;
-    Il2CppClass *safe_handle_class;
-    Il2CppClass *sort_key_class;
     Il2CppClass *dbnull_class;
     Il2CppClass *error_wrapper_class;
     Il2CppClass *missing_class;
     Il2CppClass *value_type_class;
+    Il2CppClass *stream_class;
 
+#if !MONO_NET8_BCL
     // Stuff used by the mono code
     Il2CppClass *threadpool_wait_callback_class;
     MethodInfo *threadpool_perform_wait_callback_method;
     Il2CppClass *mono_method_message_class;
+#endif
 
     // Windows.Foundation.IReference`1<T>
     Il2CppClass* ireference_class;
@@ -173,8 +169,12 @@ typedef struct Il2CppDefaults
     Il2CppClass* uint16_shared_enum;
     Il2CppClass* uint32_shared_enum;
     Il2CppClass* uint64_shared_enum;
+    Il2CppClass* il2cpp_shared_object_type;
     Il2CppClass* il2cpp_fully_shared_type;
     Il2CppClass* il2cpp_fully_shared_struct_type;
+
+    const MethodInfo* thread_sleep_internal_method;
+    const MethodInfo* runtime_type_get_type_method;
 } Il2CppDefaults;
 
 extern LIBIL2CPP_CODEGEN_API Il2CppDefaults il2cpp_defaults;
@@ -379,24 +379,31 @@ typedef struct Il2CppClass
     void* gc_desc;
     const char* name;
     const char* namespaze;
+#if IL2CPP_DEBUG
+    char* debug_name;
+#endif
     Il2CppType byval_arg;
     Il2CppType this_arg;
+    // element_class has a special meaning for classes that have "elements"
+    // * arrays - the array's element type
+    // * pointers - the type the pointer points to
+    // * enums - the underlying type
+    // * Nullable<T> - the type of T
     Il2CppClass* element_class;
+    // castClass is the same as element_class except for arrays
+    // For arrays, primitives of the same size cast be cast to one another - so this is a reduced type
     Il2CppClass* castClass;
     Il2CppClass* declaringType;
     Il2CppClass* parent;
     Il2CppGenericClass *generic_class;
-    Il2CppMetadataTypeHandle typeMetadataHandle; // non-NULL for Il2CppClass's constructed from type defintions
+    Il2CppMetadataTypeHandle typeMetadataHandle; // non-NULL for Il2CppClass's constructed from type definitions
     const Il2CppInteropData* interopData;
     Il2CppClass* klass; // hack to pretend we are a MonoVTable. Points to ourself
     // End always valid fields
 
     // The following fields need initialized before access. This can be done per field or as an aggregate via a call to Class::Init
     FieldInfo* fields; // Initialized in SetupFields
-    const EventInfo* events; // Initialized in SetupEvents
-    const PropertyInfo* properties; // Initialized in SetupProperties
     const MethodInfo** methods; // Initialized in SetupMethods
-    Il2CppClass** nestedTypes; // Initialized in SetupNestedTypes
     Il2CppClass** implementedInterfaces; // Initialized in SetupInterfaces
     Il2CppRuntimeInterfaceOffsetPair* interfaceOffsets; // Initialized in Init
     void* static_fields; // Initialized in Init
@@ -409,6 +416,9 @@ typedef struct Il2CppClass
 
     // used for fast parent checks
     Il2CppClass** typeHierarchy; // Initialized in SetupTypeHierachy
+    const void* /* const EventInfo* */ events; // Always lazily created, access by calling GetEvents
+    const void* /* const PropertyInfo* */ properties; // Always lazily created access by calling GetProperties
+    const void* /* const Il2cppClass* */ nestedTypes; // Always lazily created access by calling GetNestedTypes
     // End initialization required fields
 
     void *unity_user_data;
@@ -465,6 +475,7 @@ typedef struct Il2CppClass
     uint8_t is_import_or_windows_runtime : 1;
     uint8_t is_vtable_initialized : 1;
     uint8_t is_byref_like : 1;
+    uint8_t has_inline_array : 1;
     VirtualInvokeData vtable[IL2CPP_ZERO_LEN_ARRAY];
 } Il2CppClass;
 
@@ -538,10 +549,16 @@ typedef struct Il2CppAssembly
 {
     Il2CppImage* image;
     uint32_t token;
+    uint32_t moduleToken;
     int32_t referencedAssemblyStart;
     int32_t referencedAssemblyCount;
     Il2CppAssemblyName aname;
 } Il2CppAssembly;
+
+typedef struct Il2CppAssemblyLoadContext
+{
+    Il2CppGCHandle gchandle;
+} Il2CppAssemblyLoadContext;
 
 typedef struct Il2CppCodeGenOptions
 {
@@ -728,3 +745,15 @@ typedef struct Il2CppPerfCounters
     unsigned int threadpool_threads;
     unsigned int threadpool_iothreads;
 } Il2CppPerfCounters;
+
+typedef enum Il2CppRGCTXInitMode
+{
+    IL2CPP_RGCTX_INIT_MODE_DEFAULT,
+    IL2CPP_RGCTX_INIT_MODE_DISABLE,
+} Il2CppRGCTXInitMode;
+
+struct Il2CppFieldRvaData
+{
+    const char* data;
+    size_t size;
+};

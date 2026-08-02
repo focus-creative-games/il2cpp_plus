@@ -81,6 +81,11 @@ namespace os
     {
         return 0;
     }
+
+    void Process::Exit(int32_t exitCode)
+    {
+        _Exit(exitCode);
+    }
 }
 }
 

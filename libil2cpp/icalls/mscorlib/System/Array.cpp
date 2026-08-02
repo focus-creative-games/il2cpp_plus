@@ -128,7 +128,7 @@ namespace System
                 if (!elem)
                     vm::Exception::Raise(vm::Exception::GetInvalidCastException("At least one element in the source array could not be cast down to the destination array type."));
 
-                memcpy(il2cpp_array_addr_with_size(dest, element_size, dest_idx + (size_t)i), vm::Object::Unbox(elem), element_size);
+                memcpy(il2cpp_array_addr_with_size(dest, element_size, dest_idx + (size_t)i), vm::Object::GetRawData(elem), element_size);
             }
             gc::GarbageCollector::SetWriteBarrier((void**)baseAddr, byte_len);
 
@@ -497,7 +497,7 @@ namespace System
 
         if (vm::Object::IsInst(value, elementClass))
         {
-            memcpy(elementAddress, vm::Object::Unbox(value), elementSize);
+            memcpy(elementAddress, vm::Object::GetRawData(value), elementSize);
             gc::GarbageCollector::SetWriteBarrier((void**)elementAddress, elementSize);
             return;
         }
@@ -535,7 +535,7 @@ namespace System
             }
         }
 
-        WidenedValueUnion widenedValue = ExtractWidenedValue(valueType, vm::Object::Unbox(value));
+        WidenedValueUnion widenedValue = ExtractWidenedValue(valueType, vm::Object::GetRawData(value));
 
         switch (elementType)
         {

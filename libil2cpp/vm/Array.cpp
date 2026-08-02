@@ -97,7 +97,7 @@ namespace vm
         uint32_t elem_size;
         il2cpp_array_size_t byte_len;
 
-        Class::Init(klass);
+        ClassInlines::InitFromCodegen(klass);
         IL2CPP_ASSERT(klass->rank);
         IL2CPP_ASSERT(klass->initialized);
         IL2CPP_ASSERT(klass->element_class->initialized);
@@ -128,7 +128,7 @@ namespace vm
             o = Object::AllocatePtrFree(byte_len, klass);
 #if NEED_TO_ZERO_PTRFREE
             ((Il2CppArray*)o)->bounds = NULL;
-            memset((char*)o + sizeof(Il2CppObject), 0, byte_len - sizeof(Il2CppObject));
+            memset(vm::Object::GetRawData(o), 0, byte_len - sizeof(Il2CppObject));
 #endif
         }
         else if (klass->element_class->byval_arg.valuetype &&
@@ -228,7 +228,7 @@ namespace vm
         {
             o = Object::AllocatePtrFree(byte_len, array_class);
 #if NEED_TO_ZERO_PTRFREE
-            memset((char*)o + sizeof(Il2CppObject), 0, byte_len - sizeof(Il2CppObject));
+            memset(vm::Object::GetRawData(o), 0, byte_len - sizeof(Il2CppObject));
 #endif
         }
 #if IL2CPP_HAS_GC_DESCRIPTORS

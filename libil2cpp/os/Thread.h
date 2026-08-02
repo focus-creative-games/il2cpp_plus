@@ -75,6 +75,8 @@ namespace os
         /// NOTE: The APC is allowed to raise exceptions!
         void QueueUserAPC(APCFunc func, void* context);
 
+        void CheckForUserAPCAndHandle();
+
         // Explicit versions modify state without actually changing COM state.
         // Used to set thread state before it's started.
         ApartmentState GetApartment();

@@ -285,7 +285,7 @@ namespace vm
     {
         TypeVector types;
         GetTypes(image, exportedOnly, &types);
-        Il2CppArray* result = Array::New(il2cpp_defaults.monotype_class, (il2cpp_array_size_t)types.size());
+        Il2CppArray* result = Array::New(il2cpp_defaults.systemtype_class, (il2cpp_array_size_t)types.size());
         size_t index = 0;
         for (vm::TypeVector::const_iterator type = types.begin(); type != types.end(); ++type)
         {
@@ -440,6 +440,22 @@ namespace vm
 
         s_CachedMemoryMappedResourceFiles.clear();
         s_CachedResourceData.clear();
+    }
+
+    void Image::ClearImageCachedData(Il2CppImage* image)
+    {
+        if (image->nameToClassHashTable)
+        {
+            for (Il2CppNameToTypeHandleHashTable::iterator i = image->nameToClassHashTable->begin(); i != image->nameToClassHashTable->end(); ++i)
+            {
+                // Nested types have allocated names - see AddNestedTypesToNametoClassHashTable
+                if (MetadataCache::TypeIsNested(i->second))
+                    IL2CPP_FREE((char*)i->first.key.second);
+            }
+
+            delete image->nameToClassHashTable;
+            image->nameToClassHashTable = NULL;
+        }
     }
 } /* namespace vm */
 } /* namespace il2cpp */

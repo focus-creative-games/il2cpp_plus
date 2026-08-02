@@ -31,8 +31,8 @@
 // MethodRef         110               0xC0000000
 // FieldRVA          111               0xE0000000
 
-typedef uint32_t EncodedMethodIndex;
 
+// Keep in sync with Unity.IL2CPP.Metadata.Il2CppMetadataUsage
 enum Il2CppMetadataUsage
 {
     kIl2CppMetadataUsageInvalid,
@@ -45,10 +45,14 @@ enum Il2CppMetadataUsage
     kIl2CppMetadataUsageFieldRva
 };
 
+// Keep in sync with Unity.IL2CPP.Metadata.InvalidMetadataUsageTokens
 enum Il2CppInvalidMetadataUsageToken
 {
     kIl2CppInvalidMetadataUsageNoData = 0,
     kIl2CppInvalidMetadataUsageAmbiguousMethod = 1,
+    kIl2CppInvalidMetadataUsageAmbiguousStaticMethod = 2,
+    kIl2CppInvalidMetadataUsageEntryPointNotFound = 3,
+    kIl2CppInvalidMetadataUsageStaticEntryPointNotFound = 4,
 };
 
 #ifdef __cplusplus
@@ -112,9 +116,17 @@ typedef struct Il2CppTypeDefinition
     // 11 - PackingSize is default
     // 12 - ClassSize is default
     // 13-16 - One of nine possible PackingSize values (0, 1, 2, 4, 8, 16, 32, 64, or 128) - the specified packing size (even for explicit layouts)
+    // 17 - IsByRefLike (e.g. reg struct)
+    // 18 - HasInlineArray
     uint32_t bitfield;
     uint32_t token;
 } Il2CppTypeDefinition;
+
+typedef struct Il2CppInlineArrayLength
+{
+    TypeIndex typeIndex;
+    int32_t length;
+} Il2CppInlineArrayLength;
 
 typedef struct Il2CppFieldDefinition
 {
@@ -255,9 +267,9 @@ typedef struct Il2CppGenericContainer
 {
     /* index of the generic type definition or the generic method definition corresponding to this container */
     int32_t ownerIndex; // either index into Il2CppClass metadata array or Il2CppMethodDefinition array
-    int32_t type_argc;
+    uint16_t type_argc;
     /* If true, we're a generic method, otherwise a generic type definition. */
-    int32_t is_method;
+    uint8_t is_method;
     /* Our type parameters. */
     GenericParameterIndex genericParameterStart;
 } Il2CppGenericContainer;
@@ -312,6 +324,7 @@ typedef struct Il2CppGlobalMetadataHeader
     Il2CppSectionMetadata vtableMethods; // EncodedMethodIndex
     Il2CppSectionMetadata interfaceOffsets; // Il2CppInterfaceOffsetPair
     Il2CppSectionMetadata typeDefinitions; // Il2CppTypeDefinition
+    Il2CppSectionMetadata typeInlineArrays; // Il2CppInlineArrayLength
     Il2CppSectionMetadata images; // Il2CppImageDefinition
     Il2CppSectionMetadata assemblies; // Il2CppAssemblyDefinition
     Il2CppSectionMetadata fieldRefs; // Il2CppFieldRef

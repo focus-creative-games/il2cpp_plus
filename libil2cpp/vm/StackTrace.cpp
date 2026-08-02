@@ -472,7 +472,11 @@ namespace vm
         apcContext.depth = depth;
         apcContext.frame = &frame;
 
+#if MONO_NET8_BCL
+        thread->handle->QueueUserAPC(GetThreadFrameAtCallback, &apcContext);
+#else
         thread->GetInternalThread()->handle->QueueUserAPC(GetThreadFrameAtCallback, &apcContext);
+#endif
         apcContext.apcDoneEvent.Wait();
 
         return apcContext.hasResult;
@@ -497,7 +501,11 @@ namespace vm
         apcContext.callback = callback;
         apcContext.userContext = context;
 
+#if MONO_NET8_BCL
+        thread->handle->QueueUserAPC(WalkThreadFrameStackCallback, &apcContext);
+#else
         thread->GetInternalThread()->handle->QueueUserAPC(WalkThreadFrameStackCallback, &apcContext);
+#endif
         apcContext.apcDoneEvent.Wait();
 #endif
     }
@@ -515,7 +523,11 @@ namespace vm
 #if IL2CPP_ENABLE_STACKTRACES
         GetThreadStackDepthContext apcContext;
 
+#if MONO_NET8_BCL
+        thread->handle->QueueUserAPC(GetThreadStackDepthCallback, &apcContext);
+#else
         thread->GetInternalThread()->handle->QueueUserAPC(GetThreadStackDepthCallback, &apcContext);
+#endif
         apcContext.apcDoneEvent.Wait();
 
         return apcContext.stackDepth;
@@ -538,7 +550,11 @@ namespace vm
         GetThreadTopFrameContext apcContext;
         apcContext.frame = &frame;
 
+#if MONO_NET8_BCL
+        thread->handle->QueueUserAPC(GetThreadTopFrameCallback, &apcContext);
+#else
         thread->GetInternalThread()->handle->QueueUserAPC(GetThreadTopFrameCallback, &apcContext);
+#endif
         apcContext.apcDoneEvent.Wait();
 
         return apcContext.hasResult;

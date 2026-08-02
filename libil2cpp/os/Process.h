@@ -19,6 +19,7 @@ namespace os
         static void FreeProcess(ProcessHandle* handle);
         static utils::Expected<std::string> GetProcessName(ProcessHandle* handle);
         static intptr_t GetMainWindowHandle(int32_t pid);
+        static void Exit(int32_t exitCode);
     };
 }
 }

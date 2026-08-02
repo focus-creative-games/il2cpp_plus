@@ -15,6 +15,5 @@ namespace vm
     void* MetadataCalloc(size_t count, size_t size);
 // These metadata structures have their own locks, since they do lightweight initialization
     Il2CppGenericClass* MetadataAllocGenericClass();
-    Il2CppGenericMethod* MetadataAllocGenericMethod();
 } // namespace vm
 } // namespace il2cpp

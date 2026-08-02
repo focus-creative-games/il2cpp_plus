@@ -502,7 +502,7 @@ System.Runtime.InteropServices.Marshal::AllocCoTaskMemSize(System.UIntPtr) mscor
 System.Diagnostics.StackTrace::get_trace(System.Exception,System.Int32,System.Boolean) mscorlib::System::Diagnostics::StackTrace::get_trace
 
 // System.Math
->vm-utils/icalls/mscorlib/System/Math.h
+>icalls/mscorlib/System/Math.h
 System.Math::Abs(System.Double) mscorlib::System::Math::Abs
 System.Math::Acos(System.Double) mscorlib::System::Math::Acos
 System.Math::Acosh(System.Double) mscorlib::System::Math::Acosh
@@ -531,7 +531,7 @@ System.Math::Tanh(System.Double) mscorlib::System::Math::Tanh
 System.Math::Abs(System.Single) mscorlib::System::Math::Abs
 
 // System.Threading.Interlocked
->vm-utils/icalls/mscorlib/System.Threading/Interlocked.h
+>icalls/mscorlib/System.Threading/Interlocked.h
 System.Threading.Interlocked::CompareExchange(System.Double&,System.Double,System.Double) mscorlib::System::Threading::Interlocked::CompareExchangeDouble
 System.Threading.Interlocked::CompareExchange(System.Int32&,System.Int32,System.Int32) mscorlib::System::Threading::Interlocked::CompareExchange
 System.Threading.Interlocked::CompareExchange(System.Int32&,System.Int32,System.Int32,System.Boolean&) mscorlib::System::Threading::Interlocked::CompareExchange
@@ -783,7 +783,7 @@ System.Reflection.FieldInfo::get_marshal_info() mscorlib::System::Reflection::Fi
 System.Reflection.MethodBase::GetCurrentMethod() mscorlib::System::Reflection::MethodBase::GetCurrentMethod
 
 // System.MathF
->vm-utils/icalls/mscorlib/System/MathF.h
+>icalls/mscorlib/System/MathF.h
 System.MathF::Pow(System.Single,System.Single) mscorlib::System::MathF::Pow
 
 // System.IO.Path

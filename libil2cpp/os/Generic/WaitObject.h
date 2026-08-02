@@ -89,9 +89,9 @@ namespace os
 
         bool HaveWaitingThreads() const { return (m_WaitingThreadCount != 0); }
 
-        void WakeupOneThread() { WakeupThreads(true); }
-        void WakeupAllThreads() { WakeupThreads(false); }
-        void WakeupThreads(bool wakeupOneThread);
+        void WakeupOneThread(bool lifo = false) { WakeupThreads(true, lifo); }
+        void WakeupAllThreads(bool lifo = false) { WakeupThreads(false, lifo); }
+        void WakeupThreads(bool wakeupOneThread, bool lifo = false);
 
         void ConditionWait(ThreadImpl* thread);
         bool ConditionTimedWait(ThreadImpl* thread, uint32_t timeout);

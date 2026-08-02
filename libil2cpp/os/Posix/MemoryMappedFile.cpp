@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <map>
 #include "os/File.h"
+#include "os/Memory.h"
 #include "os/MemoryMappedFile.h"
 #include "os/Mutex.h"
 #include "utils/Memory.h"
@@ -48,22 +49,15 @@ namespace os
         return buf->st_size == 0 && (buf->st_mode & (S_IFCHR | S_IFBLK | S_IFIFO | S_IFSOCK)) != 0;
     }
 
-    static int64_t GetPageSize()
-    {
-        static int64_t page_size = getpagesize();
-
-        return page_size;
-    }
-
     static int64_t AlignUpToPageSize(int64_t size)
     {
-        const int64_t page_size = GetPageSize();
+        const int64_t page_size = os::Memory::GetPageSize();
         return (size + page_size - 1) & ~(page_size - 1);
     }
 
     static int64_t AlignDownToPageSize(int64_t size)
     {
-        const int64_t page_size = GetPageSize();
+        const int64_t page_size = os::Memory::GetPageSize();
         return size & ~(page_size - 1);
     }
 

@@ -5,6 +5,7 @@
 #include "vm/Class.h"
 #include "vm/MetadataCache.h"
 #include "vm/Object.h"
+#include "vm/Method.h"
 #include "vm/Reflection.h"
 #include "vm/Runtime.h"
 #include "vm/Type.h"
@@ -83,12 +84,22 @@ namespace vm
         return !(method->flags & METHOD_ATTRIBUTE_STATIC);
     }
 
+    bool Method::IsStatic(const MethodInfo *method)
+    {
+        return method->flags & METHOD_ATTRIBUTE_STATIC;
+    }
+
+    bool Method::IsVirtual(const MethodInfo *method)
+    {
+        return method->flags & METHOD_ATTRIBUTE_VIRTUAL;
+    }
+
     uint32_t Method::GetParamCount(const MethodInfo *method)
     {
         return method->parameters_count;
     }
 
-    uint32_t Method::GetGenericParamCount(const MethodInfo *method)
+    uint16_t Method::GetGenericParamCount(const MethodInfo *method)
     {
         if (IsGeneric(method) && method->genericContainerHandle != NULL)
             return MetadataCache::GetGenericContainerCount(method->genericContainerHandle);
@@ -279,9 +290,9 @@ namespace vm
         return parameterCount1 < parameterCount2;
     }
 
-    const char* Method::GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue)
+    const char* Method::GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitlySetNullDefaultValue)
     {
-        return reinterpret_cast<const char*>(MetadataCache::GetParameterDefaultValue(method, parameterPosition, type, isExplicitySetNullDefaultValue));
+        return reinterpret_cast<const char*>(MetadataCache::GetParameterDefaultValue(method, parameterPosition, type, isExplicitlySetNullDefaultValue));
     }
 
     uint32_t Method::GetParameterToken(const MethodInfo* method, int32_t index)
@@ -311,6 +322,11 @@ namespace vm
 
     std::string Method::GetFullName(const MethodInfo* method)
     {
+        if (IsAmbiguousMethodInfo(method))
+            return method->name;
+        if (IsEntryPointNotFoundMethodInfo(method))
+            return method->name;
+
         std::string str;
         str += Type::GetName(&method->klass->byval_arg, IL2CPP_TYPE_NAME_FORMAT_FULL_NAME);
         str += "::";
@@ -321,39 +337,98 @@ namespace vm
 
     static void AmbiguousImplementationMethod()
     {
-        il2cpp::vm::Runtime::RaiseAmbiguousImplementationException(NULL);
+        il2cpp::vm::Runtime::RaiseAmbiguousImplementationException(NULL, NULL);
     }
 
     static void AmbiguousImplementationMethodInvoker(Il2CppMethodPointer ptr, const MethodInfo* method, void* obj, void** args, void* ret)
     {
-        il2cpp::vm::Runtime::RaiseAmbiguousImplementationException(method);
+        il2cpp::vm::Runtime::RaiseAmbiguousImplementationException(method, NULL);
     }
 
     static void EntryPointNotFoundImplementationMethod()
     {
-        il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetEntryPointNotFoundException(""));
+        il2cpp::vm::Runtime::RaiseEntryPointNotFoundException(NULL, NULL);
     }
 
     static void EntryPointNotFoundMethodInvoker(Il2CppMethodPointer ptr, const MethodInfo* method, void* obj, void** args, void* ret)
     {
-        std::string name = "";
-        if (method != NULL && method->name != NULL)
-            name = Method::GetFullName(method);
-        il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetEntryPointNotFoundException(name.c_str()));
+        il2cpp::vm::Runtime::RaiseEntryPointNotFoundException(method, NULL);
     }
 
-    const static MethodInfo ambiguousMethodInfo =
+    static Il2CppClass ambiguousMethodClass =
     {
-        AmbiguousImplementationMethod,              // method_ptr
-        AmbiguousImplementationMethod,              // virtual_method_ptr
-        AmbiguousImplementationMethodInvoker,       // invoker_method
+        NULL,                                                   // image
+        NULL,                                                   // gc_desc
+        "AmbiguousImplementationMethodStubClass",               // name
+        ""                                                      // namespaze
     };
 
-    const static MethodInfo entryPointNoFoundMethodInfo =
+    static Il2CppClass entryPointNotFoundClass =
     {
-        EntryPointNotFoundImplementationMethod,     // method_ptr
-        EntryPointNotFoundImplementationMethod,     // virtual_method_ptr
-        EntryPointNotFoundMethodInvoker,            // invoker_method
+        NULL,                                                   // image
+        NULL,                                                   // gc_desc
+        "EntryPointNotFoundMethodStubClass",                    // name
+        ""                                                      // namespaze
+    };
+
+    static MethodInfo ambiguousMethodInfo =
+    {
+        AmbiguousImplementationMethod,                          // method_ptr
+        AmbiguousImplementationMethod,                          // virtual_method_ptr
+        AmbiguousImplementationMethodInvoker,                   // invoker_method
+        "AmbiguousImplementationMethodStub",                    // name
+        &ambiguousMethodClass,                                  // klass
+        NULL,                                                   // return_type
+        NULL,                                                   // parameters
+        NULL,                                                   // methodMetadataHandle
+        NULL,                                                   // generic_method
+        0,                                                      // token
+        METHOD_ATTRIBUTE_ABSTRACT,                              // flags
+    };
+
+    static MethodInfo staticAmbiguousMethodInfo =
+    {
+        AmbiguousImplementationMethod,                          // method_ptr
+        AmbiguousImplementationMethod,                          // virtual_method_ptr
+        AmbiguousImplementationMethodInvoker,                   // invoker_method
+        "AmbiguousImplementationMethodStub",                    // name
+        &ambiguousMethodClass,                                  // klass
+        NULL,                                                   // return_type
+        NULL,                                                   // parameters
+        NULL,                                                   // methodMetadataHandle
+        NULL,                                                   // generic_method
+        0,                                                      // token
+        METHOD_ATTRIBUTE_ABSTRACT | METHOD_ATTRIBUTE_STATIC,    // flags
+    };
+
+    static MethodInfo entryPointNotFoundMethodInfo =
+    {
+        EntryPointNotFoundImplementationMethod,                 // method_ptr
+        EntryPointNotFoundImplementationMethod,                 // virtual_method_ptr
+        EntryPointNotFoundMethodInvoker,                        // invoker_method
+        "EntryPointNotFoundMethodStub",                         // name
+        &entryPointNotFoundClass,                               // klass
+        NULL,                                                   // return_type
+        NULL,                                                   // parameters
+        NULL,                                                   // methodMetadataHandle
+        NULL,                                                   // generic_method
+        0,                                                      // token
+        METHOD_ATTRIBUTE_ABSTRACT,                              // flags
+    };
+
+    static MethodInfo staticEntryPointerNotFoundMethodInfo =
+    {
+        EntryPointNotFoundImplementationMethod,                 // method_ptr
+        EntryPointNotFoundImplementationMethod,                 // virtual_method_ptr
+        EntryPointNotFoundMethodInvoker,                        // invoker_method
+        "EntryPointNotFoundMethodStub",                         // name
+        &entryPointNotFoundClass,                               // klass
+        NULL,                                                   // return_type
+        NULL,                                                   // parameters
+        NULL,                                                   // methodMetadataHandle
+        NULL,                                                   // generic_method
+        0,                                                      // token
+        METHOD_ATTRIBUTE_ABSTRACT | METHOD_ATTRIBUTE_STATIC,    // flags
     };
 
     const MethodInfo* Method::GetAmbiguousMethodInfo()
@@ -361,33 +436,83 @@ namespace vm
         IL2CPP_ASSERT(ambiguousMethodInfo.methodPointer == AmbiguousImplementationMethod);
         IL2CPP_ASSERT(ambiguousMethodInfo.virtualMethodPointer == AmbiguousImplementationMethod);
         IL2CPP_ASSERT(ambiguousMethodInfo.invoker_method == AmbiguousImplementationMethodInvoker);
+        IL2CPP_ASSERT(ambiguousMethodInfo.klass == &ambiguousMethodClass);
+        IL2CPP_ASSERT(ambiguousMethodInfo.flags == METHOD_ATTRIBUTE_ABSTRACT);
 
         // GenericMethod::GetMethod relies on ambiguousMethodInfo being a singleton
         return &ambiguousMethodInfo;
     }
 
+    const MethodInfo* Method::GetStaticAmbiguousMethodInfo()
+    {
+        IL2CPP_ASSERT(staticAmbiguousMethodInfo.methodPointer == AmbiguousImplementationMethod);
+        IL2CPP_ASSERT(staticAmbiguousMethodInfo.virtualMethodPointer == AmbiguousImplementationMethod);
+        IL2CPP_ASSERT(staticAmbiguousMethodInfo.invoker_method == AmbiguousImplementationMethodInvoker);
+        IL2CPP_ASSERT(staticAmbiguousMethodInfo.klass == &ambiguousMethodClass);
+        IL2CPP_ASSERT(staticAmbiguousMethodInfo.flags == (METHOD_ATTRIBUTE_ABSTRACT | METHOD_ATTRIBUTE_STATIC));
+
+        // GenericMethod::GetMethod relies on staticAmbiguousMethodInfo being a singleton
+        return &staticAmbiguousMethodInfo;
+    }
+
     const MethodInfo* Method::GetEntryPointNotFoundMethodInfo()
     {
-        IL2CPP_ASSERT(entryPointNoFoundMethodInfo.methodPointer == EntryPointNotFoundImplementationMethod);
-        IL2CPP_ASSERT(entryPointNoFoundMethodInfo.virtualMethodPointer == EntryPointNotFoundImplementationMethod);
-        IL2CPP_ASSERT(entryPointNoFoundMethodInfo.invoker_method == EntryPointNotFoundMethodInvoker);
+        IL2CPP_ASSERT(entryPointNotFoundMethodInfo.methodPointer == EntryPointNotFoundImplementationMethod);
+        IL2CPP_ASSERT(entryPointNotFoundMethodInfo.virtualMethodPointer == EntryPointNotFoundImplementationMethod);
+        IL2CPP_ASSERT(entryPointNotFoundMethodInfo.invoker_method == EntryPointNotFoundMethodInvoker);
+        IL2CPP_ASSERT(entryPointNotFoundMethodInfo.klass == &entryPointNotFoundClass);
+        IL2CPP_ASSERT(entryPointNotFoundMethodInfo.flags == METHOD_ATTRIBUTE_ABSTRACT);
 
-        return &entryPointNoFoundMethodInfo;
+        return &entryPointNotFoundMethodInfo;
+    }
+
+    const MethodInfo* Method::GetStaticEntryPointNotFoundMethodInfo()
+    {
+        IL2CPP_ASSERT(staticEntryPointerNotFoundMethodInfo.methodPointer == EntryPointNotFoundImplementationMethod);
+        IL2CPP_ASSERT(staticEntryPointerNotFoundMethodInfo.virtualMethodPointer == EntryPointNotFoundImplementationMethod);
+        IL2CPP_ASSERT(staticEntryPointerNotFoundMethodInfo.invoker_method == EntryPointNotFoundMethodInvoker);
+        IL2CPP_ASSERT(staticEntryPointerNotFoundMethodInfo.klass == &entryPointNotFoundClass);
+        IL2CPP_ASSERT(staticEntryPointerNotFoundMethodInfo.flags == (METHOD_ATTRIBUTE_ABSTRACT | METHOD_ATTRIBUTE_STATIC));
+
+        return &staticEntryPointerNotFoundMethodInfo;
+    }
+
+    const MethodInfo* Method::GetEntryPointNotFoundMethodInfoForMethod(const MethodInfo* method)
+    {
+        if (Method::IsStatic(method))
+            return Method::GetStaticEntryPointNotFoundMethodInfo();
+        else
+            return Method::GetEntryPointNotFoundMethodInfo();
     }
 
     bool Method::IsAmbiguousMethodInfo(const MethodInfo* method)
     {
-        return method == &ambiguousMethodInfo || metadata::GenericMethod::IsGenericAmbiguousMethodInfo(method);
+        return IsAmbiguousMethodClass(method->klass);
+    }
+
+    bool Method::IsAmbiguousMethodClass(const Il2CppClass* klass)
+    {
+        return klass == &ambiguousMethodClass;
     }
 
     bool Method::IsEntryPointNotFoundMethodInfo(const MethodInfo* method)
     {
-        return method == &entryPointNoFoundMethodInfo;
+        return IsEntryPointNotFoundMethodClass(method->klass);
+    }
+
+    bool Method::IsEntryPointNotFoundMethodClass(const Il2CppClass* klass)
+    {
+        return klass == &entryPointNotFoundClass;
     }
 
     bool Method::HasFullGenericSharingSignature(const MethodInfo* method)
     {
         return method->has_full_generic_sharing_signature;
+    }
+
+    bool Method::RequiresAdjustorThunk(const MethodInfo* method)
+    {
+        return Method::IsInstance(method) && Class::IsValuetype(method->klass);
     }
 } /* namespace vm */
 } /* namespace il2cpp */

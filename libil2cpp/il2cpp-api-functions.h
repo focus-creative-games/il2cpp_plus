@@ -140,6 +140,7 @@ DO_API(void, il2cpp_stop_gc_world, ());
 DO_API(void, il2cpp_start_gc_world, ());
 DO_API(void*, il2cpp_gc_alloc_fixed, (size_t size));
 DO_API(void, il2cpp_gc_free_fixed, (void* address));
+DO_API(bool, il2cpp_gc_is_heap_ptr, (const void* address));
 // gchandle
 DO_API(Il2CppGCHandle, il2cpp_gchandle_new, (Il2CppObject * obj, bool pinned));
 DO_API(Il2CppGCHandle, il2cpp_gchandle_new_weakref, (Il2CppObject * obj, bool track_resurrection));
@@ -304,7 +305,7 @@ DO_API(Il2CppCustomAttrInfo*, il2cpp_custom_attrs_from_field, (const FieldInfo *
 
 DO_API(Il2CppObject*, il2cpp_custom_attrs_get_attr, (Il2CppCustomAttrInfo * ainfo, Il2CppClass * attr_klass));
 DO_API(bool, il2cpp_custom_attrs_has_attr, (Il2CppCustomAttrInfo * ainfo, Il2CppClass * attr_klass));
-DO_API(Il2CppArray*,  il2cpp_custom_attrs_construct, (Il2CppCustomAttrInfo * cinfo));
+DO_API(Il2CppArray*,  il2cpp_custom_attrs_construct, (Il2CppCustomAttrInfo * cinfo, Il2CppException** exc));
 
 DO_API(void, il2cpp_custom_attrs_free, (Il2CppCustomAttrInfo * ainfo));
 

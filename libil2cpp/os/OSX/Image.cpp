@@ -170,8 +170,8 @@ namespace Image
     {
         const char* imageName = _dyld_get_image_name(GetImageIndex());
         size_t nameSize = strlen(imageName);
-        char* imageNameCopy = (char*)IL2CPP_MALLOC(nameSize);
-        strncpy(imageNameCopy, imageName, nameSize);
+        char* imageNameCopy = (char*)IL2CPP_MALLOC(nameSize + 1);
+        strncpy(imageNameCopy, imageName, nameSize + 1);
         return imageNameCopy;
     }
 

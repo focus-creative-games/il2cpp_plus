@@ -15,7 +15,7 @@ namespace win
         uint32_t remainingWaitTimeMS = ms;
         while (true)
         {
-            uint32_t waitStartTime = os::Time::GetTicksMillisecondsMonotonic();
+            uint32_t waitStartTime = (uint32_t)os::Time::GetTicksMillisecondsMonotonic();
             DWORD result = ::WaitForSingleObjectEx(handle, remainingWaitTimeMS, interruptible);
 
             if (result == WAIT_OBJECT_0)
@@ -28,7 +28,7 @@ namespace win
             {
                 if (ms != INFINITE)
                 {
-                    uint32_t haveWaitedTimeMS = os::Time::GetTicksMillisecondsMonotonic() - waitStartTime;
+                    uint32_t haveWaitedTimeMS = (uint32_t)os::Time::GetTicksMillisecondsMonotonic() - waitStartTime;
                     if (haveWaitedTimeMS >= remainingWaitTimeMS)
                         return kWaitStatusTimeout;
                     remainingWaitTimeMS -= haveWaitedTimeMS;
@@ -49,7 +49,7 @@ namespace win
         uint32_t remainingWaitTimeMS = ms;
         while (true)
         {
-            uint32_t waitStartTime = os::Time::GetTicksMillisecondsMonotonic();
+            uint32_t waitStartTime = (uint32_t)os::Time::GetTicksMillisecondsMonotonic();
             DWORD result = ::WaitForMultipleObjectsEx((DWORD)handles.size(), handles.data(), false, remainingWaitTimeMS, interruptible);
 
             // If we are waiting for just one of many objects, the return value
@@ -65,7 +65,7 @@ namespace win
             {
                 if (ms != INFINITE)
                 {
-                    uint32_t haveWaitedTimeMS = os::Time::GetTicksMillisecondsMonotonic() - waitStartTime;
+                    uint32_t haveWaitedTimeMS = (uint32_t)os::Time::GetTicksMillisecondsMonotonic() - waitStartTime;
                     if (haveWaitedTimeMS >= remainingWaitTimeMS)
                         return WAIT_TIMEOUT;
                     remainingWaitTimeMS -= haveWaitedTimeMS;
@@ -86,7 +86,7 @@ namespace win
         uint32_t remainingWaitTimeMS = ms;
         while (true)
         {
-            uint32_t waitStartTime = os::Time::GetTicksMillisecondsMonotonic();
+            uint32_t waitStartTime = (uint32_t)os::Time::GetTicksMillisecondsMonotonic();
             DWORD result = ::WaitForMultipleObjectsEx((DWORD)handles.size(), handles.data(), true, remainingWaitTimeMS, interruptible);
 
             if (result == WAIT_OBJECT_0)
@@ -99,7 +99,7 @@ namespace win
             {
                 if (ms != INFINITE)
                 {
-                    uint32_t haveWaitedTimeMS = os::Time::GetTicksMillisecondsMonotonic() - waitStartTime;
+                    uint32_t haveWaitedTimeMS = (uint32_t)os::Time::GetTicksMillisecondsMonotonic() - waitStartTime;
                     if (haveWaitedTimeMS >= remainingWaitTimeMS)
                         return false;
                     remainingWaitTimeMS -= haveWaitedTimeMS;

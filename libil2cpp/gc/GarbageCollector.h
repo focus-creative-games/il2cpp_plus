@@ -4,7 +4,9 @@ struct Il2CppGuid;
 struct Il2CppIUnknown;
 struct Il2CppObject;
 struct Il2CppThread;
+#if !MONO_NET8_BCL
 struct Il2CppInternalThread;
+#endif
 
 namespace il2cpp
 {
@@ -36,7 +38,9 @@ namespace gc
         static int32_t GetGeneration(void* addr);
         static void InitializeFinalizer();
         static bool IsFinalizerThread(Il2CppThread* thread);
+#if !MONO_NET8_BCL
         static bool IsFinalizerInternalThread(Il2CppInternalThread* thread);
+#endif
         static void UninitializeFinalizers();
         static void NotifyFinalizers();
         static void RunFinalizer(void *obj, void *data);
@@ -106,6 +110,8 @@ namespace gc
         static void SetSkipThread(bool skip);
 
         static bool EphemeronArrayAdd(Il2CppObject* obj);
+
+        static bool IsHeapPtr(const void* address);
     };
 } /* namespace vm */
 } /* namespace il2cpp */

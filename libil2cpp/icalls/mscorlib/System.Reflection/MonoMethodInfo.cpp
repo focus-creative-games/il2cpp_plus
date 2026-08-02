@@ -17,7 +17,7 @@ namespace System
 {
 namespace Reflection
 {
-    void MonoMethodInfo::get_method_info(intptr_t methodPtr, Il2CppMethodInfo *info)
+    void MonoMethodInfo::get_method_info(intptr_t methodPtr, Il2CppMonoMethodInfo *info)
     {
         IL2CPP_NOT_IMPLEMENTED_ICALL_NO_ASSERT(MonoMethodInfo::get_method_info, "Audit and look over commented code. Work in progress.");
 

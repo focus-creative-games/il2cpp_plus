@@ -4,6 +4,7 @@
 #include "il2cpp-config.h"
 #include "Class.h"
 #include "ClassInlines.h"
+#include "vm/ObjectInlines.h"
 
 struct Il2CppString;
 struct Il2CppObject;
@@ -18,19 +19,31 @@ namespace vm
     {
     public:
         static Il2CppObject* Box(Il2CppClass *klass, void* data);
-        static Il2CppClass* GetClass(Il2CppObject* obj);
+
+        static Il2CppClass* GetClass(Il2CppObject* obj)
+        {
+            return obj->klass;
+        }
+
         static int32_t GetHash(Il2CppObject* obj);
         static uint32_t GetSize(Il2CppObject* obj);
         static const MethodInfo* GetVirtualMethod(Il2CppObject *obj, const MethodInfo *virtualMethod);
         static Il2CppObject * IsInst(Il2CppObject *obj, Il2CppClass *klass);
         static Il2CppObject* New(Il2CppClass *klass);
-        static void* Unbox(Il2CppObject* obj);
+        static Il2CppObject* NewBoxedNullable(Il2CppClass *klass);
+
+        static void* GetRawData(Il2CppObject* obj)
+        {
+            return ObjectInlines::GetRawData(obj);
+        }
+
         static void UnboxNullable(Il2CppObject* obj, Il2CppClass* nullableArgumentClass, void* storage);
         static void UnboxNullableWithWriteBarrier(Il2CppObject* obj, Il2CppClass* nullableArgumentClass, void* storage);
 
         static Il2CppObject * Clone(Il2CppObject *obj);
         static Il2CppObject* NewPinned(Il2CppClass *klass);
-        static void NullableInit(uint8_t* buf, Il2CppObject* value, Il2CppClass* klass);
+        static void NullableInit(uint8_t* nullable, Il2CppObject* value, Il2CppClass* klass);
+        static void NullableInit(uint8_t* nullable, void* value, Il2CppClass* klass);
 
         static bool NullableHasValue(Il2CppClass* klass, void* data)
         {
@@ -43,8 +56,10 @@ namespace vm
             return *hasValueByte != 0;
         }
 
+        static void* NullableGetValue(Il2CppClass* klass, void* data);
+
     private:
-        static Il2CppObject * NewAllocSpecific(Il2CppClass *klass);
+        static Il2CppObject * NewAllocSpecific(Il2CppClass *klass, bool allowBoxToNulalble);
         static Il2CppObject* NewPtrFree(Il2CppClass *klass);
         static Il2CppObject* Allocate(size_t size, Il2CppClass *typeInfo);
         static Il2CppObject* AllocatePtrFree(size_t size, Il2CppClass *typeInfo);

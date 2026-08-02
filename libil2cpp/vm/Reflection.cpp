@@ -109,6 +109,18 @@ namespace vm
         if (attributeClass == NULL)
             return [](const MethodInfo*) { return true; };
 
+        if (vm::Class::IsGenericTypeDefinition(attributeClass))
+        {
+            return [attributeClass](const MethodInfo* ctor) {
+                    Il2CppClass* klass = ctor->klass;
+                    if (!vm::Class::IsInflated(klass))
+                        return false;
+                    Il2CppClass* genericClassDefinition = vm::GenericClass::GetTypeDefinition(klass->generic_class);
+
+                    return il2cpp::vm::Class::HasParent(genericClassDefinition, attributeClass) || (il2cpp::vm::Class::IsInterface(attributeClass) && il2cpp::vm::Class::IsAssignableFrom(attributeClass, genericClassDefinition));
+            };
+        }
+
         return [attributeClass](const MethodInfo* ctor) {
                 Il2CppClass* klass = ctor->klass;
                 return il2cpp::vm::Class::HasParent(klass, attributeClass) || (il2cpp::vm::Class::IsInterface(attributeClass) && il2cpp::vm::Class::IsAssignableFrom(attributeClass, klass));
@@ -141,7 +153,7 @@ namespace vm
         return reflectionAssemblyName;
     }
 
-    Il2CppReflectionField* Reflection::GetFieldObject(Il2CppClass *klass, FieldInfo *field)
+    Il2CppReflectionField* Reflection::GetFieldObject(Il2CppClass *klass, ::FieldInfo *field)
     {
         Il2CppReflectionField *res;
 
@@ -161,7 +173,7 @@ namespace vm
         return s_FieldMap->GetOrAdd(key, res);
     }
 
-    const FieldInfo* Reflection::GetField(const Il2CppReflectionField* field)
+    const ::FieldInfo* Reflection::GetField(const Il2CppReflectionField* field)
     {
         return field->field;
     }
@@ -223,6 +235,8 @@ namespace vm
         IL2CPP_OBJECT_SETREF(res, name, String::New(image->name));
         IL2CPP_OBJECT_SETREF(res, scopename, String::New(image->nameNoExt));
 
+        res->token = res->assembly->assembly->moduleToken;
+
         //g_free (basename);
 
         /*if (image->assembly->image == image) {
@@ -275,6 +289,11 @@ namespace vm
         result = reinterpret_cast<Il2CppReflectionEvent*>(monoEvent);
 
         return s_EventMap->GetOrAdd(key, result);
+    }
+
+    Il2CppReflectionType* Reflection::GetTypeObject(const Il2CppClass* klass)
+    {
+        return GetTypeObject(il2cpp::vm::Class::GetType(klass));
     }
 
     Il2CppReflectionType* Reflection::GetTypeObject(const Il2CppType *type)
@@ -366,9 +385,9 @@ namespace vm
             Il2CppObject* defaultValue = NULL;
             if (param->AttrsImpl & PARAM_ATTRIBUTE_HAS_DEFAULT)
             {
-                bool isExplicitySetNullDefaultValue = false;
-                defaultValue = Parameter::GetDefaultParameterValueObject(method, i, &isExplicitySetNullDefaultValue);
-                if (defaultValue == NULL && !isExplicitySetNullDefaultValue)
+                bool isExplicitlySetNullDefaultValue = false;
+                defaultValue = Parameter::GetDefaultParameterValueObject(method, i, &isExplicitlySetNullDefaultValue);
+                if (defaultValue == NULL && !isExplicitlySetNullDefaultValue)
                     defaultValue = GetObjectForMissingDefaultValue(param->AttrsImpl);
             }
             else
@@ -430,6 +449,11 @@ namespace vm
         return obj->klass == s_System_Reflection_Assembly->klass;
     }
 
+    static bool IsModule(Il2CppObject *obj)
+    {
+        return obj->klass == s_System_Reflection_Module->klass;
+    }
+
     static std::tuple<uint32_t, const Il2CppImage*> GetMetadataTokenFromReflectionType(Il2CppObject* obj, bool throwOnError = true)
     {
         if (vm::Reflection::IsField(obj))
@@ -470,6 +494,11 @@ namespace vm
         {
             Il2CppReflectionAssembly* assembly = (Il2CppReflectionAssembly*)obj;
             return std::make_tuple(assembly->assembly->token, assembly->assembly->image);
+        }
+        if (IsModule(obj))
+        {
+            Il2CppReflectionModule* mod  = (Il2CppReflectionModule*)obj;
+            return std::make_tuple(mod->token, mod->image);
         }
 
         if (throwOnError)
@@ -731,8 +760,17 @@ namespace vm
         s_ParametersMap = NULL;
         delete s_TypeMap;
         s_TypeMap = NULL;
+
+        for (auto it : *s_MonoGenericParamterMap)
+        {
+            IL2CPP_FREE((void*)it.second->constraints);
+            IL2CPP_FREE((void*)it.second);
+        }
         delete s_MonoGenericParamterMap;
         s_MonoGenericParamterMap = NULL;
+
+        for (auto it : *s_MonoAssemblyNameMap)
+            IL2CPP_FREE((void*)it.second);
         delete s_MonoAssemblyNameMap;
         s_MonoAssemblyNameMap = NULL;
 

@@ -18,6 +18,7 @@ namespace os
         ~Semaphore();
 
         bool Post(int32_t releaseCount = 1, int32_t* previousCount = NULL);
+        bool PostLifo(int32_t releaseCount = 1, int32_t* previousCount = NULL);
         WaitStatus Wait(bool interruptible = false);
         WaitStatus Wait(uint32_t ms, bool interruptible = false);
         void* GetOSHandle();

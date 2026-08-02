@@ -27,7 +27,7 @@ namespace os
         {
         }
 
-        bool Post(int32_t releaseCount, int32_t* previousCount)
+        bool Post(int32_t releaseCount, int32_t* previousCount, bool lifo)
         {
             uint32_t oldCount;
             {
@@ -41,7 +41,7 @@ namespace os
 
                 m_Count += releaseCount;
 
-                WakeupOneThread();
+                WakeupOneThread(lifo);
             }
 
             if (previousCount)

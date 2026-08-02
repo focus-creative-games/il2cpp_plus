@@ -137,10 +137,18 @@ namespace metadata
     }
 
     static FullySharedGenericMethodInfo ambiguousMethodInfo;
+    static FullySharedGenericMethodInfo staticAmbiguousMethodInfo;
+    static FullySharedGenericMethodInfo entryPointNotFoundMethodInfo;
+    static FullySharedGenericMethodInfo staticEntryPointNotFoundMethodInfo;
 
     bool GenericMethod::IsGenericAmbiguousMethodInfo(const MethodInfo* method)
     {
-        return method == &ambiguousMethodInfo;
+        return method == &ambiguousMethodInfo || method == &staticAmbiguousMethodInfo;
+    }
+
+    bool GenericMethod::IsGenericEntryPointNotFoundMethod(const MethodInfo* method)
+    {
+        return method == &entryPointNotFoundMethodInfo || method == &staticEntryPointNotFoundMethodInfo;
     }
 
     const MethodInfo* GenericMethod::GetGenericVirtualMethod(const MethodInfo* vtableSlotMethod, const MethodInfo* genericVirtualMethod)
@@ -163,7 +171,7 @@ namespace metadata
         gmethod.methodDefinition = methodDefinition;
         gmethod.context.class_inst = classInst;
         gmethod.context.method_inst = methodInst;
-        return GetMethod(gmethod);
+        return GetMethod(gmethod, IL2CPP_RGCTX_INIT_MODE_DEFAULT);
     }
 
     MethodInfo* GenericMethod::AllocateNewMethodInfo(const MethodInfo* methodDefinition, const Il2CppGenericInst* classInst, const Il2CppGenericInst* methodInst)
@@ -172,7 +180,7 @@ namespace metadata
         return AllocCopyGenericMethodInfo(methodInfo);
     }
 
-    const MethodInfo* GenericMethod::GetMethod(const Il2CppGenericMethod& gmethod)
+    const MethodInfo* GenericMethod::GetMethod(const Il2CppGenericMethod& gmethod, Il2CppRGCTXInitMode rgctxInitMode)
     {
         // This can be NULL only when we have hit the generic recursion depth limit.
         if (gmethod.methodDefinition == NULL)
@@ -200,23 +208,39 @@ namespace metadata
 
         if (Method::IsAmbiguousMethodInfo(methodDefinition))
         {
-            // is_inflated is used as an initialized check
-            if (!ambiguousMethodInfo.is_inflated)
+            FullySharedGenericMethodInfo* methodInfo = Method::IsInstance(methodDefinition) ? &ambiguousMethodInfo : &staticAmbiguousMethodInfo;
+            if (!methodInfo->is_inflated)
             {
-                memcpy(&ambiguousMethodInfo, gmethod.methodDefinition, sizeof(MethodInfo));
-                ambiguousMethodInfo.is_inflated = true;
-                ambiguousMethodInfo.rawVirtualMethodPointer = gmethod.methodDefinition->virtualMethodPointer;
-                ambiguousMethodInfo.rawDirectMethodPointer = gmethod.methodDefinition->methodPointer;
-                ambiguousMethodInfo.invoker_method = gmethod.methodDefinition->invoker_method;
+                memcpy(methodInfo, methodDefinition, sizeof(MethodInfo));
+                methodInfo->is_inflated = true;
+                methodInfo->rawVirtualMethodPointer = methodDefinition->virtualMethodPointer;
+                methodInfo->rawDirectMethodPointer = methodDefinition->methodPointer;
+                methodInfo->invoker_method = methodDefinition->invoker_method;
             }
 
-            return &ambiguousMethodInfo;
+            return methodInfo;
         }
 
-        return CreateMethodLocked(gmethod);
+        if (Method::IsEntryPointNotFoundMethodInfo(methodDefinition))
+        {
+            FullySharedGenericMethodInfo* methodInfo = Method::IsInstance(methodDefinition) ? &entryPointNotFoundMethodInfo : &staticEntryPointNotFoundMethodInfo;
+            // is_inflated is used as an initialized check
+            if (!methodInfo->is_inflated)
+            {
+                memcpy(methodInfo, methodDefinition, sizeof(MethodInfo));
+                methodInfo->is_inflated = true;
+                methodInfo->rawVirtualMethodPointer = methodDefinition->virtualMethodPointer;
+                methodInfo->rawDirectMethodPointer = methodDefinition->methodPointer;
+                methodInfo->invoker_method = methodDefinition->invoker_method;
+            }
+
+            return methodInfo;
+        }
+
+        return CreateMethodLocked(gmethod, rgctxInitMode);
     }
 
-    const MethodInfo* GenericMethod::CreateMethodLocked(const Il2CppGenericMethod& gmethod)
+    const MethodInfo* GenericMethod::CreateMethodLocked(const Il2CppGenericMethod& gmethod, Il2CppRGCTXInitMode rgctxInitMode)
     {
         // We need to inflate a new generic method, take the metadata mutex
         // All code below this point can and does assume mutual exclusion
@@ -286,7 +310,8 @@ namespace metadata
         else if (!il2cpp::vm::Runtime::IsLazyRGCTXInflationEnabled() && !il2cpp::metadata::GenericMetadata::ContainsGenericParameters(newMethod))
         {
             // we only need RGCTX for generic instance methods
-            newMethod->rgctx_data = InflateRGCTXLocked(gmethod, lock);
+            Il2CppException* exc;
+            newMethod->rgctx_data = InflateRGCTXLocked(gmethod, lock, &exc);
         }
 
         newMethod->virtualMethodPointer = methodPointers.virtualMethodPointer;
@@ -358,7 +383,7 @@ namespace metadata
         }
 
         // If we are a default interface method on a generic instance interface we need to ensure that the interfaces rgctx is inflated
-        if (Method::IsDefaultInterfaceMethodOnGenericInstance(newMethod))
+        if (rgctxInitMode == IL2CPP_RGCTX_INIT_MODE_DEFAULT && Method::IsDefaultInterfaceMethodOnGenericInstance(newMethod))
             vm::Class::InitLocked(declaringClass, lock);
 
         // The generic method is fully created,
@@ -374,21 +399,21 @@ namespace metadata
         return newMethod;
     }
 
-    const Il2CppRGCTXData* GenericMethod::InflateRGCTX(const MethodInfo* method)
+    const Il2CppRGCTXData* GenericMethod::InflateRGCTX(const MethodInfo* method, Il2CppException** exc)
     {
         IL2CPP_ASSERT(method->is_inflated);
         IL2CPP_ASSERT(method->genericMethod);
         IL2CPP_ASSERT(method->genericMethod->context.method_inst);
 
-        return il2cpp::utils::InitOnce(const_cast<Il2CppRGCTXData**>(&method->rgctx_data), &il2cpp::vm::g_MetadataLock, [method](const il2cpp::os::FastAutoLock& lock) {
-            return const_cast<Il2CppRGCTXData*>(GenericMethod::InflateRGCTXLocked(*method->genericMethod, lock));
+        return il2cpp::utils::InitOnce(const_cast<Il2CppRGCTXData**>(&method->rgctx_data), &il2cpp::vm::g_MetadataLock, [method, exc](const il2cpp::os::FastAutoLock& lock) {
+            return const_cast<Il2CppRGCTXData*>(GenericMethod::InflateRGCTXLocked(*method->genericMethod, lock, exc));
         });
     }
 
-    const Il2CppRGCTXData* GenericMethod::InflateRGCTXLocked(const Il2CppGenericMethod& gmethod, const il2cpp::os::FastAutoLock &lock)
+    const Il2CppRGCTXData* GenericMethod::InflateRGCTXLocked(const Il2CppGenericMethod& gmethod, const il2cpp::os::FastAutoLock &lock, Il2CppException** exc)
     {
         const MethodInfo* methodDefinition = gmethod.methodDefinition;
-        return GenericMetadata::InflateRGCTXLocked(methodDefinition->klass->image, methodDefinition->token, &gmethod.context, lock);
+        return GenericMetadata::InflateRGCTXLocked(methodDefinition->klass->image, methodDefinition->token, &gmethod.context, lock, exc);
     }
 
     const Il2CppGenericContext* GenericMethod::GetContext(const Il2CppGenericMethod* gmethod)

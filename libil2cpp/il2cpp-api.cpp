@@ -787,6 +787,11 @@ void il2cpp_gc_free_fixed(void* address)
     il2cpp::gc::GarbageCollector::FreeFixed(address);
 }
 
+bool il2cpp_gc_is_heap_ptr(const void* address)
+{
+    return il2cpp::gc::GarbageCollector::IsHeapPtr(address);
+}
+
 // gchandle
 
 Il2CppGCHandle il2cpp_gchandle_new(Il2CppObject *obj, bool pinned)
@@ -1080,7 +1085,7 @@ Il2CppObject* il2cpp_object_new(const Il2CppClass *klass)
 
 void* il2cpp_object_unbox(Il2CppObject* obj)
 {
-    return Object::Unbox(obj);
+    return Object::GetRawData(obj);
 }
 
 Il2CppObject* il2cpp_value_box(Il2CppClass *klass, void* data)
@@ -1468,9 +1473,19 @@ Il2CppObject* il2cpp_custom_attrs_get_attr(Il2CppCustomAttrInfo *ainfo, Il2CppCl
     return Reflection::GetCustomAttribute(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo), attr_klass);
 }
 
-Il2CppArray*  il2cpp_custom_attrs_construct(Il2CppCustomAttrInfo *ainfo)
+Il2CppArray*  il2cpp_custom_attrs_construct(Il2CppCustomAttrInfo *ainfo, Il2CppException **exc)
 {
-    return Reflection::ConstructCustomAttributes(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo));
+    try
+    {
+        return Reflection::ConstructCustomAttributes(reinterpret_cast<Il2CppMetadataCustomAttributeHandle>(ainfo));
+    }
+    catch (const Il2CppExceptionWrapper& exception)
+    {
+        if (exc)
+            il2cpp::gc::WriteBarrier::GenericStore(exc, exception.ex);
+
+        return NULL;
+    }
 }
 
 void il2cpp_custom_attrs_free(Il2CppCustomAttrInfo *ainfo)

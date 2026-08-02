@@ -26,6 +26,11 @@ namespace os
             Baselib_atomic_thread_fence_seq_cst();
         }
 
+        static inline void ReadMemoryBarrier()
+        {
+            Baselib_atomic_thread_fence_acquire();
+        }
+
         static inline int32_t Add(int32_t* location1, int32_t value)
         {
             int32_t result = Baselib_atomic_fetch_add_32_seq_cst(location1, value) + value;
@@ -40,7 +45,6 @@ namespace os
             return (uint32_t)Add((int32_t*)location1, (int32_t)value);
         }
 
-#if IL2CPP_ENABLE_INTERLOCKED_64_REQUIRED_ALIGNMENT
         static inline int64_t Add64(int64_t* location1, int64_t value)
         {
             int64_t result = Baselib_atomic_fetch_add_64_seq_cst(location1, value) + value;
@@ -49,8 +53,6 @@ namespace os
 #endif
             return result;
         }
-
-#endif
 
         template<typename T>
         static inline T* CompareExchangePointer(T** dest, T* newValue, T* oldValue)
@@ -91,6 +93,11 @@ namespace os
             return Baselib_atomic_load_32_relaxed(addr);
         }
 
+        static inline int32_t LoadRelaxed(const uint32_t* addr)
+        {
+            return Baselib_atomic_load_32_relaxed((int32_t*)addr);
+        }
+
         template<typename T>
         static inline T* LoadPointerRelaxed(const T* const * addr)
         {
@@ -124,7 +131,6 @@ namespace os
             return (uint32_t)Increment((int32_t*)value);
         }
 
-#if IL2CPP_ENABLE_INTERLOCKED_64_REQUIRED_ALIGNMENT
         static inline int64_t Increment64(int64_t* value)
         {
             int64_t result = Baselib_atomic_fetch_add_64_seq_cst(value, 1) + 1;
@@ -138,8 +144,6 @@ namespace os
         {
             return (uint64_t)Increment64((int64_t*)value);
         }
-
-#endif
 
         static inline int32_t Decrement(int32_t* value)
         {
@@ -155,7 +159,6 @@ namespace os
             return (uint32_t)Decrement((int32_t*)value);
         }
 
-#if IL2CPP_ENABLE_INTERLOCKED_64_REQUIRED_ALIGNMENT
         static inline int64_t Decrement64(int64_t* value)
         {
             int64_t result = Baselib_atomic_fetch_add_64_seq_cst(value, -1) - 1;
@@ -169,8 +172,6 @@ namespace os
         {
             return (uint64_t)Decrement64((int64_t*)value);
         }
-
-#endif
 
         static inline int32_t CompareExchange(int32_t* dest, int32_t exchange, int32_t comparand)
         {
@@ -219,7 +220,6 @@ namespace os
             return (uint32_t)Exchange((int32_t*)value, newValue);
         }
 
-#if IL2CPP_ENABLE_INTERLOCKED_64_REQUIRED_ALIGNMENT
         static inline int64_t Exchange64(int64_t* dest, int64_t exchange)
         {
             int64_t result = Baselib_atomic_exchange_64_seq_cst(dest, exchange);
@@ -234,7 +234,6 @@ namespace os
             return (uint64_t)Exchange64((int64_t*)value, newValue);
         }
 
-#endif
         static inline intptr_t ReadPtrVal(intptr_t* addr)
         {
             intptr_t result = Baselib_atomic_fetch_add_ptr_seq_cst(addr, 0);

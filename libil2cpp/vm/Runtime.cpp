@@ -10,11 +10,13 @@
 #include "os/MemoryMappedFile.h"
 #include "os/Mutex.h"
 #include "os/Path.h"
+#include "os/Process.h"
 #include "os/SynchronizationContext.h"
 #include "os/Thread.h"
 #include "os/Socket.h"
 #include "os/c-api/Allocator.h"
 #include "metadata/GenericMetadata.h"
+#include "vm/AppContext.h"
 #include "vm/Array.h"
 #include "vm/Assembly.h"
 #include "vm/ClassLibraryPAL.h"
@@ -24,6 +26,7 @@
 #include "vm/Exception.h"
 #include "vm/Field.h"
 #include "gc/GCHandle.h"
+#include "vm/IcuData.h"
 #include "vm/Image.h"
 #include "vm/LastError.h"
 #include "vm/MetadataAlloc.h"
@@ -55,12 +58,20 @@
 #include "utils/PathUtils.h"
 #include "utils/Runtime.h"
 #include "utils/Environment.h"
+#include "vm/Monitor.h"
+#include "vm-utils/Debugger.h"
+
+#if MONO_NET8_BCL
+#include "icalls_monoaot/System.Private.CoreLib/System.Reflection/RuntimeAssembly.h"
+#include "icalls_monoaot/System.Private.CoreLib/System.Runtime.Loader/AssemblyLoadContext.h"
+#include "icalls_monoaot/System.Private.CoreLib/System.IO/Stream.h"
+#else
 #include "mono/ThreadPool/threadpool-ms.h"
 #include "mono/ThreadPool/threadpool-ms-io.h"
 #include "icalls/mscorlib/System.Reflection/RuntimeAssembly.h"
+#include "icalls/mscorlib/System/AppDomain.h"
 #include "icalls/mscorlib/System.IO/MonoIO.h"
-#include "vm/Monitor.h"
-#include "vm-utils/Debugger.h"
+#endif
 
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
@@ -126,13 +137,6 @@ namespace vm
         return "4.0";
     }
 
-    static void SanityChecks()
-    {
-#if IL2CPP_ENABLE_INTERLOCKED_64_REQUIRED_ALIGNMENT
-        IL2CPP_ASSERT(ALIGN_OF(int64_t) == 8);
-#endif
-    }
-
     static inline void InitializeStringEmpty()
     {
         Class::Init(il2cpp_defaults.string_class);
@@ -150,14 +154,14 @@ namespace vm
         if (s_RuntimeInitCount++ > 0)
             return true;
 
-        SanityChecks();
-
 #if IL2CPP_MONO_DEBUGGER
         il2cpp::utils::Debugger::AllocateStaticData();
 #endif
         il2cpp::vm::Monitor::AllocateStaticData();
         il2cpp::os::MemoryMappedFile::AllocateStaticData();
+#if !MONO_NET8_BCL
         il2cpp::icalls::mscorlib::System::IO::MonoIO::AllocateStaticData();
+#endif
         il2cpp::vm::Class::AllocateStaticData();
 
 #if IL2CPP_ENABLE_PROFILER
@@ -165,7 +169,19 @@ namespace vm
         il2cpp::vm::Profiler::AllocateStaticData();
 #endif
 
+#if MONO_NET8_BCL
+        il2cpp::icalls::System::Private::CoreLib::System::Reflection::RuntimeAssembly::AllocateStaticData();
+#else
         il2cpp::icalls::mscorlib::System::Reflection::RuntimeAssembly::AllocateStaticData();
+#endif
+
+#if MONO_NET8_BCL
+#if IL2CPP_TARGET_ANDROID
+        // libSystemGlobaizationNative should be built with ANDROID_FORCE_ICU_DATA_DIR enabled (see pal_icushim.c)
+        // This appears to not be happening, so force the ICU_DATA envvar here
+        setenv("ICU_DATA", "/system/usr/icu/", 0);
+#endif
+#endif
 
         os::Initialize();
         os::Locale::Initialize();
@@ -205,7 +221,12 @@ namespace vm
 
         memset(&il2cpp_defaults, 0, sizeof(Il2CppDefaults));
 
+#if MONO_NET8_BCL
+        const Il2CppAssembly* assembly = Assembly::Load("System.Private.CoreLib.dll");
+#else
         const Il2CppAssembly* assembly = Assembly::Load("mscorlib.dll");
+#endif
+
         const Il2CppAssembly* assembly2 = Assembly::Load("__Generated");
 
         // It is not possible to use DEFAULTS_INIT_TYPE for managed types for which we have a native struct, if the
@@ -237,77 +258,114 @@ namespace vm
         DEFAULTS_INIT(value_type_class, "System", "ValueType");
         DEFAULTS_INIT_TYPE(delegate_class, "System", "Delegate", Il2CppDelegate);
         DEFAULTS_INIT_TYPE(multicastdelegate_class, "System", "MulticastDelegate", Il2CppMulticastDelegate);
+#if !MONO_NET8_BCL
         DEFAULTS_INIT(asyncresult_class, "System.Runtime.Remoting.Messaging", "AsyncResult");
         DEFAULTS_INIT_TYPE(async_call_class, "System", "MonoAsyncCall", Il2CppAsyncCall);
+#endif
         DEFAULTS_INIT(manualresetevent_class, "System.Threading", "ManualResetEvent");
-        //DEFAULTS_INIT(typehandle_class, "System", "RuntimeTypeHandle");
-        //DEFAULTS_INIT(methodhandle_class, "System", "RuntimeMethodHandle");
-        //DEFAULTS_INIT(fieldhandle_class, "System", "RuntimeFieldHandle");
         DEFAULTS_INIT(systemtype_class, "System", "Type");
-        DEFAULTS_INIT_TYPE(monotype_class, "System", "MonoType", Il2CppReflectionMonoType);
-        //DEFAULTS_INIT(exception_class, "System", "Exception");
-        //DEFAULTS_INIT(threadabortexcepXtion_class, "System.Threading", "ThreadAbortException");
         DEFAULTS_INIT_TYPE(thread_class, "System.Threading", "Thread", Il2CppThread);
+#if !MONO_NET8_BCL
+        DEFAULTS_INIT_TYPE(monotype_class, "System", "MonoType", Il2CppReflectionMonoType);
         DEFAULTS_INIT_TYPE(internal_thread_class, "System.Threading", "InternalThread", Il2CppInternalThread);
+#endif
         DEFAULTS_INIT_TYPE(runtimetype_class, "System", "RuntimeType", Il2CppReflectionRuntimeType);
         DEFAULTS_INIT(appdomain_class, "System", "AppDomain");
+#if !MONO_NET8_BCL
         DEFAULTS_INIT(appdomain_setup_class, "System", "AppDomainSetup");
+#else
+        DEFAULTS_INIT(app_context_class, "System", "AppContext");
+        DEFAULTS_INIT(assembly_load_context_class, "System.Runtime.Loader", "AssemblyLoadContext");
+#endif
         DEFAULTS_INIT(member_info_class, "System.Reflection", "MemberInfo");
         DEFAULTS_INIT(field_info_class, "System.Reflection", "FieldInfo");
         DEFAULTS_INIT(method_info_class, "System.Reflection", "MethodInfo");
         DEFAULTS_INIT(property_info_class, "System.Reflection", "PropertyInfo");
+#if !MONO_NET8_BCL
         DEFAULTS_INIT_TYPE(event_info_class, "System.Reflection", "EventInfo", Il2CppReflectionEvent);
         DEFAULTS_INIT_TYPE(stringbuilder_class, "System.Text", "StringBuilder", Il2CppStringBuilder);
         DEFAULTS_INIT_TYPE(stack_frame_class, "System.Diagnostics", "StackFrame", Il2CppStackFrame);
-        DEFAULTS_INIT(stack_trace_class, "System.Diagnostics", "StackTrace");
-        DEFAULTS_INIT_TYPE(typed_reference_class, "System", "TypedReference", Il2CppTypedRef);
-        DEFAULTS_INIT(generic_ilist_class, "System.Collections.Generic", "IList`1");
-        DEFAULTS_INIT(generic_icollection_class, "System.Collections.Generic", "ICollection`1");
-        DEFAULTS_INIT(generic_ienumerable_class, "System.Collections.Generic", "IEnumerable`1");
-        DEFAULTS_INIT(generic_ireadonlylist_class, "System.Collections.Generic", "IReadOnlyList`1");
-        DEFAULTS_INIT(generic_ireadonlycollection_class, "System.Collections.Generic", "IReadOnlyCollection`1");
+#else
+        DEFAULTS_INIT_TYPE_OPTIONAL(mono_stack_frame_class, "System.Diagnostics", "MonoStackFrame", Il2CppMonoStackFrame);
+        DEFAULTS_INIT_OPTIONAL(stack_frame_class, "System.Diagnostics", "StackFrame");
+        DEFAULTS_INIT_OPTIONAL(stack_trace_class, "System.Diagnostics", "StackTrace");
+#endif
+
+        DEFAULTS_INIT_TYPE_OPTIONAL(typed_reference_class, "System", "TypedReference", Il2CppTypedRef);
+        DEFAULTS_INIT_OPTIONAL(generic_ilist_class, "System.Collections.Generic", "IList`1");
+        DEFAULTS_INIT_OPTIONAL(generic_icollection_class, "System.Collections.Generic", "ICollection`1");
+        DEFAULTS_INIT_OPTIONAL(generic_ienumerable_class, "System.Collections.Generic", "IEnumerable`1");
+        DEFAULTS_INIT_OPTIONAL(generic_ireadonlylist_class, "System.Collections.Generic", "IReadOnlyList`1");
+        DEFAULTS_INIT_OPTIONAL(generic_ireadonlycollection_class, "System.Collections.Generic", "IReadOnlyCollection`1");
+        DEFAULTS_INIT_OPTIONAL(generic_readonlycollection_class, "System.Collections.ObjectModel", "ReadOnlyCollection`1");
         DEFAULTS_INIT(generic_nullable_class, "System", "Nullable`1");
         DEFAULTS_INIT(version, "System", "Version");
         DEFAULTS_INIT(culture_info, "System.Globalization", "CultureInfo");
+        DEFAULTS_INIT_TYPE_OPTIONAL(parameter_info_class, "System.Reflection", "RuntimeParameterInfo", Il2CppReflectionParameter);
         DEFAULTS_INIT_TYPE(assembly_class, "System.Reflection", "RuntimeAssembly", Il2CppReflectionAssembly);
+#if !MONO_NET8_BCL
         DEFAULTS_INIT_TYPE_OPTIONAL(assembly_name_class, "System.Reflection", "AssemblyName", Il2CppReflectionAssemblyName);
-        DEFAULTS_INIT_TYPE(parameter_info_class, "System.Reflection", "RuntimeParameterInfo", Il2CppReflectionParameter);
         DEFAULTS_INIT_TYPE(module_class, "System.Reflection", "RuntimeModule", Il2CppReflectionModule);
+#else
+        DEFAULTS_INIT_TYPE_OPTIONAL(mono_assembly_name_class, "Mono", "MonoAssemblyName", Il2CppMonoAssemblyName);
+        DEFAULTS_INIT_OPTIONAL(module_class, "System.Reflection", "Module");
+#endif
         DEFAULTS_INIT_TYPE(exception_class, "System", "Exception", Il2CppException);
-        DEFAULTS_INIT_TYPE(system_exception_class, "System", "SystemException", Il2CppSystemException);
-        DEFAULTS_INIT_TYPE(argument_exception_class, "System", "ArgumentException", Il2CppArgumentException);
-        DEFAULTS_INIT_TYPE(marshalbyrefobject_class, "System", "MarshalByRefObject", Il2CppMarshalByRefObject);
+        DEFAULTS_INIT_OPTIONAL(threadabortexception_class, "System", "ThreadAbortException");
         DEFAULTS_GEN_INIT_TYPE(il2cpp_com_object_class, "System", "__Il2CppComObject", Il2CppComObject);
-        DEFAULTS_INIT_TYPE(safe_handle_class, "System.Runtime.InteropServices", "SafeHandle", Il2CppSafeHandle);
-        DEFAULTS_INIT_TYPE(sort_key_class, "System.Globalization", "SortKey", Il2CppSortKey);
         DEFAULTS_INIT(dbnull_class, "System", "DBNull");
         DEFAULTS_INIT_TYPE_OPTIONAL(error_wrapper_class, "System.Runtime.InteropServices", "ErrorWrapper", Il2CppErrorWrapper);
         DEFAULTS_INIT(missing_class, "System.Reflection", "Missing");
         DEFAULTS_INIT(attribute_class, "System", "Attribute");
+#if MONO_NET8_BCL
+        DEFAULTS_INIT_OPTIONAL(runtime_customattribute_data_class, "System.Reflection", "RuntimeCustomAttributeData");
+        DEFAULTS_INIT_TYPE_OPTIONAL(customattribute_typed_argument_class, "System.Reflection", "CustomAttributeTypedArgument", Il2CppCustomAttributeTypedArgument);
+        DEFAULTS_INIT_TYPE_OPTIONAL(customattribute_named_argument_class, "System.Reflection", "CustomAttributeNamedArgument", Il2CppCustomAttributeNamedArgument);
+#else
         DEFAULTS_INIT_OPTIONAL(customattribute_data_class, "System.Reflection", "CustomAttributeData");
         DEFAULTS_INIT_OPTIONAL(customattribute_typed_argument_class, "System.Reflection", "CustomAttributeTypedArgument");
         DEFAULTS_INIT_OPTIONAL(customattribute_named_argument_class, "System.Reflection", "CustomAttributeNamedArgument");
+#endif
         DEFAULTS_INIT(key_value_pair_class, "System.Collections.Generic", "KeyValuePair`2");
         DEFAULTS_INIT(system_guid_class, "System", "Guid");
 
+#if !MONO_NET8_BCL
         DEFAULTS_INIT(threadpool_wait_callback_class, "System.Threading", "_ThreadPoolWaitCallback");
         DEFAULTS_INIT(mono_method_message_class, "System.Runtime.Remoting.Messaging", "MonoMethodMessage");
 
         il2cpp_defaults.threadpool_perform_wait_callback_method = (MethodInfo*)vm::Class::GetMethodFromName(
             il2cpp_defaults.threadpool_wait_callback_class, "PerformWaitCallback", 0);
+#endif
 
-        DEFAULTS_INIT_OPTIONAL(sbyte_shared_enum, "System", "SByteEnum");
-        DEFAULTS_INIT_OPTIONAL(int16_shared_enum, "System", "Int16Enum");
-        DEFAULTS_INIT_OPTIONAL(int32_shared_enum, "System", "Int32Enum");
-        DEFAULTS_INIT_OPTIONAL(int64_shared_enum, "System", "Int64Enum");
+        DEFAULTS_INIT_OPTIONAL(stream_class, "System.IO", "Stream");
 
-        DEFAULTS_INIT_OPTIONAL(byte_shared_enum, "System", "ByteEnum");
-        DEFAULTS_INIT_OPTIONAL(uint16_shared_enum, "System", "UInt16Enum");
-        DEFAULTS_INIT_OPTIONAL(uint32_shared_enum, "System", "UInt32Enum");
-        DEFAULTS_INIT_OPTIONAL(uint64_shared_enum, "System", "UInt64Enum");
+        DEFAULTS_GEN_INIT_OPTIONAL(sbyte_shared_enum, "Unity.IL2CPP.Metadata", "__Il2CppSByteEnum");
+        DEFAULTS_GEN_INIT_OPTIONAL(int16_shared_enum, "Unity.IL2CPP.Metadata", "__Il2CppInt16Enum");
+        DEFAULTS_GEN_INIT_OPTIONAL(int32_shared_enum, "Unity.IL2CPP.Metadata", "__Il2CppInt32Enum");
+        DEFAULTS_GEN_INIT_OPTIONAL(int64_shared_enum, "Unity.IL2CPP.Metadata", "__Il2CppInt64Enum");
 
+        DEFAULTS_GEN_INIT_OPTIONAL(byte_shared_enum,   "Unity.IL2CPP.Metadata", "__Il2CppByteEnum");
+        DEFAULTS_GEN_INIT_OPTIONAL(uint16_shared_enum, "Unity.IL2CPP.Metadata", "__Il2CppUInt16Enum");
+        DEFAULTS_GEN_INIT_OPTIONAL(uint32_shared_enum, "Unity.IL2CPP.Metadata", "__Il2CppUInt32Enum");
+        DEFAULTS_GEN_INIT_OPTIONAL(uint64_shared_enum, "Unity.IL2CPP.Metadata", "__Il2CppUInt64Enum");
+
+        DEFAULTS_GEN_INIT_OPTIONAL(il2cpp_shared_object_type, "System", "__Canon");
         DEFAULTS_GEN_INIT_OPTIONAL(il2cpp_fully_shared_type, "Unity.IL2CPP.Metadata", "__Il2CppFullySharedGenericType");
         DEFAULTS_GEN_INIT_OPTIONAL(il2cpp_fully_shared_struct_type, "Unity.IL2CPP.Metadata", "__Il2CppFullySharedGenericStructType");
+
+        if (il2cpp_defaults.void_class)
+            il2cpp_defaults.void_ptr_class = vm::Class::GetPtrClass(il2cpp_defaults.void_class);
+
+
+#if MONO_NET8_BCL
+        if (il2cpp_defaults.runtimetype_class)
+            il2cpp_defaults.runtime_type_get_type_method = vm::Class::GetMethodFromName(il2cpp_defaults.runtimetype_class, "GetType", 4);
+        if (il2cpp_defaults.thread_class)
+            il2cpp_defaults.thread_sleep_internal_method = il2cpp::vm::Class::GetMethodFromName(il2cpp_defaults.thread_class, "SleepInternal", 1);
+#else
+        if (il2cpp_defaults.runtimetype_class)
+            il2cpp_defaults.runtime_type_get_type_method = vm::Class::GetMethodFromName(il2cpp_defaults.runtimetype_class, "GetType", 5);
+#endif
 
         ClassLibraryPAL::Initialize();
 
@@ -335,6 +393,11 @@ namespace vm
 
         Class::Init(il2cpp_defaults.string_class);
 
+        MetadataCache::InitializeGCSafe();
+
+        String::InitializeEmptyString(il2cpp_defaults.string_class);
+        InitializeStringEmpty();
+
         os::Socket::Startup();
 
 #if IL2CPP_MONO_DEBUGGER
@@ -346,12 +409,19 @@ namespace vm
         Il2CppThread* mainThread = Thread::Attach(domain);
         Thread::SetMain(mainThread);
 
+#if !MONO_NET8_BCL
+        // TODO: AppDomainSetup
         Il2CppAppDomainSetup* setup = (Il2CppAppDomainSetup*)Object::NewPinned(il2cpp_defaults.appdomain_setup_class);
 
         Il2CppAppDomain* ad = (Il2CppAppDomain*)Object::NewPinned(il2cpp_defaults.appdomain_class);
         gc::WriteBarrier::GenericStore(&ad->data, domain);
         gc::WriteBarrier::GenericStore(&domain->domain, ad);
         gc::WriteBarrier::GenericStore(&domain->setup, setup);
+#else
+        std::string icuDataFile = IcuData::LoadIcuData();
+        AppContext::SetupAppContextSwitches(icuDataFile);
+        il2cpp::icalls::System::Private::CoreLib::System::IO::Stream::Init(il2cpp_defaults.stream_class);
+#endif
 
         domain->domain_id = 1; // Only have a single domain ATM.
 
@@ -361,10 +431,6 @@ namespace vm
 
         gc::GarbageCollector::InitializeFinalizer();
 
-        MetadataCache::InitializeGCSafe();
-
-        String::InitializeEmptyString(il2cpp_defaults.string_class);
-        InitializeStringEmpty();
 
         g_il2cpp_is_fully_initialized = true;
 
@@ -373,8 +439,11 @@ namespace vm
         os::Environment::SetEnvironmentVariable("MONO_REFLECTION_SERIALIZER", "yes");
         os::Environment::SetEnvironmentVariable("MONO_XMLSERIALIZER_THS", "no");
 
+#if !MONO_NET8_BCL
+        // TODO: AppDomainSetup
         Domain::ContextInit(domain);
         Domain::ContextSet(domain->default_context);
+#endif
 
         VerifyApiVersion();
 
@@ -423,6 +492,13 @@ namespace vm
 
     static void FireProcessExitEvent()
     {
+        Il2CppException* exc = NULL;
+
+#if MONO_NET8_BCL
+        const MethodInfo* appContextOnProcessExit = Class::GetMethodFromNameFlags(il2cpp_defaults.app_context_class, "OnProcessExit", 0, METHOD_ATTRIBUTE_STATIC);
+        IL2CPP_ASSERT(appContextOnProcessExit); // This is preserver in link.xml in System.Private.CoreLib
+        Runtime::Invoke(appContextOnProcessExit, NULL, NULL, &exc);
+#else
         FieldInfo* processExitField = vm::Class::GetFieldFromName(il2cpp_defaults.appdomain_class, "ProcessExit");
         if (processExitField != NULL) // The field might have been stripped, just ignore it.
         {
@@ -431,12 +507,23 @@ namespace vm
             vm::Field::GetValue((Il2CppObject*)appDomain, processExitField, &processExitDelegate);
             if (processExitDelegate == NULL) // Don't call the delegate if no one is listening to it.
                 return;
-
             void* args[2];
             args[0] = appDomain;
             args[1] = GetEventArgsEmptyField();
-            Il2CppException* unusedException;
-            Runtime::DelegateInvoke(processExitDelegate, args, &unusedException);
+            Runtime::DelegateInvoke(processExitDelegate, args, &exc);
+        }
+#endif
+
+        if (exc)
+        {
+            // An error occurred in a process exit event.  We rely on these to shutdown some internal threads
+            // We could deadlock on exit if that didn't run.  Nothing reasonable to do, just abort
+            Runtime::UnhandledException(exc);
+            std::string excType = Type::GetName(vm::Class::GetType(exc->klass), IL2CPP_TYPE_NAME_FORMAT_REFLECTION).c_str();
+            std::string msg = utils::StringUtils::Utf16ToUtf8(exc->message->chars, exc->message->length);
+            utils::Logging::Write("Unhandled exception (%s) '%s' during AppDomain::ProcessExit, aborting.", excType.c_str(), msg.c_str());
+            IL2CPP_ASSERT(false && "Unhandled exception during AppDomain::ProcessExit, aborting.");
+            utils::Runtime::Abort();
         }
     }
 
@@ -456,10 +543,17 @@ namespace vm
         il2cpp::utils::Debugger::RuntimeShutdownEnd();
 #endif
 
+#if MONO_NET8_BCL
+        il2cpp::icalls::System::Private::CoreLib::System::Reflection::RuntimeAssembly::FreeStaticData();
+        il2cpp::icalls::System::Private::CoreLib::System::Runtime::Loader::AssemblyLoadContext::FreeStaticData();
+#else
         il2cpp::icalls::mscorlib::System::Reflection::RuntimeAssembly::FreeStaticData();
+        il2cpp::icalls::mscorlib::System::AppDomain::ClearData();
 
 #if IL2CPP_SUPPORT_THREADS
         threadpool_ms_cleanup();
+#endif
+
 #endif
         // Tries to abort all threads
         // Threads at alertable waits may not have existing when this return
@@ -501,10 +595,10 @@ namespace vm
         MetadataAllocCleanup();
 
         vm::COMEntryPoints::FreeCachedData();
+        vm::IcuData::FreeIcuData();
 
         os::Locale::UnInitialize();
         os::Uninitialize();
-
 
 #if IL2CPP_ENABLE_PROFILER
         il2cpp::vm::Profiler::FreeStaticData();
@@ -512,7 +606,9 @@ namespace vm
 
         il2cpp::vm::Monitor::FreeStaticData();
         il2cpp::os::MemoryMappedFile::FreeStaticData();
+#if !MONO_NET8_BCL
         il2cpp::icalls::mscorlib::System::IO::MonoIO::FreeStaticData();
+#endif
         il2cpp::vm::Class::FreeStaticData();
 #if IL2CPP_MONO_DEBUGGER
         il2cpp::utils::Debugger::FreeStaticData();
@@ -522,6 +618,9 @@ namespace vm
         if (g_ClearMethodMetadataInitializedFlags != NULL)
             g_ClearMethodMetadataInitializedFlags();
 #endif
+
+        Il2CppDomain* domain = Domain::GetCurrent();
+        IL2CPP_FREE(const_cast<char*>(domain->friendly_name));
     }
 
     bool Runtime::IsShuttingDown()
@@ -536,12 +635,15 @@ namespace vm
 
     static void SetConfigStr(const std::string& executablePath)
     {
+#if !MONO_NET8_BCL
+        // TODO: AppDomain
         Il2CppDomain* domain = vm::Domain::GetCurrent();
         std::string configFileName = utils::PathUtils::Basename(executablePath);
         configFileName.append(".config");
         std::string appBase = utils::PathUtils::DirectoryName(executablePath);
         IL2CPP_OBJECT_SETREF(domain->setup, application_base, vm::String::New(appBase.c_str()));
         IL2CPP_OBJECT_SETREF(domain->setup, configuration_file, vm::String::New(configFileName.c_str()));
+#endif
     }
 
     void Runtime::SetConfigUtf16(const Il2CppChar* executablePath)
@@ -679,7 +781,7 @@ namespace vm
         IL2CPP_ASSERT(method != NULL && "ObjectInit; no default constructor for object is found");
 
         if (method->klass->byval_arg.valuetype)
-            object = (Il2CppObject*)Object::Unbox(object);
+            object = (Il2CppObject*)Object::GetRawData(object);
         Invoke(method, object, NULL, exc);
     }
 
@@ -695,14 +797,7 @@ namespace vm
 
     void Runtime::UnhandledException(Il2CppException* exc)
     {
-        Il2CppDomain *currentDomain = Domain::GetCurrent();
         Il2CppDomain *rootDomain = Domain::GetRoot();
-        FieldInfo *field;
-        Il2CppObject *current_appdomain_delegate = NULL;
-        Il2CppObject *root_appdomain_delegate = NULL;
-
-        field = Class::GetFieldFromName(il2cpp_defaults.appdomain_class, "UnhandledException");
-        IL2CPP_ASSERT(field);
 
         Il2CppObject* excObject = (Il2CppObject*)exc;
 
@@ -710,6 +805,23 @@ namespace vm
         {
             //bool abort_process = (Thread::Current () == Thread::Main ()) ||
             //  (Runtime::GetUnhandledExceptionPolicy () == IL2CPP_UNHANDLED_POLICY_CURRENT);
+
+#if MONO_NET8_BCL
+            FieldInfo* field = Class::GetFieldFromName(il2cpp_defaults.app_context_class, "UnhandledException");
+            IL2CPP_ASSERT(field && "Unable to find AppContext.UnhandledException event");
+
+            Il2CppObject* excDelegate;
+            vm::Field::StaticGetValue(field, &excDelegate);
+
+            if (excDelegate)
+                CallUnhandledExceptionDelegate(rootDomain, (Il2CppDelegate*)excDelegate, exc);
+#else
+            Il2CppDomain *currentDomain = Domain::GetCurrent();
+            Il2CppObject *current_appdomain_delegate = NULL;
+            Il2CppObject *root_appdomain_delegate = NULL;
+
+            FieldInfo* field = Class::GetFieldFromName(il2cpp_defaults.appdomain_class, "UnhandledException");
+            IL2CPP_ASSERT(field && "Unable to find AppDomain.UnhandledException event");
 
             Field::GetValue((Il2CppObject*)rootDomain->domain, field, &root_appdomain_delegate);
 
@@ -740,6 +852,7 @@ namespace vm
                     CallUnhandledExceptionDelegate(currentDomain, (Il2CppDelegate*)current_appdomain_delegate, exc);
                 }
             }
+#endif
         }
     }
 
@@ -759,8 +872,8 @@ namespace vm
                 nullable = Object::New(method->klass);
 
                 Il2CppObject* boxed = Object::Box(method->klass->castClass, obj);
-                Object::NullableInit((uint8_t*)Object::Unbox(nullable), boxed, method->klass);
-                obj = Object::Unbox(nullable);
+                Object::NullableInit((uint8_t*)Object::GetRawData(nullable), boxed, method->klass);
+                obj = Object::GetRawData(nullable);
             }
 
             return Runtime::Invoke(method, obj, convertedParameters, exception);
@@ -780,7 +893,7 @@ namespace vm
             else
             {
                 thisArg = instance = Object::New(thisType);
-                Runtime::Invoke(method, thisType->byval_arg.valuetype ? Object::Unbox((Il2CppObject*)thisArg) : thisArg, convertedParameters, exception);
+                Runtime::Invoke(method, thisType->byval_arg.valuetype ? Object::GetRawData((Il2CppObject*)thisArg) : thisArg, convertedParameters, exception);
             }
         }
         else
@@ -829,7 +942,7 @@ namespace vm
                         if (parameters[i] == NULL)
                             gc::WriteBarrier::GenericStore(parameters + i, Object::New(parameterType));
 
-                        convertedParameters[i] = Object::Unbox(parameters[i]);
+                        convertedParameters[i] = Object::GetRawData(parameters[i]);
                     }
                     else if (parameters[i] == NULL) // If value type is passed by value, we need to pass pointer to its value
                     {
@@ -841,7 +954,7 @@ namespace vm
                     else
                     {
                         // Otherwise, pass the original
-                        convertedParameters[i] = Object::Unbox(parameters[i]);
+                        convertedParameters[i] = Object::GetRawData(parameters[i]);
                     }
                 }
                 else if (passedByReference)
@@ -853,7 +966,7 @@ namespace vm
                     if (parameters[i] != NULL)
                     {
                         IL2CPP_ASSERT(parameters[i]->klass == il2cpp_defaults.int_class);
-                        convertedParameters[i] = reinterpret_cast<void*>(*static_cast<intptr_t*>(Object::Unbox(parameters[i])));
+                        convertedParameters[i] = reinterpret_cast<void*>(*static_cast<intptr_t*>(Object::GetRawData(parameters[i])));
                     }
                     else
                     {
@@ -883,6 +996,54 @@ namespace vm
                     gc::WriteBarrier::GenericStore(parameters + i, Object::Box(parameterType, convertedParameters[i]));
             }
         }
+
+        if (method->return_type->type == IL2CPP_TYPE_PTR)
+        {
+            static Il2CppClass* pointerClass = Class::FromName(il2cpp_defaults.corlib, "System.Reflection", "Pointer");
+            Il2CppReflectionPointer* pointer = reinterpret_cast<Il2CppReflectionPointer*>(Object::New(pointerClass));
+            pointer->data = result;
+            IL2CPP_OBJECT_SETREF(pointer, type, Reflection::GetTypeObject(method->return_type));
+            result = reinterpret_cast<Il2CppObject*>(pointer);
+        }
+
+        return result;
+    }
+
+    Il2CppObject* Runtime::InvokeConvertArgs_NoBoxing(const MethodInfo *method, void* thisArg, void** parameters, int paramCount, Il2CppException** exception)
+    {
+        void** convertedParameters = NULL;
+
+        // Convert parameters if they are not null
+        if (parameters != NULL)
+        {
+            convertedParameters = (void**)alloca(sizeof(void*) * paramCount);
+
+            for (int i = 0; i < paramCount; i++)
+            {
+                bool passedByReference = method->parameters[i]->byref;
+                Il2CppClass* parameterType = Class::FromIl2CppType(method->parameters[i]);
+                Class::Init(parameterType);
+
+                if (Class::IsValuetype(parameterType))
+                {
+                    convertedParameters[i] = parameters[i];
+                }
+                else if (passedByReference)
+                {
+                    convertedParameters[i] = parameters[i]; // Reference type passed by reference
+                }
+                else if (parameterType->byval_arg.type == IL2CPP_TYPE_PTR || parameterType->byval_arg.type == IL2CPP_TYPE_FNPTR)
+                {
+                    convertedParameters[i] = *(void**)parameters[i]; // pointer type passed by reference
+                }
+                else
+                {
+                    convertedParameters[i] = *(Il2CppObject**)parameters[i]; // Reference type passed by value
+                }
+            }
+        }
+
+        Il2CppObject* result = InvokeConvertThis(method, thisArg, convertedParameters, exception);
 
         if (method->return_type->type == IL2CPP_TYPE_PTR)
         {
@@ -958,6 +1119,7 @@ namespace vm
             s_TypeInitializationLock.Release();
 
             // Run it.
+            Class::Init(klass);
             Il2CppException* exception = NULL;
             const MethodInfo* cctor = Class::GetCCtor(klass);
             if (cctor != NULL)
@@ -1033,6 +1195,8 @@ namespace vm
 
     void Runtime::VerifyApiVersion()
     {
+#if !MONO_NET8_BCL
+        // TODO: AppDomain
 #if IL2CPP_DEBUG
         Il2CppClass *klass = Class::FromName(il2cpp_defaults.corlib, "System", "Environment");
         Class::Init(klass);
@@ -1042,6 +1206,7 @@ namespace vm
 
         std::string version = il2cpp::utils::StringUtils::Utf16ToUtf8(value->chars);
         IL2CPP_ASSERT(version == "1A5E0066-58DC-428A-B21C-0AD6CDAE2789");
+#endif
 #endif
     }
 
@@ -1136,17 +1301,17 @@ namespace vm
         return &ArrayGetInvoker;
     }
 
-    void Runtime::AlwaysRaiseExecutionEngineException(const MethodInfo* method)
+    NORETURN void Runtime::AlwaysRaiseExecutionEngineException(const MethodInfo* method)
     {
         RaiseExecutionEngineException(method, false);
     }
 
-    void Runtime::AlwaysRaiseExecutionEngineExceptionOnVirtualCall(const MethodInfo* method)
+    NORETURN void Runtime::AlwaysRaiseExecutionEngineExceptionOnVirtualCall(const MethodInfo* method)
     {
         RaiseExecutionEngineException(method, true);
     }
 
-    void Runtime::RaiseExecutionEngineException(const MethodInfo* method, bool virtualCall)
+    NORETURN void Runtime::RaiseExecutionEngineException(const MethodInfo* method, bool virtualCall)
     {
         if (Method::GetClass(method))
             RaiseExecutionEngineException(method, Method::GetFullName(method).c_str(), virtualCall);
@@ -1154,15 +1319,35 @@ namespace vm
             RaiseExecutionEngineException(method, Method::GetNameWithGenericTypes(method).c_str(), virtualCall);
     }
 
-    void Runtime::RaiseAmbiguousImplementationException(const MethodInfo* method)
+    NORETURN void Runtime::RaiseEntryPointNotFoundException(const MethodInfo* method, const Il2CppClass* klass)
     {
+        // Raise the EntryPointNotFound with as much information as possible
+        // If we have a valid method, that is not the EntryPointNotFound stub, report its full name
+        // If we have a valid class, report the class's name
+
+        if (method != NULL && !Method::IsEntryPointNotFoundMethodInfo(method))
+            Exception::Raise(Exception::GetEntryPointNotFoundException(Method::GetFullName(method).c_str()));
+        else if (klass != NULL)
+            Exception::Raise(Exception::GetEntryPointNotFoundException(utils::StringUtils::Printf("Entry point not found on type '%s'", Type::GetName(Class::GetType(klass), IL2CPP_TYPE_NAME_FORMAT_IL).c_str()).c_str()));
+        else
+            Exception::Raise(Exception::GetEntryPointNotFoundException(""));
+    }
+
+    NORETURN void Runtime::RaiseAmbiguousImplementationException(const MethodInfo* method, const Il2CppClass* klass)
+    {
+        // Raise the AmbiguousImplmentationException with as much information as possible
+        // If we have a valid method, that is not the EntryPointNotFound stub, report its full name
+        // If we have a valid class, report the class's name
+
         if (method != NULL && !Method::IsAmbiguousMethodInfo(method))
             Exception::Raise(Exception::GetAmbiguousImplementationException(utils::StringUtils::Printf("Attempting to call default interface method for '%s' with ambiguous implementations", Method::GetFullName(method).c_str()).c_str()));
+        else if (method == NULL && klass != NULL)
+            Exception::Raise(Exception::GetAmbiguousImplementationException(utils::StringUtils::Printf("Attempting to call default interface on type '%s' with ambiguous implementations", Type::GetName(Class::GetType(klass), IL2CPP_TYPE_NAME_FORMAT_IL).c_str()).c_str()));
         else
             Exception::Raise(Exception::GetAmbiguousImplementationException("Attempting to call default interface method with ambiguous implementations"));
     }
 
-    void Runtime::RaiseExecutionEngineException(const MethodInfo* method, const char* methodFullName, bool virtualCall)
+    NORETURN void Runtime::RaiseExecutionEngineException(const MethodInfo* method, const char* methodFullName, bool virtualCall)
     {
         if (method->flags & METHOD_ATTRIBUTE_ABSTRACT)
         {
@@ -1172,7 +1357,7 @@ namespace vm
         else if (method->methodPointer)
         {
             if (method->is_unmanaged_callers_only)
-                Exception::Raise(Exception::GetExecutionEngineException(utils::StringUtils::Printf("Cannot call a method marked with [UnmangedCallersOnly] from managed code: '%s'", methodFullName).c_str()));
+                Exception::Raise(Exception::GetExecutionEngineException(utils::StringUtils::Printf("Cannot call a method marked with [UnmanagedCallersOnly] from managed code: '%s'", methodFullName).c_str()));
             else
                 Exception::Raise(Exception::GetExecutionEngineException(utils::StringUtils::Printf("Invalid call to method '%s'", methodFullName).c_str()));
         }

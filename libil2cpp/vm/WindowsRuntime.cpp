@@ -804,7 +804,7 @@ namespace vm
             Exception::Raise(Exception::GetTypeLoadException(utils::StringView<char>::Empty(), name, assemblyName));
         }
 
-        return Class::il2cpp_type_from_type_info(info, static_cast<TypeSearchFlags>(kTypeSearchFlagThrowOnError | kTypeSearchFlagDontUseExecutingImage));
+        return Class::il2cpp_type_from_type_info(info, static_cast<TypeSearchFlags>(kTypeSearchFlagThrowOnError | kTypeSearchFlagDontUseExecutingImage), NULL);
     }
 
     const Il2CppType* WindowsRuntime::MarshalTypeFromNative(Il2CppWindowsRuntimeTypeName& nativeType)

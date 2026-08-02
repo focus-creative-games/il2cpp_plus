@@ -1,6 +1,7 @@
 #include "il2cpp-config.h"
 #include "il2cpp-object-internals.h"
 #include "vm/Monitor.h"
+#include "vm/Exception.h"
 
 #if IL2CPP_SUPPORT_THREADS
 
@@ -8,7 +9,6 @@
 #include "os/Event.h"
 #include "os/Semaphore.h"
 #include "os/Thread.h"
-#include "vm/Exception.h"
 #include "vm/Thread.h"
 
 #include "utils/ThreadSafeFreeList.h"
@@ -441,7 +441,7 @@ namespace vm
                         waitStatus = installedMonitor->semaphore.Wait(true);
                     }
                 }
-                catch (Thread::NativeThreadAbortException&)
+                catch (Il2CppNativeThreadAbortException&)
                 {
                     // This signals that the monitor was not entered properly by this thread. Therefore
                     // a later call to Exit on this monitor should not actually try to exit the monitor,
@@ -725,4 +725,29 @@ namespace vm
 } /* namespace il2cpp */
 
 
-#endif // IL2CPP_SUPPORT_THREADS
+#else // IL2CPP_SUPPORT_THREADS
+
+namespace il2cpp
+{
+namespace vm
+{
+    void Monitor::Enter(Il2CppObject* object)
+    {
+        uintptr_t lockCount = reinterpret_cast<uintptr_t>(object->monitor);
+        lockCount++;
+        object->monitor = reinterpret_cast<MonitorData*>(lockCount);
+    }
+
+    void Monitor::Exit(Il2CppObject* object)
+    {
+        if (!object->monitor)
+            il2cpp::vm::Exception::Raise(il2cpp::vm::Exception::GetSynchronizationLockException("Object is not locked."));
+        uintptr_t lockCount = reinterpret_cast<uintptr_t>(object->monitor);
+        lockCount--;
+        object->monitor = reinterpret_cast<MonitorData*>(lockCount);
+    }
+} /* namespace vm */
+} /* namespace il2cpp */
+
+
+#endif

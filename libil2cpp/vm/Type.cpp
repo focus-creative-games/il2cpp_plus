@@ -14,6 +14,7 @@
 #include "vm/Field.h"
 #include "vm/GenericClass.h"
 #include "vm/GenericContainer.h"
+#include "vm/GlobalMetadata.h"
 #include "vm/MetadataCache.h"
 #include "vm/Method.h"
 #include "vm/Object.h"
@@ -70,11 +71,11 @@ namespace vm
 
         if (IsEOL())
             return false;
-        if (!ParseTypeName(arity))
+        if (!ParseTypeName())
             return false;
-        if (!ParseNestedTypeOptional(arity))
+        if (!ParseNestedTypeOptional())
             return false;
-        if (!ParseTypeArgumentsOptional(arity))
+        if (!ParseTypeArgumentsOptional())
             return false;
         if (!ParsePointerModifiersOptional())
             return false;
@@ -100,7 +101,7 @@ namespace vm
         return true;
     }
 
-    bool TypeNameParser::ParseTypeName(int32_t &arity)
+    bool TypeNameParser::ParseTypeName()
     {
         std::string::const_iterator begin = _p;
         std::string::const_iterator last_dot = _end;
@@ -118,15 +119,6 @@ namespace vm
                 return false; // Invalid format
         }
 
-        if (CurrentIs('`'))
-        {
-            if (!Next())
-                return false; // Invalid format
-
-            if (!ConsumeNumber(arity))
-                return false; // Invalid format
-        }
-
         if (last_dot == _end)
         {
             _info._name.assign(begin, _p);
@@ -140,7 +132,7 @@ namespace vm
         return true;
     }
 
-    bool TypeNameParser::ParseNestedTypeOptional(int32_t &arity)
+    bool TypeNameParser::ParseNestedTypeOptional()
     {
         while (CurrentIs('+'))
         {
@@ -150,19 +142,6 @@ namespace vm
             std::string::const_iterator begin = _p;
 
             ConsumeIdentifier();
-
-            if (CurrentIs('`'))
-            {
-                if (!Next())
-                    return false; // Invalid format
-
-                int32_t nested_arity = 0;
-
-                if (!ConsumeNumber(nested_arity))
-                    return false; // Invalid format
-
-                arity += nested_arity;
-            }
 
             _info._nested.push_back(std::string(begin, _p));
         }
@@ -203,7 +182,7 @@ namespace vm
         return true;
     }
 
-    bool TypeNameParser::ParseTypeArgumentsOptional(int32_t &arity)
+    bool TypeNameParser::ParseTypeArgumentsOptional()
     {
         SkipWhites();
 
@@ -219,7 +198,7 @@ namespace vm
         if (!Next(true))
             return false; // Invalid format
 
-        _info._type_arguments.reserve(arity);
+        _info._type_arguments.reserve(4);
 
         while (true)
         {
@@ -270,9 +249,6 @@ namespace vm
                 return false; // Invalid format
             }
         }
-
-        if (_info._type_arguments.size() != arity)
-            return false; // Invalid format
 
         Next(true);
 
@@ -468,24 +444,6 @@ namespace vm
         return *(_p + i) == v;
     }
 
-    bool TypeNameParser::ConsumeNumber(int32_t &value)
-    {
-        if (!isdigit(*_p))
-            return false;
-
-        std::string::const_iterator begin = _p;
-
-        while (isdigit(*_p))
-        {
-            if (!Next())
-                break;
-        }
-
-        value = (int32_t)strtol(&(*begin), NULL, 10);
-
-        return true;
-    }
-
     void TypeNameParser::ConsumeAssemblyIdentifier()
     {
         do
@@ -553,7 +511,6 @@ namespace vm
                 case '.':
                 case '=':
                 case '"':
-                case '`':
                     return;
 
                 case '\\':
@@ -591,54 +548,65 @@ namespace vm
         return type->type;
     }
 
+    static void AppendAssemblyNameIfNeeded(std::string& str, const Il2CppType* type, Il2CppTypeNameFormat format, const Il2CppTypeNameInfo& nameInfo)
+    {
+        if (format == IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED)
+        {
+            const Il2CppAssembly *ta = nameInfo.image->assembly;
+            str += ", " + vm::AssemblyName::AssemblyNameToString(ta->aname);
+        }
+        else if (format == IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED)
+        {
+            str += ", ";
+            str.append(nameInfo.image->nameNoExt);
+        }
+    }
+
+    static void AppendAssemblyNameIfNeeded(std::string& str, const Il2CppType* type, Il2CppTypeNameFormat format)
+    {
+        if (format == IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED || format == IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED)
+        {
+            while (type->type == IL2CPP_TYPE_PTR)
+                type = type->data.type;
+
+            AppendAssemblyNameIfNeeded(str, type, format, GlobalMetadata::GetTypeNameInfoFromType(type));
+        }
+    }
+
     void Type::GetNameInternal(std::string &str, const Il2CppType *type, Il2CppTypeNameFormat format, bool is_nested)
     {
         switch (type->type)
         {
             case IL2CPP_TYPE_ARRAY:
             {
-                Il2CppClass* arrayClass = Class::FromIl2CppType(type);
-                Il2CppClass* elementClass = Class::GetElementClass(arrayClass);
+                Il2CppArrayType* arrayType = type->data.array;
                 Type::GetNameInternal(
                     str,
-                    &elementClass->byval_arg,
+                    arrayType->etype,
                     format >= IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED ? IL2CPP_TYPE_NAME_FORMAT_FULL_NAME : format,
                     false);
 
                 str += '[';
-
-                if (arrayClass->rank == 1)
+                if (arrayType->rank == 1)
                     str += '*';
-
-                for (int32_t i = 1; i < arrayClass->rank; i++)
+                for (int32_t i = 1; i < arrayType->rank; i++)
                     str += ',';
-
                 str += ']';
 
                 if (type->byref)
                     str += '&';
 
-                if (format == IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED)
-                {
-                    const Il2CppAssembly* ta = elementClass->image->assembly;
-                    str += ", " + vm::AssemblyName::AssemblyNameToString(ta->aname);
-                }
-                else if (format == IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED)
-                {
-                    str += ", ";
-                    str.append(elementClass->image->nameNoExt);
-                }
-
+                AppendAssemblyNameIfNeeded(str, arrayType->etype, format);
 
                 break;
             }
 
             case IL2CPP_TYPE_SZARRAY:
             {
-                Il2CppClass* elementClass = Class::FromIl2CppType(type->data.type);
+                const Il2CppType* elementType = type->data.type;
                 Type::GetNameInternal(
                     str,
-                    &elementClass->byval_arg,
+                    elementType,
                     format >= IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED ? IL2CPP_TYPE_NAME_FORMAT_FULL_NAME : format,
                     false);
 
@@ -647,16 +615,7 @@ namespace vm
                 if (type->byref)
                     str += '&';
 
-                if (format == IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED)
-                {
-                    const Il2CppAssembly *ta = elementClass->image->assembly;
-                    str += ", " + vm::AssemblyName::AssemblyNameToString(ta->aname);
-                }
-                else if (format == IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED)
-                {
-                    str += ", ";
-                    str.append(elementClass->image->nameNoExt);
-                }
+                AppendAssemblyNameIfNeeded(str, elementType, format);
                 break;
             }
 
@@ -673,16 +632,8 @@ namespace vm
                 if (type->byref)
                     str += '&';
 
-                if (format == IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED)
-                {
-                    const Il2CppAssembly *ta = Class::FromIl2CppType(type->data.type)->image->assembly;
-                    str += ", " + vm::AssemblyName::AssemblyNameToString(ta->aname);
-                }
-                else if (format == IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED)
-                {
-                    str += ", ";
-                    str.append(Class::FromIl2CppType(type->data.type)->image->nameNoExt);
-                }
+                AppendAssemblyNameIfNeeded(str, type->data.type, format);
+
                 break;
             }
 
@@ -696,35 +647,33 @@ namespace vm
 
             default:
             {
-                Il2CppClass *klass = Class::FromIl2CppType(type);
-                Class::Init(klass);
+                Il2CppTypeNameInfo nameInfo = GlobalMetadata::GetTypeNameInfoFromType(type);
 
-                Il2CppClass* declaringType = Class::GetDeclaringType(klass);
-                if (declaringType)
+                if (nameInfo.declaringType)
                 {
-                    Type::GetNameInternal(str, &declaringType->byval_arg, format, true);
+                    Type::GetNameInternal(str, nameInfo.declaringType, format, true);
                     str += (format == IL2CPP_TYPE_NAME_FORMAT_IL ? '.' : '+');
                 }
-                else if (*klass->namespaze)
+                else if (nameInfo.namespaze[0])
                 {
-                    str += klass->namespaze;
+                    str += nameInfo.namespaze;
                     str += '.';
                 }
 
                 if (format == IL2CPP_TYPE_NAME_FORMAT_IL)
                 {
-                    const char *s = strchr(klass->name, '`');
-                    str += (s ? std::string(klass->name, s) : klass->name);
+                    const char *s = strchr(nameInfo.name, '`');
+                    str += (s ? std::string(nameInfo.name, s) : nameInfo.name);
                 }
                 else
-                    str += klass->name;
+                    str += nameInfo.name;
 
                 if (is_nested)
                     break;
 
-                if (klass->generic_class)
+                if (IsGenericInstance(type))
                 {
-                    Il2CppGenericClass *gclass = klass->generic_class;
+                    Il2CppGenericClass *gclass = type->data.generic_class;
                     const Il2CppGenericInst *inst = gclass->context.class_inst;
                     Il2CppTypeNameFormat nested_format;
 
@@ -750,13 +699,13 @@ namespace vm
 
                     str += (format == IL2CPP_TYPE_NAME_FORMAT_IL ? '>' : ']');
                 }
-                else if (Class::IsGeneric(klass) && format < IL2CPP_TYPE_NAME_FORMAT_FULL_NAME)
+                else if (nameInfo.isGeneric && format < IL2CPP_TYPE_NAME_FORMAT_FULL_NAME)
                 {
-                    Il2CppMetadataGenericContainerHandle containerHandle = Class::GetGenericContainer(klass);
+                    Il2CppMetadataGenericContainerHandle containerHandle = nameInfo.genericContainerHandle;
 
                     str += (format == IL2CPP_TYPE_NAME_FORMAT_IL ? '<' : '[');
 
-                    uint32_t type_argc = MetadataCache::GetGenericContainerCount(containerHandle);
+                    uint16_t type_argc = MetadataCache::GetGenericContainerCount(containerHandle);
                     for (uint32_t i = 0; i < type_argc; i++)
                     {
                         if (i)
@@ -773,16 +722,7 @@ namespace vm
                 if (type->byref)
                     str += '&';
 
-                if ((format == IL2CPP_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED) && (type->type != IL2CPP_TYPE_VAR) && (type->type != IL2CPP_TYPE_MVAR))
-                {
-                    const Il2CppAssembly *ta = klass->image->assembly;
-                    str += ", " + vm::AssemblyName::AssemblyNameToString(ta->aname);
-                }
-                else if (format == IL2CPP_TYPE_NAME_FORMAT_REFLECTION_QUALIFIED)
-                {
-                    str += ", ";
-                    str.append(klass->image->nameNoExt);
-                }
+                AppendAssemblyNameIfNeeded(str, type, format, nameInfo);
 
                 break;
             }
@@ -998,7 +938,7 @@ namespace vm
 
                     *bufferIter++ = (format == IL2CPP_TYPE_NAME_FORMAT_IL ? '<' : '[');
 
-                    uint32_t type_argc = MetadataCache::GetGenericContainerCount(containerHandle);
+                    uint16_t type_argc = MetadataCache::GetGenericContainerCount(containerHandle);
                     for (uint32_t i = 0; i < type_argc; ++i)
                     {
                         if (i)
@@ -1117,7 +1057,7 @@ namespace vm
 
         if (Class::IsGeneric(klass))
         {
-            uint32_t type_argc = MetadataCache::GetGenericContainerCount(klass->genericContainerHandle);
+            uint16_t type_argc = MetadataCache::GetGenericContainerCount(klass->genericContainerHandle);
             res = Array::New(arrType, type_argc);
             for (uint32_t i = 0; i < type_argc; ++i)
             {
@@ -1147,9 +1087,13 @@ namespace vm
     Il2CppReflectionType* Type::GetTypeFromHandle(intptr_t handle)
     {
         const Il2CppType* type = (const Il2CppType*)handle;
-        Il2CppClass *klass = vm::Class::FromIl2CppType(type);
 
-        return il2cpp::vm::Reflection::GetTypeObject(&klass->byval_arg);
+        // Convert the Il2CppType to an Il2CppClass
+        // This is a non-op for most types, but for byref types (e.g. type->byref is true) it will strip the byref
+        // And perhaps it affects other types, but it is not clear why this was added
+        Il2CppClass* klass = vm::Class::FromIl2CppType(type);
+
+        return il2cpp::vm::Reflection::GetTypeObject(vm::Class::GetType(klass));
     }
 
     uint32_t Type::GetToken(const Il2CppType *type)
@@ -1263,10 +1207,24 @@ namespace vm
         return (klass->image == il2cpp_defaults.corlib && strcmp(klass->namespaze, "System") == 0 && strcmp(klass->name, "Decimal") == 0);
     }
 
+    bool Type::IsSharedGenericMetaType(const Il2CppType* type)
+    {
+        return
+            metadata::Il2CppTypeEqualityComparer::AreEqual(type, Class::GetType(il2cpp_defaults.il2cpp_shared_object_type)) ||
+            metadata::Il2CppTypeEqualityComparer::AreEqual(type, Class::GetType(il2cpp_defaults.il2cpp_fully_shared_type)) ||
+            metadata::Il2CppTypeEqualityComparer::AreEqual(type, Class::GetType(il2cpp_defaults.il2cpp_fully_shared_struct_type));
+    }
+
     Il2CppClass* Type::GetClass(const Il2CppType *type)
     {
         IL2CPP_ASSERT(type->type == IL2CPP_TYPE_CLASS || type->type == IL2CPP_TYPE_VALUETYPE);
         return MetadataCache::GetTypeInfoFromType(type);
+    }
+
+    Il2CppClass* Type::GetClass_OnlyCached(const Il2CppType *type)
+    {
+        IL2CPP_ASSERT(type->type == IL2CPP_TYPE_CLASS || type->type == IL2CPP_TYPE_VALUETYPE);
+        return MetadataCache::GetTypeInfoFromType_OnlyCached(type);
     }
 
     Il2CppMetadataGenericParameterHandle Type::GetGenericParameterHandle(const Il2CppType *type)
@@ -1347,29 +1305,6 @@ namespace vm
         // that the ctor will choose, so override it with the direct method
         if (target == NULL && method != NULL && Class::IsValuetype(method->klass))
             delegate->method_ptr = method->methodPointer;
-    }
-
-    Il2CppString* Type::AppendAssemblyNameIfNecessary(Il2CppString* typeName, const MethodInfo* callingMethod)
-    {
-        if (typeName != NULL)
-        {
-            std::string name = utils::StringUtils::Utf16ToUtf8(utils::StringUtils::GetChars(typeName));
-
-            il2cpp::vm::TypeNameParseInfo info;
-            il2cpp::vm::TypeNameParser parser(name, info, false);
-
-            if (parser.Parse())
-            {
-                if (info.assembly_name().name.empty())
-                {
-                    std::string assemblyQualifiedName;
-                    assemblyQualifiedName = name + ", " + callingMethod->klass->image->name;
-                    return vm::String::New(assemblyQualifiedName.c_str());
-                }
-            }
-        }
-
-        return typeName;
     }
 } /* namespace vm */
 } /* namespace il2cpp */

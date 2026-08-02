@@ -19,6 +19,8 @@
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 
+/* Internal Boehm API: wait for ongoing GC (used to avoid deregistering roots mid-mark). */
+extern "C" void GC_wait_for_gc_completion(int wait_for_all);
 static bool s_GCInitialized = false;
 
 #if IL2CPP_ENABLE_DEFERRED_GC
@@ -167,6 +169,7 @@ void il2cpp::gc::GarbageCollector::UninitializeGC()
     s_GCInitialized = false;
     default_push_other_roots = NULL;
     s_Roots.clear();
+    ephemeron_list = NULL;
 #endif
 }
 
@@ -578,6 +581,12 @@ void il2cpp::gc::GarbageCollector::RegisterRoot(char *start, size_t size)
 static void*
 deregister_root(void* arg)
 {
+    /* Wait for GC to complete to ensure any references to this root
+     * are not on the mark stack. Similar to GC_unregister_my_thread usage
+     * where we acquire the allocation lock and then wait for GC to complete
+     * before manipulating the mark stack.
+     */
+    GC_wait_for_gc_completion(true /* wait_for_all */);
     s_Roots.erase((char*)arg);
     return NULL;
 }
@@ -758,6 +767,11 @@ bool il2cpp::gc::GarbageCollector::EphemeronArrayAdd(Il2CppObject* obj)
 
     GC_call_with_alloc_lock(ephemeron_array_add, item);
     return true;
+}
+
+bool il2cpp::gc::GarbageCollector::IsHeapPtr(const void* address)
+{
+    return GC_is_heap_ptr(address);
 }
 
 #endif

@@ -12,6 +12,7 @@
 #if IL2CPP_TARGET_LINUX
 #include <sys/prctl.h>
 #include <sys/resource.h>
+#include <signal.h>
 #endif
 
 #include "ThreadImpl.h"
@@ -145,7 +146,8 @@ namespace os
 #if IL2CPP_TARGET_DARWIN
         pthread_setname_np(name);
 #elif IL2CPP_TARGET_LINUX || IL2CPP_TARGET_ANDROID || IL2CPP_ENABLE_PLATFORM_THREAD_RENAME
-        if (pthread_setname_np(m_Handle, name) == ERANGE)
+        int err = pthread_setname_np(m_Handle, name);
+        if (err == ERANGE || err == E2BIG)
         {
             char buf[16]; // TASK_COMM_LEN=16
             strncpy(buf, name, sizeof(buf));
@@ -168,7 +170,7 @@ namespace os
 
     int ThreadImpl::GetMaxStackSize()
     {
-#if IL2CPP_TARGET_DARWIN || IL2CPP_TARGET_LINUX
+#if IL2CPP_TARGET_DARWIN || IL2CPP_TARGET_LINUX || IL2CPP_ENABLE_PLATFORM_MAX_STACKSIZE
         struct rlimit lim;
 
         /* If getrlimit fails, we don't enforce any limits. */

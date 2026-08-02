@@ -260,6 +260,11 @@ namespace os
         m_Thread->QueueUserAPC(func, context);
     }
 
+    void Thread::CheckForUserAPCAndHandle()
+    {
+        m_Thread->CheckForUserAPCAndHandle();
+    }
+
     ApartmentState Thread::GetApartment()
     {
 #if IL2CPP_THREAD_IMPL_HAS_COM_APARTMENTS

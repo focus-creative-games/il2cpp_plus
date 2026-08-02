@@ -126,11 +126,11 @@ namespace Reflection
                 m = vm::Object::GetVirtualMethod(thisPtr, m);
 
                 if (vm::Method::IsEntryPointNotFoundMethodInfo(m))
-                    vm::Exception::Raise(vm::Exception::GetEntryPointNotFoundException(vm::Method::GetFullName(method->method).c_str()));
+                    vm::Runtime::RaiseEntryPointNotFoundException(method->method, NULL);
 
                 /* must pass the pointer to the value for valuetype methods */
                 if (m->klass->byval_arg.valuetype)
-                    obj = vm::Object::Unbox(thisPtr);
+                    obj = vm::Object::GetRawData(thisPtr);
             }
             else
 #if IL2CPP_ENABLE_MONO_BUG_EMULATION    // Mono doesn't throw on null 'this' if it's an instance constructor, and class libs depend on this behaviour
@@ -162,7 +162,7 @@ namespace Reflection
             pcount = il2cpp::vm::Array::GetLength(params);
             lengths = (il2cpp_array_size_t*)alloca(sizeof(il2cpp_array_size_t) * pcount);
             for (i = 0; i < pcount; ++i)
-                lengths[i] = *(il2cpp_array_size_t*)((char*)il2cpp_array_get(params, void*, i) + sizeof(Il2CppObject));
+                lengths[i] = *(il2cpp_array_size_t*)vm::Object::GetRawData((Il2CppObject*)il2cpp_array_get(params, void*, i));
 
             if (m->klass->rank == pcount)
             {
@@ -223,21 +223,21 @@ namespace Reflection
             }
         }
 
-        il2cpp::vm::Class::SetupMethods(method->klass);
+        const MethodInfo** methods =  il2cpp::vm::Class::GetMethods(method->klass);
 
         for (i = 0; i < method->klass->method_count; ++i)
         {
-            if (method->klass->methods[i] == method)
+            if (methods[i] == method)
             {
                 offset = i;
                 break;
             }
         }
 
-        il2cpp::vm::Class::SetupMethods(klass);
+        const MethodInfo** classMethods = il2cpp::vm::Class::GetMethods(klass);
 
         IL2CPP_ASSERT(offset >= 0 && offset < klass->method_count);
-        return klass->methods[offset];
+        return classMethods[offset];
     }
 
     Il2CppReflectionMethod* RuntimeMethodInfo::GetMethodFromHandleInternalType_native(intptr_t method_handle, intptr_t type_handle, bool genericCheck)
@@ -412,7 +412,7 @@ namespace Reflection
 
     Il2CppArray* RuntimeMethodInfo::GetGenericArguments(Il2CppReflectionMethod* method)
     {
-        uint32_t count = 0;
+        uint16_t count = 0;
         Il2CppArray* res = NULL;
         const MethodInfo* methodInfo = method->method;
         if (methodInfo->is_inflated)

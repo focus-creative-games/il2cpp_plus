@@ -12,13 +12,8 @@
 #include "vm/Reflection.h"
 #include "vm/MetadataCache.h"
 #include "vm/GenericClass.h"
+#include "vm-utils/ImageStackCrawlMark.h"
 #include "il2cpp-api.h"
-
-#define CHECK_IF_NULL(v)    \
-    if ( (v) == NULL && throwOnError ) \
-        vm::Exception::Raise (vm::Exception::GetTypeLoadException (info)); \
-    if ( (v) == NULL ) \
-        return NULL;
 
 namespace il2cpp
 {
@@ -236,6 +231,8 @@ namespace System
     {
         std::string str = utils::StringUtils::Utf16ToUtf8(utils::StringUtils::GetChars(name));
 
+        const Il2CppImage* callingImage = ImageStackCrawlMark::GetImageFromStackMark(stackMark);
+
         il2cpp::vm::TypeNameParseInfo info;
         il2cpp::vm::TypeNameParser parser(str, info, false);
 
@@ -255,11 +252,9 @@ namespace System
         if (ignoreCase)
             searchFlags = static_cast<vm::TypeSearchFlags>(searchFlags | vm::kTypeSearchFlagIgnoreCase);
 
-        const Il2CppType *type = vm::Class::il2cpp_type_from_type_info(info, searchFlags);
+        const Il2CppType *type = vm::Class::il2cpp_type_from_type_info(info, searchFlags, NULL);
 
-        CHECK_IF_NULL(type);
-
-        return il2cpp::vm::Reflection::GetTypeObject(type);
+        return type ? il2cpp::vm::Reflection::GetTypeObject(type) : NULL;
     }
 
     Il2CppReflectionType* RuntimeTypeHandle::GetGenericTypeDefinition_impl(Il2CppReflectionRuntimeType* type)

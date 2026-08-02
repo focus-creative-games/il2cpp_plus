@@ -28,13 +28,13 @@ namespace os
         }
     }
 
-    uint32_t Time::GetTicksMillisecondsMonotonic()
+    int64_t Time::GetTicksMillisecondsMonotonic()
     {
         InitializePerformanceCounterFrequency();
 
         LARGE_INTEGER value;
         QueryPerformanceCounter(&value);
-        return static_cast<uint32_t>(value.QuadPart * 1000 / s_PerformanceCounterFrequency.QuadPart);
+        return value.QuadPart * 1000 / s_PerformanceCounterFrequency.QuadPart;
     }
 
     int64_t Time::GetTicks100NanosecondsMonotonic()

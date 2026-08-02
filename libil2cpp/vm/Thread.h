@@ -1,3 +1,9 @@
+#if MONO_NET8_BCL
+
+#include "vm/Thread-mono-net8.h"
+
+#else
+
 #pragma once
 
 #include <stdint.h>
@@ -86,7 +92,9 @@ namespace vm
         static void SetPriority(Il2CppThread* thread, int32_t priority);
         static int32_t GetPriority(Il2CppThread* thread);
 
-        struct NativeThreadAbortException {};
+        static bool IsNativeThreadAbortExceptionPendingForCurrentThread();
+        NORETURN static void ThrowNativeThreadAbortException();
+        static void NativeThreadAbortExceptionWasHandled();
 
     public:
         // internal
@@ -163,3 +171,4 @@ namespace vm
     };
 } /* namespace vm */
 } /* namespace il2cpp */
+#endif

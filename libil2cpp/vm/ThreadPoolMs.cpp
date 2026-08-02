@@ -58,7 +58,7 @@ namespace vm
                     IL2CPP_ASSERT(paramClass->native_size > 0 && "EndInvoke: Invalid native_size found when trying to copy a value type in the out_args.");
 
                     // NOTE(gab): in case of value types, we need to copy the data over.
-                    memcpy(out_args[arrayOutArgsIndex], il2cpp::vm::Object::Unbox((Il2CppObject*)outArgsPtr[arrayOutArgsIndex]), paramClass->native_size);
+                    memcpy(out_args[arrayOutArgsIndex], il2cpp::vm::Object::GetRawData((Il2CppObject*)outArgsPtr[arrayOutArgsIndex]), paramClass->native_size);
                 }
                 else
                 {

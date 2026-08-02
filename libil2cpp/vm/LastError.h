@@ -19,5 +19,14 @@ namespace vm
     private:
         static int32_t s_LastErrorThreadLocalStorageOffset;
     };
+
+    class LastOsErrorPreserver
+    {
+    public:
+        LastOsErrorPreserver();
+        ~LastOsErrorPreserver();
+    private:
+        uint32_t m_LastError;
+    };
 } /* namespace vm */
 } /* namespace il2cpp */

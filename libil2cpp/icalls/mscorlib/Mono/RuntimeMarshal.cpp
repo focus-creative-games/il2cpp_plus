@@ -12,8 +12,9 @@ namespace Mono
 {
     void RuntimeMarshal::FreeAssemblyName(Il2CppMonoAssemblyName* name, bool freeStruct)
     {
-        IL2CPP_FREE(const_cast<char*>(name->name));
-        IL2CPP_FREE(const_cast<char*>(name->culture));
+        if (name->name) IL2CPP_FREE(const_cast<char*>(name->name));
+        if (name->culture) IL2CPP_FREE(const_cast<char*>(name->culture));
+        if (name->public_key) IL2CPP_FREE(const_cast<uint8_t*>(name->public_key));
         if (freeStruct)
             IL2CPP_FREE(name);
     }

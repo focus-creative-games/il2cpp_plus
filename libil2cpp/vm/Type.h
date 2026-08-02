@@ -182,10 +182,9 @@ namespace vm
         void ConsumeAssemblyIdentifier();
         void ConsumePropertyIdentifier();
         void ConsumePropertyValue();
-        bool ConsumeNumber(int32_t &value);
-        bool ParseTypeName(int32_t &arity);
-        bool ParseNestedTypeOptional(int32_t &arity);
-        bool ParseTypeArgumentsOptional(int32_t &arity);
+        bool ParseTypeName();
+        bool ParseNestedTypeOptional();
+        bool ParseTypeArgumentsOptional();
         bool ParseAssemblyNameOptional();
         bool ParseAssemblyName();
         bool ParsePropertiesOptional();
@@ -242,8 +241,10 @@ namespace vm
         static bool IsSystemDBNull(const Il2CppType *type);
         static bool IsSystemDateTime(const Il2CppType *type);
         static bool IsSystemDecimal(const Il2CppType *type);
+        static bool IsSharedGenericMetaType(const Il2CppType* type);
 
         static Il2CppClass* GetClass(const Il2CppType *type);
+        static Il2CppClass* GetClass_OnlyCached(const Il2CppType *type);
         static Il2CppMetadataGenericParameterHandle GetGenericParameterHandle(const Il2CppType *type);
         static Il2CppGenericParameterInfo GetGenericParameterInfo(const Il2CppType *type);
         static const Il2CppType* GetGenericTypeDefinition(const Il2CppType* type);
@@ -251,8 +252,6 @@ namespace vm
         static void ConstructDelegate(Il2CppDelegate* delegate, Il2CppObject* target, const MethodInfo* method);
         static void ConstructClosedDelegate(Il2CppDelegate* delegate, Il2CppObject* target, Il2CppMethodPointer addr, const MethodInfo* method);
         static void SetClosedDelegateInvokeMethod(Il2CppDelegate* delegate, Il2CppObject* target, Il2CppMethodPointer addr);
-
-        static Il2CppString* AppendAssemblyNameIfNecessary(Il2CppString* typeName, const MethodInfo* callingMethod);
     };
 } /* namespace vm */
 } /* namespace il2cpp */

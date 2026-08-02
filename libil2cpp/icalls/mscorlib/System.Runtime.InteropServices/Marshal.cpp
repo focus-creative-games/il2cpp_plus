@@ -96,37 +96,7 @@ namespace InteropServices
 
     intptr_t Marshal::GetCCW(Il2CppObject* o, Il2CppReflectionType* T)
     {
-        if (o == NULL)
-            vm::Exception::Raise(vm::Exception::GetArgumentNullException("o"));
-
-        if (T == NULL)
-            vm::Exception::Raise(vm::Exception::GetArgumentNullException("T"));
-
-        Il2CppClass* klass = vm::Class::FromIl2CppType(T->type);
-
-        if (!vm::Class::IsInterface(klass))
-        {
-            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(parameter, IL2CPP_NATIVE_STRING("T"));
-            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(message, IL2CPP_NATIVE_STRING("The T parameter is not an interface."));
-            vm::Exception::Raise(vm::Exception::GetArgumentException(parameter, message));
-        }
-
-        if (vm::Class::IsGeneric(klass))
-        {
-            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(parameter, IL2CPP_NATIVE_STRING("T"));
-            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(message, IL2CPP_NATIVE_STRING("The T parameter is a generic type."));
-            vm::Exception::Raise(vm::Exception::GetArgumentException(parameter, message));
-        }
-
-        const Il2CppInteropData* interopData = klass->interopData;
-        if (interopData == NULL || interopData->guid == NULL)
-        {
-            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(parameter, IL2CPP_NATIVE_STRING("T"));
-            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(message, IL2CPP_NATIVE_STRING("The specified type must be visible from COM."));
-            vm::Exception::Raise(vm::Exception::GetArgumentException(parameter, message));
-        }
-
-        return reinterpret_cast<intptr_t>(vm::CCW::GetOrCreate(o, *interopData->guid));
+        return reinterpret_cast<intptr_t>(vm::CCW::GetCCW(o, T));
     }
 
     int32_t Marshal::GetComSlotForMethodInfoInternal(mscorlib_System_Reflection_MemberInfo * m)
@@ -239,13 +209,13 @@ namespace InteropServices
             if (typeType == IL2CPP_TYPE_CLASS)
             {
                 typedef void (*Constructor)(Il2CppObject*);
-                Constructor ctor = reinterpret_cast<Constructor>(vm::Class::GetMethodFromName(type, ".ctor", 0)->virtualMethodPointer);
-                ctor(result);
+                const MethodInfo* ctor = vm::Class::GetMethodFromName(type, ".ctor", 0);
+                ctor->invoker_method(ctor->methodPointer, ctor, result, NULL, NULL);
                 utils::MarshalingUtils::MarshalStructFromNative(reinterpret_cast<void*>(ptr), result, type->interopData);
             }
             else
             {
-                utils::MarshalingUtils::MarshalStructFromNative(reinterpret_cast<void*>(ptr), vm::Object::Unbox(result), type->interopData);
+                utils::MarshalingUtils::MarshalStructFromNative(reinterpret_cast<void*>(ptr), vm::Object::GetRawData(result), type->interopData);
             }
 
             return result;
@@ -262,7 +232,7 @@ namespace InteropServices
             if (!type->enumtype)
             {
                 Il2CppObject* result = vm::Object::New(type);
-                memcpy(vm::Object::Unbox(result), reinterpret_cast<void*>(ptr), type->native_size);
+                memcpy(vm::Object::GetRawData(result), reinterpret_cast<void*>(ptr), type->native_size);
                 return result;
             }
         }
@@ -437,7 +407,7 @@ namespace InteropServices
             if (deleteOld)
                 utils::MarshalingUtils::MarshalFreeStruct(reinterpret_cast<void*>(ptr), type->interopData);
 
-            void* objectPtr = (type->byval_arg.type == IL2CPP_TYPE_CLASS) ? structure : vm::Object::Unbox(structure);
+            void* objectPtr = (type->byval_arg.type == IL2CPP_TYPE_CLASS) ? structure : vm::Object::GetRawData(structure);
             utils::MarshalingUtils::MarshalStructToNative(objectPtr, reinterpret_cast<void*>(ptr), type->interopData);
             return;
         }
@@ -449,7 +419,7 @@ namespace InteropServices
             // StructureToPtr is supposed to throw on strings and enums
             if (!type->enumtype && type->byval_arg.type != IL2CPP_TYPE_STRING)
             {
-                memcpy(reinterpret_cast<void*>(ptr), vm::Object::Unbox(structure), type->native_size);
+                memcpy(reinterpret_cast<void*>(ptr), vm::Object::GetRawData(structure), type->native_size);
                 return;
             }
         }

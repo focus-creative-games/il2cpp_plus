@@ -68,7 +68,7 @@ namespace os
         return (int64_t)MADEUP_BOOT_TIME;
     }
 
-    uint32_t Time::GetTicksMillisecondsMonotonic()
+    int64_t Time::GetTicksMillisecondsMonotonic()
     {
 #if IL2CPP_TARGET_ANDROID
         struct timespec ts;
@@ -83,7 +83,7 @@ namespace os
         if (!boot_time)
             boot_time = GetBootTime();
         now = GetTicks100NanosecondsMonotonic();
-        return (uint32_t)((now - boot_time) / 10000);
+        return (now - boot_time) / 10000;
 #endif
     }
 

@@ -14,6 +14,11 @@ namespace os
     {
         return errno;
     }
+
+    void LastError::SetLastError(uint32_t error)
+    {
+        errno = error;
+    }
 } /* namespace os */
 } /* namespace il2cpp*/
 

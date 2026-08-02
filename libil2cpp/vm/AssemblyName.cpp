@@ -101,11 +101,11 @@ namespace vm
         return char(hexValue + 87);
     }
 
-    void AssemblyName::FillNativeAssemblyName(const Il2CppAssemblyName& aname, Il2CppMonoAssemblyName* nativeName)
+    void AssemblyName::FillNativeAssemblyName(const Il2CppAssemblyName& aname, Il2CppMonoAssemblyName* nativeName, bool copyNames)
     {
-        nativeName->name = il2cpp::utils::StringUtils::StringDuplicate(aname.name);
-        nativeName->culture = il2cpp::utils::StringUtils::StringDuplicate(aname.culture);
-        nativeName->public_key = aname.public_key != NULL ? aname.public_key : NULL;
+        nativeName->name = copyNames ? il2cpp::utils::StringUtils::StringDuplicate(aname.name) : aname.name;
+        nativeName->culture = copyNames ? il2cpp::utils::StringUtils::StringDuplicate(aname.culture) : aname.culture;
+        nativeName->public_key = copyNames ? NULL : aname.public_key;
         nativeName->hash_alg = aname.hash_alg;
         nativeName->hash_len = aname.hash_len;
         nativeName->flags = aname.flags;

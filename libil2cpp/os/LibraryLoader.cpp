@@ -65,6 +65,27 @@ namespace os
         return false;
     }
 
+    static const std::basic_string<Il2CppNativeChar>* FindLibraryNameFromHandle(Baselib_DynamicLibrary_Handle nativeDynamicLibraryHandle)
+    {
+        os::FastAutoLock lock(&s_DllCacheMutex);
+
+        for (DllCacheIterator it = s_DllCache.begin(); it != s_DllCache.end(); it++)
+        {
+            if (it->second == nativeDynamicLibraryHandle)
+                return &it->first;
+        }
+
+        return NULL;
+    }
+
+    Il2CppMethodPointer LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(Baselib_DynamicLibrary_Handle nativeDynamicLibraryHandle, const il2cpp::utils::StringView<char>& entryPoint, Il2CppCharSet charSet)
+    {
+        const std::basic_string<Il2CppNativeChar>* libraryName = FindLibraryNameFromHandle(nativeDynamicLibraryHandle);
+        if (libraryName == NULL)
+            return NULL;
+        return GetHardcodedPInvokeDependencyFunctionPointer(*libraryName, entryPoint, charSet);
+    }
+
     Il2CppMethodPointer LibraryLoader::GetHardcodedPInvokeDependencyFunctionPointer(const il2cpp::utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, const il2cpp::utils::StringView<char>& entryPoint, Il2CppCharSet charSet)
     {
         // We don't support, nor do we need to Ansi functions.  That would break forwarding method names to Unicode MoveFileEx -> MoveFileExW
@@ -259,10 +280,15 @@ namespace os
 
     Baselib_DynamicLibrary_Handle LibraryLoader::TryOpeningLibrary(const Il2CppNativeChar* libraryName, std::string& detailedError)
     {
+#if (defined(__EMSCRIPTEN__))
+        // WASM_SUPPORT.md/no-dynamic-linking: We do not use Emscripten/WebAssembly dynamic linking support, due to its various limitations in usefulness.
+        NO_UNUSED_WARNING(libraryName);
+        NO_UNUSED_WARNING(detailedError);
+        return Baselib_DynamicLibrary_Handle_Invalid;
+#else
         auto errorState = Baselib_ErrorState_Create();
         auto handle = Baselib_DynamicLibrary_Open(utils::StringUtils::NativeStringToBaselib(libraryName), &errorState);
 
-#if (!defined(__EMSCRIPTEN__))
         if (Baselib_ErrorState_ErrorRaised(&errorState))
         {
             if (!detailedError.empty())
@@ -273,10 +299,8 @@ namespace os
             detailedError += utils::Exception::FormatBaselibErrorState(errorState);
             detailedError += "'.";
         }
-#else
-        NO_UNUSED_WARNING(detailedError);
-#endif
         return handle;
+#endif
     }
 } /* namespace vm */
 } /* namespace il2cpp */

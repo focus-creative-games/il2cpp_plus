@@ -12,10 +12,10 @@ namespace il2cpp
 {
 namespace vm
 {
-    Il2CppObject* Parameter::GetDefaultParameterValueObject(const MethodInfo* method, int32_t parameterPosition, bool* isExplicitySetNullDefaultValue)
+    Il2CppObject* Parameter::GetDefaultParameterValueObject(const MethodInfo* method, int32_t parameterPosition, bool* isExplicitlySetNullDefaultValue)
     {
         const Il2CppType* typeOfDefaultValue;
-        const char* data = Method::GetParameterDefaultValue(method, parameterPosition, &typeOfDefaultValue, isExplicitySetNullDefaultValue);
+        const char* data = Method::GetParameterDefaultValue(method, parameterPosition, &typeOfDefaultValue, isExplicitlySetNullDefaultValue);
         if (data == NULL)
             return NULL;
 

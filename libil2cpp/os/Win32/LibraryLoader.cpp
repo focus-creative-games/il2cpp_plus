@@ -5,6 +5,7 @@
 #include "il2cpp-runtime-metadata.h"
 #include "os/LibraryLoader.h"
 #include "os/Image.h"
+#include "utils/Memory.h"
 #include "utils/StringUtils.h"
 
 #include "WindowsHelpers.h"
@@ -68,6 +69,10 @@ namespace os
         HARDCODED_DEPENDENCY_FUNCTION(LocalAlloc),
         HARDCODED_DEPENDENCY_FUNCTION(LocalReAlloc),
         HARDCODED_DEPENDENCY_FUNCTION(LocalFree),
+        HARDCODED_DEPENDENCY_FUNCTION(GetTempPathW),
+#if IL2CPP_TARGET_WINDOWS_GAMES
+        HARDCODED_DEPENDENCY_FUNCTION_BY_NAME("GetTempPath2W", GetTempPathW)
+#endif
     };
 
     const HardcodedPInvokeDependencyFunction kBCryptFunctions[] =
@@ -95,29 +100,49 @@ namespace os
     {
         HARDCODED_DEPENDENCY_FUNCTION(RoGetBufferMarshaler)
     };
+#else
+    const HardcodedPInvokeDependencyFunction kUser32Functions[] =
+    {
+        HARDCODED_DEPENDENCY_FUNCTION(LoadStringW)
+    };
 #endif
 
 // All these come without ".dll" extension!
     const HardcodedPInvokeDependencyLibrary kHardcodedPInvokeDependencies[] =
     {
-#if IL2CPP_TARGET_WINDOWS_GAMES
+        HARDCODED_DEPENDENCY_LIBRARY(L"kernel32", kKernel32Functions),
         HARDCODED_DEPENDENCY_LIBRARY(L"bcrypt", kBCryptFunctions),
-#else
+#if !IL2CPP_TARGET_WINDOWS_GAMES
         HARDCODED_DEPENDENCY_LIBRARY(L"advapi32", kAdvapiFunctions),
         HARDCODED_DEPENDENCY_LIBRARY(L"api-ms-win-core-timezone-l1-1-0", kTimezoneFunctions),
-        HARDCODED_DEPENDENCY_LIBRARY(L"kernel32", kKernel32Functions),
         HARDCODED_DEPENDENCY_LIBRARY(L"iphlpapi", kiphlpapiFunctions),
-        HARDCODED_DEPENDENCY_LIBRARY(L"wintypes", kWinTypesFunctions),
-        HARDCODED_DEPENDENCY_LIBRARY(L"bcrypt", kBCryptFunctions),
+        HARDCODED_DEPENDENCY_LIBRARY(L"wintypes", kWinTypesFunctions)
+#else
+        HARDCODED_DEPENDENCY_LIBRARY(L"user32", kUser32Functions)
 #endif
     };
 
     const HardcodedPInvokeDependencyLibrary* LibraryLoader::HardcodedPInvokeDependencies = kHardcodedPInvokeDependencies;
     const size_t LibraryLoader::HardcodedPInvokeDependenciesCount = ARRAYSIZE(kHardcodedPInvokeDependencies);
 
-    Baselib_DynamicLibrary_Handle LibraryLoader::ProbeForLibrary(const Il2CppNativeChar* libraryName, const size_t /*libraryNameLength*/, std::string& detailedError)
+    Baselib_DynamicLibrary_Handle LibraryLoader::ProbeForLibrary(const Il2CppNativeChar* libraryName, const size_t libraryNameLength, std::string& detailedError)
     {
-        return TryOpeningLibrary(libraryName, detailedError);
+        Baselib_DynamicLibrary_Handle handle = TryOpeningLibrary(libraryName, detailedError);
+
+        if (handle == Baselib_DynamicLibrary_Handle_Invalid)
+        {
+            if (libraryNameLength > 4 && _wcsnicmp(libraryName + libraryNameLength - 4, L".dll", 4) != 0)
+            {
+                Il2CppNativeChar* libaryNameWithExt = (Il2CppNativeChar*)IL2CPP_MALLOC((libraryNameLength + 5) * sizeof(Il2CppNativeChar));
+                memcpy(libaryNameWithExt, libraryName, libraryNameLength * sizeof(Il2CppNativeChar));
+                wcscpy(libaryNameWithExt + libraryNameLength, L".dll");
+                detailedError.clear();
+                handle = TryOpeningLibrary(libaryNameWithExt, detailedError);
+                IL2CPP_FREE(libaryNameWithExt);
+            }
+        }
+
+        return handle;
     }
 
     Baselib_DynamicLibrary_Handle LibraryLoader::OpenProgramHandle(Baselib_ErrorState& errorState, bool& needsClosing)

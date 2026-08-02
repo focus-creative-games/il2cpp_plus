@@ -9,7 +9,7 @@ extern "C"
 {
     uint32_t UnityPalGetTicksMillisecondsMonotonic()
     {
-        return il2cpp::os::Time::GetTicksMillisecondsMonotonic();
+        return (uint32_t)il2cpp::os::Time::GetTicksMillisecondsMonotonic();
     }
 
     int64_t UnityPalGetTicks100NanosecondsDateTime()

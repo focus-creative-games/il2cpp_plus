@@ -27,11 +27,12 @@ namespace utils
         char buf[1];
         n = vsnprintf(buf, 0, format, argsToCheckSize);
 #endif
+        va_end(argsToCheckSize);
+
         if (n == -1)
-            return NULL;
+            return {};
 
         ret.resize(n + 1, 0);
-        va_end(argsToCheckSize);
 
         va_list argsToFormat;
 
@@ -42,7 +43,7 @@ namespace utils
         IL2CPP_ASSERT(n < (int)ret.size());
 
         if (n == -1)
-            return NULL;
+            return {};
 
         // The v*printf methods might put a trailing NUL character, which should not not be in a
         // std::string, so strip it out.
@@ -69,7 +70,10 @@ namespace utils
         n = vsnprintf(buf, 0, format, argsToCheckSize);
 #endif
         if (n == -1)
-            return NULL;
+        {
+            va_end(argsToCheckSize);
+            return {};
+        }
 
         n = (max_n < ++n) ? max_n : n;
 
@@ -85,7 +89,7 @@ namespace utils
         IL2CPP_ASSERT(n < ret.size());
 
         if (n == -1)
-            return NULL;
+            return {};
 
         // The v*printf methods might put a trailing NUL character, which should not not be in a
         // std::string, so strip it out.

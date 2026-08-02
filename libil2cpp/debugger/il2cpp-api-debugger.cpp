@@ -164,7 +164,7 @@ extern "C" {
 
     MonoMethod* il2cpp_get_interface_method(MonoClass* klass, MonoClass* itf, int slot)
     {
-        const VirtualInvokeData* data = il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTable((Il2CppClass*)klass, (Il2CppClass*)itf, slot);
+        const VirtualInvokeData* data = il2cpp::vm::ClassInlines::GetInterfaceInvokeDataFromVTableMaybeNull((Il2CppClass*)klass, (Il2CppClass*)itf, slot);
         if (!data)
             return NULL;
 
@@ -359,7 +359,11 @@ extern "C" {
     void il2cpp_field_static_get_value_for_thread(MonoInternalThread* thread, MonoVTable* vt, MonoClassField* field, void* value, MonoError* error)
     {
         error_init(error);
+#if MONO_NET8_BCL
+        il2cpp::vm::Field::StaticGetValueForThread((FieldInfo*)field, value, (Il2CppThread*)thread);
+#else
         il2cpp::vm::Field::StaticGetValueForThread((FieldInfo*)field, value, (Il2CppInternalThread*)thread);
+#endif
     }
 
     static bool IsFixedBufferAttribute(const MethodInfo* ctor)

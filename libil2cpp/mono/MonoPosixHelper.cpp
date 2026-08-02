@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "../external/zlib/zlib.h"
+#include "../external/zlib-unity/zlib.h"
 
 #include "vm/Exception.h"
 
@@ -89,6 +89,8 @@ intptr_t CreateZStream(int32_t compress, uint8_t gzip, Il2CppMethodPointer func_
 #endif
 
     z = (z_stream*)calloc(1, sizeof(z_stream));
+    z->zalloc = z_alloc;
+    z->zfree = z_free;
     if (compress)
     {
         retval = deflateInit2(z, Z_DEFAULT_COMPRESSION, Z_DEFLATED, gzip ? 31 : -15, 8, Z_DEFAULT_STRATEGY);
@@ -104,8 +106,6 @@ intptr_t CreateZStream(int32_t compress, uint8_t gzip, Il2CppMethodPointer func_
         return result_ptr;
     }
 
-    z->zalloc = z_alloc;
-    z->zfree = z_free;
     result = (ZStream*)calloc(1, sizeof(ZStream));
     result->stream = z;
     result->func = func;

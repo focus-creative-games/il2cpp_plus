@@ -1,9 +1,11 @@
 #include "il2cpp-config.h"
 #include "il2cpp-runtime-stats.h"
+#include "gc/GCHandle.h"
 #include "os/Mutex.h"
 #include "vm/Class.h"
 #include "vm/GenericClass.h"
 #include "vm/Image.h"
+#include "vm/Method.h"
 #include "vm/Runtime.h"
 #include "vm/Type.h"
 #include "metadata/GenericMetadata.h"
@@ -252,9 +254,10 @@ namespace metadata
         ConstrainedCallsToGenericInterfaceMethodsOnStructsAreNotSupported();
     }
 
-    Il2CppRGCTXData* GenericMetadata::InflateRGCTXLocked(const Il2CppImage* image, uint32_t token, const Il2CppGenericContext* context, const FastAutoLock& lock)
+    Il2CppRGCTXData* GenericMetadata::InflateRGCTXLocked(const Il2CppImage* image, uint32_t token, const Il2CppGenericContext* context, const FastAutoLock& lock, Il2CppException** exc)
     {
         // This method assumes that it has the g_MetadataLock
+        *exc = NULL;
 
         RGCTXCollection collection = MetadataCache::GetRGCTXs(image, token);
         if (collection.count == 0)
@@ -270,9 +273,16 @@ namespace metadata
                     dataValues[rgctxIndex].type = GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true);
                     break;
                 case IL2CPP_RGCTX_DATA_CLASS:
-                    dataValues[rgctxIndex].klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true));
-                    Class::InitSizeAndFieldLayoutLocked(dataValues[rgctxIndex].klass, lock);
+                {
+                    Il2CppClass* klass = Class::FromIl2CppType(GenericMetadata::InflateIfNeeded(MetadataCache::GetTypeFromRgctxDefinition(definitionData), context, true));
+                    Class::InitSizeAndFieldLayoutLocked(klass, lock);
+
+                    if (klass->initializationExceptionGCHandle)
+                        *exc = (Il2CppException*)gc::GCHandle::GetTarget(klass->initializationExceptionGCHandle);
+
+                    dataValues[rgctxIndex].klass = klass;
                     break;
+                }
                 case IL2CPP_RGCTX_DATA_METHOD:
                     dataValues[rgctxIndex].method = GenericMethod::GetMethod(Inflate(MetadataCache::GetGenericMethodFromRgctxDefinition(definitionData), context));
                     break;
@@ -286,7 +296,7 @@ namespace metadata
                     if (method->is_inflated)
                         method = GenericMethod::GetMethod(Inflate(*method->genericMethod, context));
 
-                    if (inflatedType->valuetype)
+                    if (inflatedType->valuetype || vm::Method::IsStatic(method))
                     {
                         Il2CppClass* inflatedClass = Class::FromIl2CppType(inflatedType);
                         Class::InitLocked(inflatedClass, lock);

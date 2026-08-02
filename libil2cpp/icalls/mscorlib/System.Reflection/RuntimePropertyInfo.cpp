@@ -61,7 +61,7 @@ namespace Reflection
         return 0;
     }
 
-    void RuntimePropertyInfo::get_property_info(Il2CppReflectionProperty *property, Il2CppPropertyInfo *info, PInfo req_info)
+    void RuntimePropertyInfo::get_property_info(Il2CppReflectionProperty *property, Il2CppMonoPropertyInfo *info, PInfo req_info)
     {
         if ((req_info & PInfo_ReflectedType) != 0)
             IL2CPP_STRUCT_SETREF(info, parent, vm::Reflection::GetTypeObject(&property->klass->byval_arg));

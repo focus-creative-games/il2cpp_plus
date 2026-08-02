@@ -32,10 +32,12 @@ namespace os
 
 #define HARDCODED_DEPENDENCY_LIBRARY(libraryName, libraryFunctions) { libraryName, sizeof(libraryFunctions) / sizeof(HardcodedPInvokeDependencyFunction), libraryFunctions }
 #define HARDCODED_DEPENDENCY_FUNCTION(function) { #function, reinterpret_cast<Il2CppMethodPointer>(function), IL2CPP_ARRAY_SIZE(#function)-1  }
+#define HARDCODED_DEPENDENCY_FUNCTION_BY_NAME(name, function) { name, reinterpret_cast<Il2CppMethodPointer>(function), IL2CPP_ARRAY_SIZE(name)-1  }
 
     class LibraryLoader
     {
     public:
+        static Il2CppMethodPointer GetHardcodedPInvokeDependencyFunctionPointer(Baselib_DynamicLibrary_Handle nativeDynamicLibraryHandle, const il2cpp::utils::StringView<char>& entryPoint, Il2CppCharSet charSet);
         static Il2CppMethodPointer GetHardcodedPInvokeDependencyFunctionPointer(const il2cpp::utils::StringView<Il2CppNativeChar>& nativeDynamicLibrary, const il2cpp::utils::StringView<char>& entryPoint, Il2CppCharSet charSet);
         static Baselib_DynamicLibrary_Handle LoadDynamicLibrary(const utils::StringView<Il2CppNativeChar> nativeDynamicLibrary, std::string& detailedError);
         static Il2CppMethodPointer GetFunctionPointer(Baselib_DynamicLibrary_Handle handle, const PInvokeArguments& pinvokeArgs, std::string& detailedError);

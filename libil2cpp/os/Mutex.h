@@ -38,6 +38,15 @@ namespace os
         Mutex* m_Mutex;
     };
 
+    struct AutoUnlock : public il2cpp::utils::NonCopyable
+    {
+        AutoUnlock(Mutex* mutex, bool alertable) : m_Mutex(mutex), m_Alertable(alertable) { m_Mutex->Unlock(); }
+        ~AutoUnlock() { m_Mutex->Lock(m_Alertable); }
+    private:
+        Mutex* m_Mutex;
+        bool m_Alertable;
+    };
+
     class MutexHandle : public Handle
     {
     public:

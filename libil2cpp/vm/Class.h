@@ -111,7 +111,7 @@ namespace vm
 
         inline static bool IsInterface(const Il2CppClass* klass)
         {
-            return (klass->flags & TYPE_ATTRIBUTE_INTERFACE) || (klass->byval_arg.type == IL2CPP_TYPE_VAR) || (klass->byval_arg.type == IL2CPP_TYPE_MVAR);
+            return klass->flags & TYPE_ATTRIBUTE_INTERFACE;
         }
 
         inline static bool IsNullable(const Il2CppClass* klass)
@@ -134,9 +134,14 @@ namespace vm
             return &klass->this_arg;
         }
 
-        inline static const Il2CppType* GetType(Il2CppClass* klass)
+        inline static const Il2CppType* GetType(const Il2CppClass* klass)
         {
             return &klass->byval_arg;
+        }
+
+        inline static bool IsArray(const Il2CppClass* klass)
+        {
+            return vm::Type::IsArray(vm::Class::GetType(klass));
         }
 
         static const Il2CppType* GetType(Il2CppClass *klass, const TypeNameParseInfo &info);
@@ -179,14 +184,17 @@ namespace vm
         static int GetFieldMarshaledAlignment(const FieldInfo *field);
         static Il2CppClass* GetPtrClass(const Il2CppType* type);
         static Il2CppClass* GetPtrClass(Il2CppClass* elementClass);
+        static Il2CppClass* GetPtrElementClass(const Il2CppType* ptrType);
+        static Il2CppClass* GetPtrElementClass(Il2CppClass* ptrClass);
         static bool HasReferences(Il2CppClass *klass);
-        static void SetupEvents(Il2CppClass *klass);
+        static const EventInfo* GetEvents(Il2CppClass *klass);
         static void SetupFields(Il2CppClass *klass);
         static void SetupMethods(Il2CppClass *klass);
-        static void SetupNestedTypes(Il2CppClass *klass);
-        static void SetupProperties(Il2CppClass *klass);
+        static const MethodInfo** GetMethods(Il2CppClass *klass);
+        static Il2CppClass** GetNestedTypes(Il2CppClass *klass);
+        static const PropertyInfo* GetProperties(Il2CppClass *klass);
         static void SetupTypeHierarchy(Il2CppClass *klass);
-        static void SetupInterfaces(Il2CppClass *klass);
+        static Il2CppClass** GetInterfaces(Il2CppClass *klass);
 
         // Must be called with the GC lock held!
         static const il2cpp::utils::dynamic_array<Il2CppClass*>& GetStaticFieldData();
@@ -194,10 +202,12 @@ namespace vm
         static size_t GetBitmapSize(const Il2CppClass* klass);
         static void GetBitmap(Il2CppClass* klass, size_t* bitmap, size_t& maxSetBit);
 
-        static const Il2CppType* il2cpp_type_from_type_info(const TypeNameParseInfo& info, TypeSearchFlags searchFlags);
+        static const Il2CppType* il2cpp_type_from_type_info(const TypeNameParseInfo& info, TypeSearchFlags searchFlags, const Il2CppImage* image);
 
         static Il2CppClass* GetDeclaringType(Il2CppClass* klass);
         static const MethodInfo* GetVirtualMethod(Il2CppClass* klass, const MethodInfo* virtualMethod);
+
+        static VTableIndex VTableIndexForMethod(Il2CppClass* klass, const MethodInfo* virtualMethod);
 
         static void SetClassInitializationError(Il2CppClass* klass, Il2CppException* error);
         static void PublishInitialized(Il2CppClass* klass);
@@ -283,6 +293,13 @@ namespace vm
 
             return true;
         }
+
+        static void SetDebugName(Il2CppClass* klass)
+#if IL2CPP_DEBUG
+        ;
+#else
+        {}
+#endif
     };
 } /* namespace vm */
 } /* namespace il2cpp */

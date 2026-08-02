@@ -1,3 +1,5 @@
+#if !MONO_NET8_BCL
+
 #include "il2cpp-config.h"
 #include "os/Mutex.h"
 #include "os/Thread.h"
@@ -106,6 +108,22 @@ namespace vm
         il2cpp::os::Thread* osThread = ((Il2CppThread*)arg)->GetInternalThread()->handle;
         osThread->SignalExited();
 #endif
+    }
+
+    bool Thread::IsNativeThreadAbortExceptionPendingForCurrentThread()
+    {
+        return Current()->GetInternalThread()->abort_state_handle != 0;
+    }
+
+    void Thread::ThrowNativeThreadAbortException()
+    {
+        Current()->GetInternalThread()->abort_state_handle = 1;
+        throw Il2CppNativeThreadAbortException();
+    }
+
+    void Thread::NativeThreadAbortExceptionWasHandled()
+    {
+        Current()->GetInternalThread()->abort_state_handle = 0;
     }
 
     void Thread::Initialize()
@@ -286,7 +304,7 @@ namespace vm
         // and we don't leave any locks behind (such as global locks in the allocator which
         // would then deadlock other threads). This could work off ThreadAbortException
         // but we don't want to deal with a managed exception here. So we use a C++ exception.
-        throw Thread::NativeThreadAbortException();
+        Thread::ThrowNativeThreadAbortException();
     }
 
     static bool IsDebuggerThread(os::Thread* thread)
@@ -805,7 +823,7 @@ namespace vm
                         Runtime::UnhandledException(ex.ex);
                 }
             }
-            catch (il2cpp::vm::Thread::NativeThreadAbortException)
+            catch (Il2CppNativeThreadAbortException&)
             {
                 // Nothing to do. We've successfully aborted the thread.
                 il2cpp::vm::Thread::SetState(startData->m_Thread, kThreadStateAborted);
@@ -956,3 +974,5 @@ namespace vm
     }
 } /* namespace vm */
 } /* namespace il2cpp */
+
+#endif

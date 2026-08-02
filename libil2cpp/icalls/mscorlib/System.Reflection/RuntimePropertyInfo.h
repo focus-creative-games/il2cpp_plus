@@ -29,7 +29,7 @@ namespace Reflection
         static Il2CppObject* get_default_value(Il2CppObject* prop);
         static Il2CppReflectionProperty* internal_from_handle_type(intptr_t handlePtr, intptr_t typePtr);
         static Il2CppArray* GetTypeModifiers(Il2CppObject* prop, bool optional);
-        static void get_property_info(Il2CppReflectionProperty *property, Il2CppPropertyInfo *info, PInfo req_info);
+        static void get_property_info(Il2CppReflectionProperty *property, Il2CppMonoPropertyInfo *info, PInfo req_info);
     };
 } // namespace Reflection
 } // namespace System

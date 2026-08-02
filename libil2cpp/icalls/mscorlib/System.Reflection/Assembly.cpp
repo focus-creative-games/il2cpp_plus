@@ -53,7 +53,7 @@ namespace Reflection
         for (vm::AssemblyNameVector::const_iterator aname = referencedAssemblies.begin(); aname != referencedAssemblies.end(); ++aname)
         {
             Il2CppMonoAssemblyName* monoAssemblyName = (Il2CppMonoAssemblyName*)IL2CPP_MALLOC_ZERO(sizeof(Il2CppMonoAssemblyName));
-            il2cpp::vm::AssemblyName::FillNativeAssemblyName(*(*aname), monoAssemblyName);
+            il2cpp::vm::AssemblyName::FillNativeAssemblyName(*(*aname), monoAssemblyName, true);
             assemblyPointers.push_back(monoAssemblyName);
         }
 

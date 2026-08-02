@@ -10,7 +10,7 @@ namespace os
     {
     public:
         /* Returns the number of milliseconds from boot time: this should be monotonic */
-        static uint32_t GetTicksMillisecondsMonotonic();
+        static int64_t GetTicksMillisecondsMonotonic();
 
         /* Returns the number of 100ns ticks from unspecified time: this should be monotonic */
         static int64_t GetTicks100NanosecondsMonotonic();

@@ -42,13 +42,14 @@ namespace vm
         static Il2CppObject* Invoke(const MethodInfo *method, void *obj, void **params, Il2CppException **exc);
         static Il2CppObject* InvokeWithThrow(const MethodInfo *method, void *obj, void **params);
         static Il2CppObject* InvokeConvertArgs(const MethodInfo *method, void *obj, Il2CppObject **params, int paramCount, Il2CppException **exc);
+        static Il2CppObject* InvokeConvertArgs_NoBoxing(const MethodInfo *method, void *obj, void **params, int paramCount, Il2CppException **exc);
         static Il2CppObject* InvokeArray(const MethodInfo *method, void *obj, Il2CppArray *params, Il2CppException **exc);
         static void ObjectInit(Il2CppObject* object);
         static void ObjectInitException(Il2CppObject* object, Il2CppException **exc);
         static void SetUnhandledExceptionPolicy(Il2CppRuntimeUnhandledExceptionPolicy value);
 
-        static void AlwaysRaiseExecutionEngineException(const MethodInfo* method);
-        static void AlwaysRaiseExecutionEngineExceptionOnVirtualCall(const MethodInfo* method);
+        NORETURN static void AlwaysRaiseExecutionEngineException(const MethodInfo* method);
+        NORETURN static void AlwaysRaiseExecutionEngineExceptionOnVirtualCall(const MethodInfo* method);
 
         static inline bool IsFullGenericSharingEnabled()
         {
@@ -75,9 +76,10 @@ namespace vm
         static InvokerMethod GetMissingMethodInvoker();
         static InvokerMethod GetArraySetInvoker();
         static InvokerMethod GetArrayGetInvoker();
-        static void RaiseAmbiguousImplementationException(const MethodInfo* method);
-        static void RaiseExecutionEngineException(const MethodInfo* method, bool virtualCall);
-        static void RaiseExecutionEngineException(const MethodInfo* method, const char* methodFullName, bool virtualCall);
+        NORETURN static void RaiseEntryPointNotFoundException(const MethodInfo* method, const Il2CppClass *klass);
+        NORETURN static void RaiseAmbiguousImplementationException(const MethodInfo* method, const Il2CppClass *klass);
+        NORETURN static void RaiseExecutionEngineException(const MethodInfo* method, bool virtualCall);
+        NORETURN static void RaiseExecutionEngineException(const MethodInfo* method, const char* methodFullName, bool virtualCall);
 
     private:
         static void CallUnhandledExceptionDelegate(Il2CppDomain* domain, Il2CppDelegate* delegate, Il2CppException* exc);

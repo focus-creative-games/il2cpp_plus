@@ -13,6 +13,7 @@
 #include "vm/Runtime.h"
 #include "vm/StackTrace.h"
 #include "vm/String.h"
+#include "vm/Thread.h"
 #include "vm/Type.h"
 #include "Image.h"
 #include "../utils/StringUtils.h"
@@ -24,14 +25,24 @@
 #include "vm-utils/VmStringUtils.h"
 #include "vm-utils/DebugSymbolReader.h"
 
+#if !MONO_NET8_BCL
+typedef Il2CppStackFrame Il2CppMonoStackFrame;
+#endif
+
 namespace il2cpp
 {
 namespace vm
 {
-    void Exception::PrepareExceptionForThrow(Il2CppException* ex, MethodInfo* lastManagedFrame)
+    void Exception::PrepareExceptionForThrow(Il2CppException* ex, const MethodInfo* lastManagedFrame)
     {
 #if IL2CPP_MONO_DEBUGGER
         il2cpp::utils::Debugger::HandleException(ex);
+#endif
+
+#if MONO_NET8_BCL
+        Il2CppClass* stackFrameClass = il2cpp_defaults.mono_stack_frame_class;
+#else
+        Il2CppClass* stackFrameClass = il2cpp_defaults.stack_frame_class;
 #endif
 
         if (ex->trace_ips == NULL)
@@ -51,10 +62,10 @@ namespace vm
                 // We didn't get any call stack. If we have one frame from codegen, use it.
                 if (utils::DebugSymbolReader::DebugSymbolsAvailable())
                 {
-                    Il2CppStackFrame *stackFrame = (Il2CppStackFrame*)vm::Object::New(il2cpp_defaults.stack_frame_class);
+                    Il2CppMonoStackFrame*stackFrame = (Il2CppMonoStackFrame*)vm::Object::New(stackFrameClass);
                     IL2CPP_OBJECT_SETREF(stackFrame, method, vm::Reflection::GetMethodObject(lastManagedFrame, NULL));
 
-                    ips = Array::New(il2cpp_defaults.stack_frame_class, 1);
+                    ips = Array::New(stackFrameClass, 1);
                     il2cpp_array_setref(ips, 0, stackFrame);
                 }
                 else
@@ -68,7 +79,7 @@ namespace vm
                 size_t i = numberOfFrames - 1;
                 if (utils::DebugSymbolReader::DebugSymbolsAvailable())
                 {
-                    ips = Array::New(il2cpp_defaults.stack_frame_class, numberOfFrames);
+                    ips = Array::New(stackFrameClass, numberOfFrames);
                 }
                 else
                 {
@@ -82,7 +93,7 @@ namespace vm
 
                     if (utils::DebugSymbolReader::DebugSymbolsAvailable())
                     {
-                        Il2CppStackFrame *stackFrame = (Il2CppStackFrame*)vm::Object::New(il2cpp_defaults.stack_frame_class);
+                        Il2CppMonoStackFrame*stackFrame = (Il2CppMonoStackFrame*)vm::Object::New(stackFrameClass);
 
                         IL2CPP_OBJECT_SETREF(stackFrame, method, vm::Reflection::GetMethodObject(stackFrameInfo.method, NULL));
                         stackFrame->line = stackFrameInfo.sourceCodeLineNumber;
@@ -106,14 +117,18 @@ namespace vm
         }
     }
 
-    NORETURN void Exception::Raise(Il2CppException* ex, MethodInfo* lastManagedFrame)
+    NORETURN void Exception::Raise(Il2CppException* ex, const MethodInfo* lastManagedFrame)
     {
+        if (vm::Thread::IsNativeThreadAbortExceptionPendingForCurrentThread())
+            vm::Thread::ThrowNativeThreadAbortException();
         PrepareExceptionForThrow(ex, lastManagedFrame);
         throw Il2CppExceptionWrapper(ex);
     }
 
     NORETURN void Exception::Rethrow(Il2CppException* ex)
     {
+        if (vm::Thread::IsNativeThreadAbortExceptionPendingForCurrentThread())
+            vm::Thread::ThrowNativeThreadAbortException();
         throw Il2CppExceptionWrapper(ex);
     }
 
@@ -340,6 +355,14 @@ namespace vm
     Il2CppException* Exception::FromNameMsg(const Il2CppImage* image, const char* name_space, const char* name, const utils::StringView<Il2CppChar>& msg)
     {
         Il2CppClass* exceptionClass = Class::FromName(image, name_space, name);
+
+        IL2CPP_ASSERT(exceptionClass && "Requested exception type was not found.");
+
+        if (exceptionClass == NULL)
+            exceptionClass = il2cpp_defaults.exception_class;
+
+        IL2CPP_ASSERT(exceptionClass && "System.Exception was linked away");
+
         Il2CppException* ex = (Il2CppException*)Object::New(exceptionClass);
         Runtime::ObjectInit((Il2CppObject*)ex);
 
@@ -490,6 +513,12 @@ namespace vm
         return GetTypeLoadException(STRING_TO_STRINGVIEW(info.ns()), STRING_TO_STRINGVIEW(info.name()), STRING_TO_STRINGVIEW(assemblyNameStr));
     }
 
+    Il2CppException* Exception::GetTypeLoadException(const Il2CppAssembly* assembly, const TypeNameParseInfo& info)
+    {
+        std::string assemblyNameStr = AssemblyName::AssemblyNameToString(assembly->aname);
+        return GetTypeLoadException(STRING_TO_STRINGVIEW(info.ns()), STRING_TO_STRINGVIEW(info.name()), STRING_TO_STRINGVIEW(assemblyNameStr));
+    }
+
     Il2CppException* Exception::GetTypeLoadException(const utils::StringView<char>& namespaze, const utils::StringView<char>& typeName, const utils::StringView<char>& assemblyName)
     {
         std::string exceptionMessage = "Could not load type '";
@@ -542,6 +571,12 @@ namespace vm
         }
 
         return typeLoadException;
+    }
+
+    Il2CppException* Exception::GetTypeLoadExceptionForInvalidOffset(const utils::StringView<char>& typeName, size_t firstInvalidOffset)
+    {
+        std::string message = utils::StringUtils::Printf("Could not load type '%s'.  Invalid field offset at offset %d.", typeName.Str(), firstInvalidOffset);
+        return GetTypeLoadException(message.c_str());
     }
 
     Il2CppException* Exception::GetOutOfMemoryException(const utils::StringView<Il2CppChar>& msg)
@@ -671,6 +706,11 @@ namespace vm
     }
 
     Il2CppException* Exception::GetPlatformNotSupportedException(const utils::StringView<Il2CppChar>& msg)
+    {
+        return FromNameMsg(Image::GetCorlib(), "System", "PlatformNotSupportedException", msg);
+    }
+
+    Il2CppException* Exception::GetPlatformNotSupportedException(const char* msg)
     {
         return FromNameMsg(Image::GetCorlib(), "System", "PlatformNotSupportedException", msg);
     }

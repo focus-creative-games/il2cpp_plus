@@ -205,7 +205,7 @@ namespace vm
             // Set the field in our reboxed key value pair instance
             if (Class::FromIl2CppType(field.type)->byval_arg.valuetype)
             {
-                Field::SetValue(reboxed, &field, Object::Unbox(fieldValue));
+                Field::SetValue(reboxed, &field, Object::GetRawData(fieldValue));
             }
             else
             {

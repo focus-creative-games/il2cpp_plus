@@ -34,13 +34,18 @@
 #define MonoArray Il2CppArraySize
 #define MonoAssembly Il2CppAssembly
 #define MonoGenericContainer Il2CppGenericContainer
-#define MonoInternalThread Il2CppInternalThread
 #define MonoMethod MethodInfo
 #define MonoObject Il2CppObject
-#define MonoThread Il2CppThread
 #define MonoType Il2CppType
 
+#if MONO_NET8_BCL
+#define MonoInternalThread Il2CppThread
+#define MonoThread Il2CppThread
+#else
+#define MonoThread Il2CppThread
+#define MonoInternalThread Il2CppInternalThread
 typedef struct Il2CppInternalThread Il2CppInternalThread;
+#endif
 
 // These defines map objects that the debugger-agent.c code uses directly to there
 // IL2CPP counterparts.

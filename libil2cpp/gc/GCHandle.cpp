@@ -1,9 +1,12 @@
 #include "il2cpp-config.h"
+
+#include "GarbageCollector.h"
 #include "gc/GCHandle.h"
 #include "il2cpp-object-internals.h"
-#include "GarbageCollector.h"
 #include "os/Mutex.h"
 #include "utils/Memory.h"
+#include "vm/Object.h"
+
 #include <memory>
 
 namespace il2cpp
@@ -38,6 +41,11 @@ namespace gc
     inline bool HandleTypeIsWeak(GCHandleType type)
     {
         return type == GCHandleType::HANDLE_WEAK || type == GCHandleType::HANDLE_WEAK_TRACK;
+    }
+
+    inline bool HandleTypeIsPinned(GCHandleType type)
+    {
+        return type == GCHandleType::HANDLE_PINNED;
     }
 
 #define BITMAP_SIZE (sizeof (*((HandleData *)NULL)->bitmap) * CHAR_BIT)
@@ -149,14 +157,24 @@ namespace gc
         return slot;
     }
 
+#if MONO_NET8_BCL
+    static Il2CppGCHandle
+    handle_tag_pinned(Il2CppGCHandle handle)
+    {
+        return (Il2CppGCHandle)((uintptr_t)handle | (uintptr_t)1);
+    }
+
+#else
     static Il2CppGCHandle
     handle_tag_weak(Il2CppGCHandle handle)
     {
         return (Il2CppGCHandle)((uintptr_t)handle | (uintptr_t)1);
     }
 
+#endif
+
     static Il2CppGCHandle
-    handle_untag_weak(Il2CppGCHandle handle)
+    handle_untag(Il2CppGCHandle handle)
     {
         return (Il2CppGCHandle)((uintptr_t)handle & ~(uintptr_t)1);
     }
@@ -178,7 +196,7 @@ namespace gc
     {
         HandleData* handles = get_handle_data_from_handle(handle);
         if (slot)
-            *slot = (uint32_t)(ptrdiff_t)((void**)handle_untag_weak(handle) - &handles->entries[0]);
+            *slot = (uint32_t)(ptrdiff_t)((void**)handle_untag(handle) - &handles->entries[0]);
         return handles;
     }
 
@@ -223,6 +241,15 @@ namespace gc
         unlock_handles(handles);
 
         res = (Il2CppGCHandle) & handles->entries[slot];
+#if MONO_NET8_BCL
+        if (HandleTypeIsPinned((GCHandleType)handles->type))
+        {
+            /*
+             * The NET8 BCL uses the lowest bit to indicate pinned GC handle.
+            */
+            res = handle_tag_pinned(res);
+        }
+#else
         if (HandleTypeIsWeak((GCHandleType)handles->type))
         {
             /*
@@ -232,6 +259,7 @@ namespace gc
             */
             res = handle_tag_weak(res);
         }
+#endif
         return res;
     }
 
@@ -246,17 +274,31 @@ namespace gc
 
 #ifndef HAVE_SGEN_GC
         if (track_resurrection)
+        {
+#if MONO_NET8_BCL
+            if (vm::Object::IsInst(obj, il2cpp_defaults.assembly_load_context_class))
+            {
+                // The classlibs will attempt to create an ALC with resurrection tracking
+                // BDWGC doesn't support this - and IL2CPP doesn't support ALC unloading anyway
+                // For now just ignore the request and return the handle with no error
+                return (Il2CppGCHandle)handle;
+            }
+#endif
             return utils::Il2CppError(utils::NotSupported, "IL2CPP does not support resurrection for weak references. Pass the trackResurrection with a value of false.");
+        }
 #endif
 
         return (Il2CppGCHandle)handle;
     }
 
+#if !MONO_NET8_BCL
     GCHandleType GCHandle::GetHandleType(Il2CppGCHandle gchandle)
     {
         HandleData* handles = handle_lookup(gchandle, NULL);
         return (GCHandleType)handles->type;
     }
+
+#endif
 
     Il2CppObject* GCHandle::GetTarget(Il2CppGCHandle gchandle)
     {
@@ -352,6 +394,12 @@ namespace gc
         unlock_handles(handles);
     }
 
+    void GCHandle::SetTarget(Il2CppGCHandle gchandle, Il2CppObject* value)
+    {
+        il2cpp_gchandle_set_target(gchandle, value);
+    }
+
+#if !MONO_NET8_BCL
     utils::Expected<Il2CppGCHandle> GCHandle::GetTargetHandle(Il2CppObject * obj, Il2CppGCHandle handle, int32_t type)
     {
         if (type == -1)
@@ -375,6 +423,8 @@ namespace gc
         }
         return 0;
     }
+
+#endif
 
     void GCHandle::WalkStrongGCHandleTargets(WalkGCHandleTargetsCallback callback, void* context)
     {

@@ -240,7 +240,7 @@ namespace os
         return ret;
     }
 
-    void WaitObject::WakeupThreads(bool wakeupOneThread)
+    void WaitObject::WakeupThreads(bool wakeupOneThread, bool lifo)
     {
         // Wake up threads.
         // We do this by iterating the waiters list and check if the owner (the semaphore, event or mutex) matches 'this'
@@ -250,9 +250,22 @@ namespace os
         IL2CPP_ASSERT(m_Mutex.TryAcquire() == false);
 
         int threadsWaiting = (int)m_WaitingThreads.size();
-        int threadsNotified = 0;
 
-        for (int i = 0; i < threadsWaiting; i++)
+        int start, end, step;
+        if (lifo)
+        {
+            start = threadsWaiting - 1;
+            end = -1;
+            step = -1;
+        }
+        else
+        {
+            start = 0;
+            end = threadsWaiting;
+            step = 1;
+        }
+
+        for (int i = start; i != end; i += step)
         {
             SThreadPairPosix* object = &m_WaitingThreads[i];
 

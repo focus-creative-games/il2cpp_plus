@@ -3,6 +3,9 @@
 #include <string>
 #include <stdint.h>
 
+// This needs to be callable from C code
+IL2CPP_EXTERN_C void il2cpp_console_printf_error(const char* format, ...);
+
 namespace il2cpp
 {
 namespace os

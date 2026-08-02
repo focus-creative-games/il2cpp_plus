@@ -6,6 +6,7 @@ namespace il2cpp
 namespace utils
 {
     NORETURN void RethrowException(Il2CppException* exception);
+    NORETURN void ThrowNativeThreadAbortException();
 
     template<typename FinallyBlock, bool isFault>
     struct FinallyHelper
@@ -14,7 +15,8 @@ namespace utils
         inline FinallyHelper(FinallyBlock&& finallyBlock) :
             m_Exception(nullptr),
             // static cast to rvalue reference simulates std::move, as we don't want to include <utility> for all generated code
-            m_FinallyBlock(static_cast<FinallyBlock &&>(finallyBlock))
+            m_FinallyBlock(static_cast<FinallyBlock &&>(finallyBlock)),
+            m_NativeThreadAbortOccurred(false)
         {
         }
 
@@ -47,6 +49,8 @@ namespace utils
                 m_FinallyBlock();
                 if (m_Exception != nullptr)
                     RethrowException(m_Exception);
+                else if (m_NativeThreadAbortOccurred)
+                    ThrowNativeThreadAbortException();
             }
         }
 
@@ -55,9 +59,15 @@ namespace utils
             m_Exception = exception;
         }
 
+        inline void SetNativeThreadAbortOccurred()
+        {
+            m_NativeThreadAbortOccurred = true;
+        }
+
     private:
-        Il2CppException* m_Exception;
         FinallyBlock m_FinallyBlock;
+        Il2CppException* m_Exception;
+        bool m_NativeThreadAbortOccurred;
     };
 
     template<typename FinallyBlock>

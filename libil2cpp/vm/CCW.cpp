@@ -103,7 +103,7 @@ namespace vm
         bool isValueTypeMethod = il2cpp::vm::Class::IsValuetype(il2cpp::vm::Method::GetClass(toStringMethod));
 
         Il2CppException* exception = NULL;
-        Il2CppString* result = (Il2CppString*)il2cpp::vm::Runtime::Invoke(toStringMethod, isValueTypeMethod ? Object::Unbox(value) : value, NULL, &exception);
+        Il2CppString* result = (Il2CppString*)il2cpp::vm::Runtime::Invoke(toStringMethod, isValueTypeMethod ? Object::GetRawData(value) : value, NULL, &exception);
         if (exception != NULL)
             return String::Empty();
 
@@ -161,6 +161,41 @@ namespace vm
             utils::StringUtils::Utf16ToUtf8(valueStr->chars, valueStr->length).c_str(),
             toElementType);
         return HandleInvalidIPropertyConversionImpl(message);
+    }
+
+    Il2CppIUnknown* CCW::GetCCW(Il2CppObject* o, Il2CppReflectionType* type)
+    {
+        if (o == NULL)
+            vm::Exception::Raise(vm::Exception::GetArgumentNullException("o"));
+
+        if (type == NULL)
+            vm::Exception::Raise(vm::Exception::GetArgumentNullException("type"));
+
+        Il2CppClass* klass = vm::Class::FromIl2CppType(type->type);
+
+        if (!vm::Class::IsInterface(klass))
+        {
+            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(parameter, IL2CPP_NATIVE_STRING("type"));
+            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(message, IL2CPP_NATIVE_STRING("The type parameter is not an interface."));
+            vm::Exception::Raise(vm::Exception::GetArgumentException(parameter, message));
+        }
+
+        if (vm::Class::IsGeneric(klass))
+        {
+            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(parameter, IL2CPP_NATIVE_STRING("type"));
+            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(message, IL2CPP_NATIVE_STRING("The type parameter is a generic type."));
+            vm::Exception::Raise(vm::Exception::GetArgumentException(parameter, message));
+        }
+
+        const Il2CppInteropData* interopData = klass->interopData;
+        if (interopData == NULL || interopData->guid == NULL)
+        {
+            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(parameter, IL2CPP_NATIVE_STRING("type"));
+            DECLARE_NATIVE_C_STRING_AS_STRING_VIEW_OF_IL2CPP_CHARS(message, IL2CPP_NATIVE_STRING("The specified type must be visible from COM."));
+            vm::Exception::Raise(vm::Exception::GetArgumentException(parameter, message));
+        }
+
+        return vm::CCW::GetOrCreate(o, *interopData->guid);
     }
 } /* namespace vm */
 } /* namespace il2cpp */

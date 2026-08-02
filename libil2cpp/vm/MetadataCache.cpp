@@ -22,6 +22,7 @@
 #include "vm/Class.h"
 #include "vm/ClassInlines.h"
 #include "vm/GenericClass.h"
+#include "vm/Image.h"
 #include "vm/MetadataAlloc.h"
 #include "vm/MetadataLoader.h"
 #include "vm/MetadataLock.h"
@@ -125,6 +126,11 @@ Il2CppClass* il2cpp::vm::MetadataCache::GetTypeInfoFromTypeIndex(const Il2CppIma
 const MethodInfo* il2cpp::vm::MetadataCache::GetMethodInfoFromMethodDefinitionIndex(const Il2CppImage *image, MethodIndex index)
 {
     return il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(index);
+}
+
+const MethodInfo* il2cpp::vm::MetadataCache::GetMethodInfoFromEncodedIndex(const Il2CppImage* image, EncodedMethodIndex index)
+{
+    return il2cpp::vm::GlobalMetadata::GetMethodInfoFromEncodedIndex(index);
 }
 
 const MethodInfo* il2cpp::vm::MetadataCache::GetAssemblyEntryPoint(const Il2CppImage* image)
@@ -295,12 +301,13 @@ void il2cpp::vm::MetadataCache::InitializeGCSafe()
     InitializeGuidToClassTable();
 }
 
-void ClearImageNames()
+void ClearImageData()
 {
     for (int32_t imageIndex = 0; imageIndex < s_ImagesCount; imageIndex++)
     {
         Il2CppImage* image = s_ImagesTable + imageIndex;
         IL2CPP_FREE((void*)image->nameNoExt);
+        il2cpp::vm::Image::ClearImageCachedData(image);
     }
 }
 
@@ -337,7 +344,7 @@ void il2cpp::vm::MetadataCache::Clear()
 
     Assembly::ClearAllAssemblies();
 
-    ClearImageNames();
+    ClearImageData();
 
     IL2CPP_FREE(s_ImagesTable);
     s_ImagesTable = NULL;
@@ -353,6 +360,9 @@ void il2cpp::vm::MetadataCache::Clear()
 
     s_Il2CppCodeRegistration = NULL;
     s_Il2CppCodeGenOptions = NULL;
+
+    MetadataCache::WalkPointerTypes([](Il2CppClass* ptrClass, void* ctx) { IL2CPP_FREE(const_cast<char*>(ptrClass->name)); }, NULL);
+    s_MetadataCache.m_PointerTypes.Clear();
 
     il2cpp::metadata::GenericMetadata::Clear();
     il2cpp::metadata::GenericMethod::ClearStatics();
@@ -460,7 +470,7 @@ void il2cpp::vm::MetadataCache::AddPointerTypeLocked(Il2CppClass* type, Il2CppCl
     s_MetadataCache.m_PointerTypes.Add(type, pointerType);
 }
 
-const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppType* const* types, uint32_t typeCount)
+const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppType* const* types, uint32_t typeCount, bool sharedInst)
 {
     // temporary inst to lookup a permanent one that may already exist
     Il2CppGenericInst inst;
@@ -485,7 +495,10 @@ const Il2CppGenericInst* il2cpp::vm::MetadataCache::GetGenericInst(const Il2CppT
     int index = 0;
     const Il2CppType* const* typesEnd = types + typeCount;
     for (const Il2CppType* const* iter = types; iter != typesEnd; ++iter, ++index)
+    {
         newInst->type_argv[index] = *iter;
+        IL2CPP_ASSERT(sharedInst || !vm::Type::IsSharedGenericMetaType(*iter));
+    }
 
     // Do this while still holding the g_MetadataLock to prevent the same instance from being added twice
     bool added = s_GenericInstSet.Add(newInst);
@@ -508,7 +521,7 @@ static bool IsShareableEnum(const Il2CppType* type)
         return IsShareableEnum(il2cpp::vm::Class::GetType(definition));
     }
 
-    // Base case for recurion - this is not an enum or a generic instance type.
+    // Base case for recursion - this is not an enum or a generic instance type.
     return false;
 }
 
@@ -564,7 +577,7 @@ static const Il2CppGenericInst* GetFullySharedInst(Il2CppMetadataGenericContaine
                 type = &il2cpp_defaults.il2cpp_fully_shared_struct_type->byval_arg;
                 break;
             case il2cpp::vm::GenericParameterRestrictionReferenceType:
-                type = &il2cpp_defaults.object_class->byval_arg;
+                type = &il2cpp_defaults.il2cpp_shared_object_type->byval_arg;
                 break;
             default:
                 type = &il2cpp_defaults.il2cpp_fully_shared_type->byval_arg;
@@ -589,7 +602,7 @@ static const Il2CppGenericInst* GetSharedInst(const Il2CppGenericInst* inst)
     for (uint32_t i = 0; i < inst->type_argc; ++i)
     {
         if (il2cpp::vm::Type::IsReference(inst->type_argv[i]))
-            types[i] = &il2cpp_defaults.object_class->byval_arg;
+            types[i] = &il2cpp_defaults.il2cpp_shared_object_type->byval_arg;
         else
         {
             const Il2CppType* type = inst->type_argv[i];
@@ -646,7 +659,7 @@ static const Il2CppGenericInst* GetSharedInst(const Il2CppGenericInst* inst)
         }
     }
 
-    const Il2CppGenericInst* sharedInst = il2cpp::vm::MetadataCache::GetGenericInst(types, inst->type_argc);
+    const Il2CppGenericInst* sharedInst = il2cpp::vm::MetadataCache::GetGenericInst(types, inst->type_argc, true);
 
     return sharedInst;
 }
@@ -884,10 +897,10 @@ Il2CppMethodPointer il2cpp::vm::MetadataCache::GetReversePInvokeWrapper(const Il
     return s_Il2CppCodeRegistration->reversePInvokeWrappers[index];
 }
 
-static const Il2CppType* GetReducedType(const Il2CppType* type)
+const Il2CppType* il2cpp::vm::MetadataCache::GetReducedType(const Il2CppType* type)
 {
     if (type->byref)
-        return &il2cpp_defaults.object_class->byval_arg;
+        return &il2cpp_defaults.void_ptr_class->byval_arg;
 
     if (il2cpp::vm::Type::IsEnum(type))
         type = il2cpp::vm::Type::GetUnderlyingType(type);
@@ -904,21 +917,31 @@ static const Il2CppType* GetReducedType(const Il2CppType* type)
         case IL2CPP_TYPE_STRING:
         case IL2CPP_TYPE_ARRAY:
         case IL2CPP_TYPE_SZARRAY:
-            return &il2cpp_defaults.object_class->byval_arg;
+        case IL2CPP_TYPE_FNPTR:
+        case IL2CPP_TYPE_PTR:
+            return &il2cpp_defaults.void_ptr_class->byval_arg;
         case IL2CPP_TYPE_GENERICINST:
-            if (il2cpp::vm::Type::IsValueType(type))
-            {
-                // We can't inflate a generic instance that contains generic arguments
-                if (il2cpp::metadata::GenericMetadata::ContainsGenericParameters(type))
-                    return type;
+        {
+            if (!il2cpp::vm::Type::IsValueType(type))
+                return &il2cpp_defaults.void_ptr_class->byval_arg;
 
-                const Il2CppGenericInst* sharedInst = GetSharedInst(type->data.generic_class->context.class_inst);
-                Il2CppGenericClass* gklass = il2cpp::metadata::GenericMetadata::GetGenericClass(type->data.generic_class->type, sharedInst);
-                Il2CppClass* klass = il2cpp::vm::GenericClass::GetClass(gklass);
-                return &klass->byval_arg;
-            }
+            // We can't inflate a generic instance that contains generic arguments
+            if (il2cpp::metadata::GenericMetadata::ContainsGenericParameters(type))
+                return type;
 
-            return &il2cpp_defaults.object_class->byval_arg;
+            const Il2CppGenericInst* sharedInst;
+            Il2CppClass* genericTypeDefinition = il2cpp::vm::GenericClass::GetTypeDefinition(type->data.generic_class);
+            if (il2cpp::vm::Type::HasVariableRuntimeSizeWhenFullyShared(il2cpp::vm::Class::GetType(genericTypeDefinition)))
+                sharedInst = GetSharedInst(type->data.generic_class->context.class_inst);
+            else
+                sharedInst = GetFullySharedInst(genericTypeDefinition->genericContainerHandle, type->data.generic_class->context.class_inst);
+
+            Il2CppGenericClass* gklass = il2cpp::metadata::GenericMetadata::GetGenericClass(type->data.generic_class->type, sharedInst);
+            Il2CppClass* klass = il2cpp::vm::GenericClass::GetClass(gklass);
+
+            return il2cpp::vm::Class::GetType(klass);
+        }
+
         default:
             return type;
     }
@@ -926,7 +949,7 @@ static const Il2CppType* GetReducedType(const Il2CppType* type)
 
 il2cpp::vm::Il2CppUnresolvedCallStubs il2cpp::vm::MetadataCache::GetUnresovledCallStubs(const MethodInfo* method)
 {
-    il2cpp::vm::Il2CppUnresolvedCallStubs stubs;
+    il2cpp::vm::Il2CppUnresolvedCallStubs stubs = {};
     stubs.stubsFound = false;
 
     il2cpp::metadata::Il2CppSignature signature;
@@ -953,12 +976,23 @@ il2cpp::vm::Il2CppUnresolvedCallStubs il2cpp::vm::MetadataCache::GetUnresovledCa
             stubs.stubsFound = true;
         }
     }
-    else
+
+    // Ensure that we never return a NULL method pointer in stubs
+    if (stubs.methodPointer == NULL)
     {
-        const MethodInfo* entryPointNotFoundMethod = il2cpp::vm::Method::GetEntryPointNotFoundMethodInfo();
-        stubs.methodPointer = entryPointNotFoundMethod->methodPointer;
-        stubs.virtualMethodPointer = entryPointNotFoundMethod->methodPointer;
+        if (Method::RequiresAdjustorThunk(method) || stubs.virtualMethodPointer == NULL)
+            stubs.methodPointer = Method::GetEntryPointNotFoundMethodInfoForMethod(method)->methodPointer;
+        else
+            stubs.methodPointer = stubs.virtualMethodPointer;
     }
+    if (stubs.virtualMethodPointer == NULL)
+    {
+        if (Method::RequiresAdjustorThunk(method) || stubs.methodPointer == NULL)
+            stubs.virtualMethodPointer = Method::GetEntryPointNotFoundMethodInfoForMethod(method)->methodPointer;
+        else
+            stubs.virtualMethodPointer = stubs.methodPointer;
+    }
+
 
     return stubs;
 }
@@ -1002,6 +1036,14 @@ Il2CppClass* il2cpp::vm::MetadataCache::GetTypeInfoFromType(const Il2CppType* ty
         return NULL;
 
     return il2cpp::vm::GlobalMetadata::GetTypeInfoFromType(type);
+}
+
+Il2CppClass* il2cpp::vm::MetadataCache::GetTypeInfoFromType_OnlyCached(const Il2CppType* type)
+{
+    if (type == NULL)
+        return NULL;
+
+    return il2cpp::vm::GlobalMetadata::GetTypeInfoFromType_OnlyCached(type);
 }
 
 Il2CppClass* il2cpp::vm::MetadataCache::GetTypeInfoFromHandle(Il2CppMetadataTypeHandle handle)
@@ -1100,14 +1142,19 @@ const uint8_t* il2cpp::vm::MetadataCache::GetFieldDefaultValue(const FieldInfo* 
     return il2cpp::vm::GlobalMetadata::GetFieldDefaultValue(field, type);
 }
 
-const uint8_t* il2cpp::vm::MetadataCache::GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitySetNullDefaultValue)
+const uint8_t* il2cpp::vm::MetadataCache::GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitlySetNullDefaultValue)
 {
-    return il2cpp::vm::GlobalMetadata::GetParameterDefaultValue(method, parameterPosition, type, isExplicitySetNullDefaultValue);
+    return il2cpp::vm::GlobalMetadata::GetParameterDefaultValue(method, parameterPosition, type, isExplicitlySetNullDefaultValue);
 }
 
 int il2cpp::vm::MetadataCache::GetFieldMarshaledSizeForField(const FieldInfo* field)
 {
     return il2cpp::vm::GlobalMetadata::GetFieldMarshaledSizeForField(field);
+}
+
+int32_t il2cpp::vm::MetadataCache::GetInlineArrayLengthForType(const Il2CppType* type)
+{
+    return il2cpp::vm::GlobalMetadata::GetInlineArrayLengthForType(type);
 }
 
 int32_t il2cpp::vm::MetadataCache::GetFieldOffsetFromIndexLocked(const Il2CppClass* klass, int32_t fieldIndexInType, FieldInfo* field, const il2cpp::os::FastAutoLock& lock)
@@ -1241,6 +1288,28 @@ Il2CppMetadataMethodInfo il2cpp::vm::MetadataCache::GetMethodInfo(const Il2CppCl
     return il2cpp::vm::GlobalMetadata::GetMethodInfo(klass, index);
 }
 
+int il2cpp::vm::MetadataCache::GetVirtualMethodCount(Il2CppClass* klass)
+{
+    if (klass->method_count == 0)
+        return 0;
+
+    if (Class::IsInflated(klass))
+        klass = GenericClass::GetTypeDefinition(klass->generic_class);
+
+    if (klass->methods != NULL)
+    {
+        int virtualMethodCount = 0;
+        for (int i = 0; i < klass->method_count; i++)
+        {
+            if (Method::IsVirtual(klass->methods[i]))
+                virtualMethodCount++;
+        }
+        return virtualMethodCount;
+    }
+
+    return il2cpp::vm::GlobalMetadata::GetVirtualMethodCount(klass);
+}
+
 Il2CppMetadataParameterInfo il2cpp::vm::MetadataCache::GetParameterInfo(const Il2CppClass* klass, Il2CppMetadataMethodDefinitionHandle handle, MethodParameterIndex paramIndex)
 {
     return il2cpp::vm::GlobalMetadata::GetParameterInfo(klass, handle, paramIndex);
@@ -1261,7 +1330,7 @@ uint32_t il2cpp::vm::MetadataCache::GetReturnParameterToken(Il2CppMetadataMethod
     return il2cpp::vm::GlobalMetadata::GetReturnParameterToken(handle);
 }
 
-uint32_t il2cpp::vm::MetadataCache::GetGenericContainerCount(Il2CppMetadataGenericContainerHandle handle)
+uint16_t il2cpp::vm::MetadataCache::GetGenericContainerCount(Il2CppMetadataGenericContainerHandle handle)
 {
     return il2cpp::vm::GlobalMetadata::GetGenericContainerCount(handle);
 }

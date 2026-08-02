@@ -141,6 +141,14 @@ namespace System
         gc::GarbageCollector::SetWriteBarrier((void**)&s_DomainData->back().second);
     }
 
+    void AppDomain::ClearData()
+    {
+        os::FastAutoLock lock(&s_DomainDataMutex);
+
+        if (s_DomainData)
+            s_DomainData->clear();
+    }
+
     Il2CppReflectionAssembly* AppDomain::LoadAssembly(Il2CppAppDomain* thisPtr, Il2CppString* assemblyRef, Il2CppObject* securityEvidence, bool refOnly, int32_t* stackMark)
     {
         il2cpp::vm::TypeNameParseInfo info;

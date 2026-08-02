@@ -143,12 +143,20 @@ namespace vm
         StaticGetValueInternal(field, value, NULL);
     }
 
+#if MONO_NET8_BCL
+    void Field::StaticGetValueForThread(FieldInfo* field, void* value, Il2CppThread* thread)
+#else
     void Field::StaticGetValueForThread(FieldInfo* field, void* value, Il2CppInternalThread* thread)
+#endif
     {
         StaticGetValueInternal(field, value, thread);
     }
 
+#if MONO_NET8_BCL
+    void Field::StaticGetValueInternal(FieldInfo* field, void* value, Il2CppThread* thread)
+#else
     void Field::StaticGetValueInternal(FieldInfo* field, void* value, Il2CppInternalThread* thread)
+#endif
     {
         void *src = NULL;
 
@@ -325,23 +333,18 @@ namespace vm
         }
     }
 
-    const char* Field::GetData(FieldInfo *field)
+    const char* Field::GetData(FieldInfo *field, size_t* size)
     {
-        if (field->type->attrs & FIELD_ATTRIBUTE_HAS_DEFAULT)
+        if (field->type->attrs & (FIELD_ATTRIBUTE_HAS_DEFAULT | FIELD_ATTRIBUTE_HAS_FIELD_RVA))
         {
             const Il2CppType* type = NULL;
-            return Class::GetFieldDefaultValue(field, &type);
+            const char* data = Class::GetFieldDefaultValue(field, &type);
+            Il2CppClass *klass = Class::FromIl2CppType(type);
+            *size = Class::GetValueSize(klass, NULL);
+            return data;
         }
-        else if (field->type->attrs & FIELD_ATTRIBUTE_HAS_FIELD_RVA)
-        {
-            IL2CPP_NOT_IMPLEMENTED_NO_ASSERT(Field::GetData, "This works for array initialization data. Revisit any other RVA use case.");
-            const Il2CppType* type = NULL;
-            return Class::GetFieldDefaultValue(field, &type);
-        }
-        else
-        {
-            return NULL;
-        }
+
+        return NULL;
     }
 
     bool Field::IsInstance(FieldInfo* field)

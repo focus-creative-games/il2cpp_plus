@@ -7,6 +7,7 @@
 #include "os/CrashHelpers.h"
 #include "os/Time.h"
 #include "os/Environment.h"
+#include "os/Memory.h"
 
 #include "vm/Array.h"
 #include "vm/Class.h"
@@ -68,12 +69,12 @@ namespace System
 
     int32_t Environment::get_TickCount()
     {
-        return il2cpp::os::Time::GetTicksMillisecondsMonotonic();
+        return (int32_t)il2cpp::os::Time::GetTicksMillisecondsMonotonic();
     }
 
     int32_t Environment::GetPageSize()
     {
-        return IL2CPP_PAGE_SIZE;
+        return il2cpp::os::Memory::GetPageSize();
     }
 
     int32_t Environment::get_Platform()

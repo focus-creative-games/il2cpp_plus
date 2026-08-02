@@ -1,6 +1,6 @@
 #pragma once
 #include "il2cpp-config.h"
-struct Il2CppObject;
+#include "il2cpp-object-internals.h"
 
 namespace il2cpp
 {
@@ -24,6 +24,7 @@ namespace vm
     };
 
 #if !IL2CPP_SUPPORT_THREADS
+
     inline void Monitor::AllocateStaticData()
     {
     }
@@ -32,17 +33,10 @@ namespace vm
     {
     }
 
-    inline void Monitor::Enter(Il2CppObject* object)
-    {
-    }
-
     inline bool Monitor::TryEnter(Il2CppObject* object, uint32_t timeout)
     {
+        Monitor::Enter(object);
         return true;
-    }
-
-    inline void Monitor::Exit(Il2CppObject* object)
-    {
     }
 
     inline void Monitor::Pulse(Il2CppObject* object)
@@ -64,12 +58,12 @@ namespace vm
 
     inline bool Monitor::IsAcquired(Il2CppObject* object)
     {
-        return true;
+        return object->monitor != 0;
     }
 
     inline bool Monitor::IsOwnedByCurrentThread(Il2CppObject* object)
     {
-        return true;
+        return Monitor::IsAcquired(object);
     }
 
 #endif
