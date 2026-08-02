@@ -96,7 +96,7 @@ namespace collections
         inline static TValue* AllocateAndInitialize(const TValue* originalValues, size_t valueCount, TValueToKeyConverter valueToKeyConverter, TKeyLess keyLessComparer)
         {
             TValue* values = new TValue[valueCount];
-            memcpy(values, originalValues, valueCount * sizeof(TValue));
+            std::copy(originalValues, originalValues + valueCount, values);
 
             return InitializeInPlace(values, valueCount, valueToKeyConverter, keyLessComparer);
         }
