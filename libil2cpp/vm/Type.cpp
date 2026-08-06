@@ -144,9 +144,17 @@ namespace vm
             if (!Next())
                 return false; // Invalid format
 
-            std::string::const_iterator begin = _p;
+            std::string::const_iterator begin;
 
-            ConsumeIdentifier();
+            while (true)
+            {
+                begin = _p;
+                ConsumeIdentifier();
+                if (!CurrentIs('.'))
+                    break;
+                if (!Next())
+                    break;
+            }
 
             if (CurrentIs('`'))
             {
