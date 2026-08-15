@@ -7,23 +7,29 @@ namespace il2cpp
 {
 namespace metadata
 {
-    bool Il2CppGenericInstCompare::operator()(const KeyWrapper<const Il2CppGenericInst*>& t1, const KeyWrapper<const Il2CppGenericInst*>& t2) const
+    bool Il2CppGenericInstCompare::operator()(const Il2CppGenericInst* left, const Il2CppGenericInst* right) const
     {
-        return Compare(t1, t2);
+        return Compare(left, right);
     }
 
-    bool Il2CppGenericInstCompare::Compare(const KeyWrapper<const Il2CppGenericInst*>& t1, const KeyWrapper<const Il2CppGenericInst*>& t2)
+    bool Il2CppGenericInstCompare::Compare(const Il2CppGenericInst* t1, const Il2CppGenericInst* t2)
     {
-        if (t1.type != t2.type)
-            return false;
-        else if (!t1.isNormal())
-            return true;
-
-        return AreEqual(t1.key, t2.key);
+        if (t1)
+        {
+            return t2 && AreEqual(t1, t2);
+        }
+        else
+        {
+            return !t2;
+        }
     }
 
     bool Il2CppGenericInstCompare::AreEqual(const Il2CppGenericInst* t1, const Il2CppGenericInst* t2)
     {
+        if (t1 == t2)
+        {
+            return true;
+        }
         if (t1->type_argc != t2->type_argc)
             return false;
 

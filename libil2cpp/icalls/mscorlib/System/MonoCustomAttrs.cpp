@@ -14,6 +14,8 @@
 #include "vm/Exception.h"
 #include "vm/MetadataCache.h"
 
+#include "hybridclr/metadata/MetadataModule.h"
+
 namespace il2cpp
 {
 namespace icalls
@@ -41,7 +43,7 @@ namespace System
         return il2cpp::vm::Reflection::HasAttribute(obj, vm::Class::FromIl2CppType(attr_type->type));
     }
 
-    static Il2CppObject* CreateCustomAttributeData(const Il2CppAssembly* assembly, const il2cpp::metadata::LazyCustomAttributeData& data)
+    Il2CppObject* MonoCustomAttrs::CreateCustomAttributeData(const Il2CppAssembly* assembly, const il2cpp::metadata::LazyCustomAttributeData& data)
     {
         static const MethodInfo* customAttributeDataConstructor;
         if (!customAttributeDataConstructor)

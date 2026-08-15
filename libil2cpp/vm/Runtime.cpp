@@ -76,6 +76,9 @@
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 
+#include "hybridclr/Runtime.h"
+#include "hybridclr/Il2CppCompatibleDef.h"
+
 Il2CppDefaults il2cpp_defaults;
 bool g_il2cpp_is_fully_initialized = false;
 static bool shutting_down = false;
@@ -461,6 +464,7 @@ namespace vm
             utils::Environment::SetMainArgs(mainArgs, 1);
         }
 
+        hybridclr::Runtime::Initialize();
         vm::MetadataCache::ExecuteEagerStaticClassConstructors();
         vm::MetadataCache::ExecuteModuleInitializers();
 
@@ -721,6 +725,7 @@ namespace vm
 
     Il2CppObject* Runtime::InvokeWithThrow(const MethodInfo *method, void *obj, void **params)
     {
+        hybridclr::InitAndGetInterpreterDirectlyCallMethodPointer(method);
         if (method->return_type->type == IL2CPP_TYPE_VOID)
         {
             method->invoker_method(method->methodPointer, method, obj, params, NULL);

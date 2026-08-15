@@ -120,6 +120,7 @@ Il2CppTypeDefinition DeserializeTypeDefinition(const Il2CppMetadataTypeHandle ha
     const auto typeIndexSize = sizes.typeIndex;
 
     return Il2CppTypeDefinition {
+            handle,
             Read<StringIndex>(ptr), // nameIndex
             Read<StringIndex>(ptr), // namespaceIndex
             ReadIndex<TypeIndex>(ptr, typeIndexSize), // byvalTypeIndex

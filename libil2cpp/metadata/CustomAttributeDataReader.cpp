@@ -40,7 +40,9 @@
 // 0x0010023f   - Encoded method index for ctor1
 // 0x02001fc1   - Encoded method index for ctor2
 // 0x02         - Constructor argument count for ctor1 (compressed uint32_t)
+// 0x01         - Property count for ctor1 (compressed uint32_t)
 // 0x04 (2)     - argument 1 type code (compressed int32_t)
+// ....         - argument 1 data
 // 0x00         - Field for ctor1 (compressed uint32_t)
 // 0x01         - Property count for ctor1 (compressed uint32_t)
 // ....         - argument 1 data

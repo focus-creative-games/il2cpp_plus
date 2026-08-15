@@ -5,6 +5,7 @@
 
 #include <map>
 #include <limits>
+#include <tuple>
 #include <il2cpp-runtime-metadata.h>
 #include "il2cpp-class-internals.h"
 #include "il2cpp-tabledefs.h"
@@ -58,29 +59,24 @@
 #include "GlobalMetadataFileInternals.h"
 #include "MetadataDeserialization.h"
 
-typedef struct Il2CppImageGlobalMetadata
-{
-    TypeDefinitionIndex typeStart;
-    TypeDefinitionIndex exportedTypeStart;
-    CustomAttributeIndex customAttributeStart;
-    MethodIndex entryPointIndex;
-    const Il2CppImage* image;
-} Il2CppImageGlobalMetadata;
+#include "hybridclr/metadata/MetadataUtil.h"
+#include "hybridclr/metadata/MetadataModule.h"
 
 static int32_t s_MetadataImagesCount = 0;
 static Il2CppImageGlobalMetadata* s_MetadataImagesTable = NULL;
 static SerializedIndexSizes s_SerializedIndexSizes;
 
-static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppMetadataTypeHandle typeHandle);
+//static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppMetadataTypeHandle typeHandle);
 static Il2CppClass* GetTypeInfoFromTypeDefinitionIndex(TypeDefinitionIndex index);
 static Il2CppClass* FromTypeDefinition(TypeDefinitionIndex index);
 static GenericParameterIndex GetIndexForGenericParameter(Il2CppMetadataGenericParameterHandle handle);
 static Il2CppMetadataGenericParameterHandle GetGenericParameterFromIndexInternal(GenericParameterIndex index);
 static Il2CppMetadataGenericContainerHandle GetGenericContainerFromIndex(GenericContainerIndex index);
 static Il2CppMetadataTypeHandle GetTypeHandle(TypeDefinitionIndex index);
-static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex index);
+//static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex index);
 
 static void* s_GlobalMetadata;
+static void* s_GlobalMetadataEnd;
 static const Il2CppGlobalMetadataHeader* s_GlobalMetadataHeader;
 
 static const MethodInfo** s_MethodInfoDefinitionTable = NULL;
@@ -96,17 +92,6 @@ static const Il2CppMetadataRegistration * s_Il2CppMetadataRegistration;
 static Il2CppClass** s_TypeInfoTable = NULL;
 static Il2CppClass** s_TypeInfoDefinitionTable = NULL;
 
-static const int kBitIsValueType = 1;
-static const int kBitIsEnum = 2;
-static const int kBitHasFinalizer = 3;
-static const int kBitHasStaticConstructor = 4;
-static const int kBitIsBlittable = 5;
-static const int kBitIsImportOrWindowsRuntime = 6;
-static const int kPackingSize = 7;     // This uses 4 bits from bit 7 to bit 10
-static const int kPackingSizeIsDefault = 11;
-static const int kClassSizeIsDefault = 12;
-static const int kSpecifiedPackingSize = 13; // This uses 4 bits from bit 13 to bit 16
-static const int kBitIsByRefLike = 17;
 static const int kBitHasInlineArray = 18;
 
 template<typename T>
@@ -115,8 +100,36 @@ static T MetadataOffset(const void* metadata, size_t sectionOffset, size_t itemI
     return reinterpret_cast<T>(reinterpret_cast<uint8_t*>(const_cast<void*>(metadata)) + sectionOffset) + itemIndex;
 }
 
-static const char* GetStringFromIndex(StringIndex index)
+bool il2cpp::vm::GlobalMetadata::IsAOTTypeHandle(Il2CppMetadataTypeHandle handle)
 {
+    return (size_t)s_GlobalMetadata <= (size_t)handle && (size_t)handle < (size_t)s_GlobalMetadataEnd;
+}
+
+bool il2cpp::vm::GlobalMetadata::IsAOTMethodHandle(Il2CppMetadataMethodDefinitionHandle handle)
+{
+    return (size_t)s_GlobalMetadata <= (size_t)handle && (size_t)handle < (size_t)s_GlobalMetadataEnd;
+}
+
+bool il2cpp::vm::GlobalMetadata::IsAOTMetadata(const void* data)
+{
+    return (size_t)s_GlobalMetadata <= (size_t)data && (size_t)data < (size_t)s_GlobalMetadataEnd;
+}
+
+const Il2CppGenericContainer il2cpp::vm::GlobalMetadata::GetGenericContainerFromHandle(Il2CppMetadataGenericContainerHandle handle)
+{
+    if (IsAOTMetadata((void*)handle))
+    {
+        return DeserializeGenericContainer(handle, s_SerializedIndexSizes);
+    }
+    return *(const Il2CppGenericContainer*)handle;
+}
+
+const char* il2cpp::vm::GlobalMetadata::GetStringFromIndex(StringIndex index)
+{
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetStringFromEncodeIndex(index);
+    }
     IL2CPP_ASSERT(index <= s_GlobalMetadataHeader->strings.size);
     return MetadataOffset<const char*>(s_GlobalMetadata, s_GlobalMetadataHeader->strings.offset, index);
 }
@@ -129,6 +142,10 @@ static const char* GetWindowsRuntimeStringFromIndex(StringIndex index)
 
 static const Il2CppMetadataMethodDefinitionHandle GetMethodDefinitionFromIndex(MethodIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodHandleFromIndex(index);
+    }
     const auto numMethods = s_GlobalMetadataHeader->methods.count;
     const auto serializedSize = s_GlobalMetadataHeader->methods.size / numMethods;
     IL2CPP_ASSERT(index >= 0 && index < numMethods);
@@ -139,6 +156,10 @@ static const Il2CppMetadataMethodDefinitionHandle GetMethodDefinitionFromIndex(M
 
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionIndex(MethodIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodInfoFromMethodDefinitionIndex(index);
+    }
     IL2CPP_ASSERT(index >= 0 && index < s_GlobalMetadataHeader->methods.count);
 
     return utils::InitOnce(&s_MethodInfoDefinitionTable[index], &g_MetadataLock, [index](il2cpp::os::FastAutoLock& _)
@@ -154,6 +175,10 @@ const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodDefinitionI
 
 static const Il2CppEventDefinition GetEventDefinitionFromIndex(const Il2CppImage* image, const EventIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterImage(image))
+    {
+        return hybridclr::metadata::MetadataModule::GetEventDefinitionFromIndex(image, index);
+    }
     const auto numEvents = s_GlobalMetadataHeader->events.count;
     const auto serializedSize = s_GlobalMetadataHeader->events.size / numEvents;
     IL2CPP_ASSERT(index >= 0 && index < numEvents);
@@ -163,6 +188,11 @@ static const Il2CppEventDefinition GetEventDefinitionFromIndex(const Il2CppImage
 
 static Il2CppPropertyDefinition GetPropertyDefinitionFromIndex(const Il2CppImage* image, const PropertyIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterImage(image))
+    {
+        return hybridclr::metadata::MetadataModule::GetPropertyDefinitionFromIndex(image, index);
+    }
+
     const auto numProperties = s_GlobalMetadataHeader->properties.count;
     const auto serializedSize = s_GlobalMetadataHeader->properties.size / numProperties;
     IL2CPP_ASSERT(index >= 0 && index < numProperties);
@@ -170,8 +200,26 @@ static Il2CppPropertyDefinition GetPropertyDefinitionFromIndex(const Il2CppImage
     return DeserializePropertyDefinition(properties + index * serializedSize, s_SerializedIndexSizes);
 }
 
-static const Il2CppParameterDefinition GetParameterDefinitionFromIndex(const Il2CppImage* image, const ParameterIndex index)
+const Il2CppParameterDefinition il2cpp::vm::GlobalMetadata::GetParameterDefinitionFromIndex(const Il2CppImage* image, const ParameterIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterImage(image))
+    {
+        return hybridclr::metadata::MetadataModule::GetParameterDefinitionFromIndex(image, index);
+    }
+    const auto numParameters = s_GlobalMetadataHeader->parameters.count;
+    const auto parameterSize = s_GlobalMetadataHeader->parameters.size / numParameters;
+    IL2CPP_ASSERT(index >= 0 && index < numParameters);
+    const auto* parameters = static_cast<const char*>(s_GlobalMetadata) + s_GlobalMetadataHeader->parameters.offset;
+    return DeserializeParameterDefinition(parameters + index * parameterSize, s_SerializedIndexSizes);
+}
+
+const Il2CppParameterDefinition il2cpp::vm::GlobalMetadata::GetParameterDefinitionFromIndex(const Il2CppMethodDefinition& methodDef, const ParameterIndex index)
+{
+    if (hybridclr::metadata::IsInterpreterIndex(methodDef.nameIndex))
+    {
+        const Il2CppImage* image = hybridclr::metadata::MetadataModule::GetImage(methodDef)->GetIl2CppImage();
+        return hybridclr::metadata::MetadataModule::GetParameterDefinitionFromIndex(image, index);
+    }
     const auto numParameters = s_GlobalMetadataHeader->parameters.count;
     const auto parameterSize = s_GlobalMetadataHeader->parameters.size / numParameters;
     IL2CPP_ASSERT(index >= 0 && index < numParameters);
@@ -311,7 +359,7 @@ static void InitializeTypeHandle(Il2CppType* type)
 
 static void ClearTypeHandle(Il2CppType* type)
 {
-    type->data.__klassIndex = GetIndexForTypeDefinitionInternal(type->data.typeHandle);
+    type->data.__klassIndex = il2cpp::vm::GlobalMetadata::GetIndexForTypeDefinitionInternal(type->data.typeHandle);
 }
 
 static void InitializeGenericParameterHandle(Il2CppType* type)
@@ -371,12 +419,13 @@ bool il2cpp::vm::GlobalMetadata::Initialize(int32_t* imagesCount, int32_t* assem
     s_GlobalMetadata = vm::MetadataLoader::LoadMetadataFile("global-metadata.dat");
     if (!s_GlobalMetadata)
         return false;
-
     s_GlobalMetadataHeader = (const Il2CppGlobalMetadataHeader*)s_GlobalMetadata;
     IL2CPP_ASSERT(s_GlobalMetadataHeader->sanity == 0xFAB11BAF);
     IL2CPP_ASSERT(s_GlobalMetadataHeader->version == 107);
     IL2CPP_ASSERT(s_GlobalMetadataHeader->stringLiterals.offset == sizeof(Il2CppGlobalMetadataHeader));
 
+    const Il2CppSectionMetadata& exportedTypeDefinitions = s_GlobalMetadataHeader->exportedTypeDefinitions;
+    s_GlobalMetadataEnd = (char*)s_GlobalMetadata + exportedTypeDefinitions.offset + exportedTypeDefinitions.size;
     s_MetadataImagesCount = *imagesCount = s_GlobalMetadataHeader->images.count;
     *assembliesCount = s_GlobalMetadataHeader->assemblies.count;
 
@@ -682,7 +731,10 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyTypeHandle(const
 const Il2CppAssembly* il2cpp::vm::GlobalMetadata::GetReferencedAssembly(const Il2CppAssembly* assembly, int32_t referencedAssemblyTableIndex, const Il2CppAssembly assembliesTable[], int assembliesCount)
 {
     IL2CPP_ASSERT(referencedAssemblyTableIndex < assembly->referencedAssemblyCount);
-
+    if (hybridclr::metadata::IsInterpreterImage(assembly->image))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(assembly->image)->GetReferencedAssembly(referencedAssemblyTableIndex, assembliesTable, assembliesCount);
+    }
     referencedAssemblyTableIndex = assembly->referencedAssemblyStart + referencedAssemblyTableIndex;
 
     IL2CPP_ASSERT(
@@ -697,6 +749,10 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyExportedTypeHand
 {
     if (index == kTypeDefinitionIndexInvalid)
         return NULL;
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetAssemblyExportedTypeHandleFromEncodeIndex(index);
+    }
 
     IL2CPP_ASSERT(index >= 0 && index < static_cast<AssemblyExportedTypeIndex>(image->exportedTypeCount));
 
@@ -714,9 +770,14 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyExportedTypeHand
     return GetTypeHandleFromIndex(typeDefinitionIndex);
 }
 
-static TypeDefinitionIndex GetIndexForTypeDefinitionInternal(const Il2CppMetadataTypeHandle typeHandle)
+TypeDefinitionIndex il2cpp::vm::GlobalMetadata::GetIndexForTypeDefinitionInternal(const Il2CppMetadataTypeHandle typeHandle)
 {
     IL2CPP_ASSERT(typeHandle);
+    if (hybridclr::metadata::IsInterpreterType(typeHandle))
+    {
+        return static_cast<TypeDefinitionIndex>(hybridclr::metadata::MetadataModule::GetTypeEncodeIndex(typeHandle));
+    }
+
     const auto numTypeDefinitions = s_GlobalMetadataHeader->typeDefinitions.count;
     const auto typeDefinitionSize = s_GlobalMetadataHeader->typeDefinitions.size / numTypeDefinitions;
     const auto* typeDefinitions = static_cast<const char*>(s_GlobalMetadata) + s_GlobalMetadataHeader->typeDefinitions.offset;
@@ -736,6 +797,10 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(Type
 {
     if (index == kTypeIndexInvalid)
         return NULL;
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetTypeInfoFromTypeDefinitionEncodeIndex(index);
+    }
 
     IL2CPP_ASSERT(index >= 0 && index < s_GlobalMetadataHeader->typeDefinitions.count);
 
@@ -744,11 +809,19 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeDefinitionIndex(Type
 
 Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromHandle(Il2CppMetadataTypeHandle handle)
 {
+    if (hybridclr::metadata::IsInterpreterType(handle))
+    {
+        return hybridclr::metadata::MetadataModule::GetTypeInfoFromHandle(handle);
+    }
     return GetTypeInfoFromTypeDefinitionIndex(GetIndexForTypeDefinitionInternal(handle));
 }
 
 Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromHandle_OnlyCached(Il2CppMetadataTypeHandle handle)
 {
+    if (hybridclr::metadata::IsInterpreterType(handle))
+    {
+        return hybridclr::metadata::MetadataModule::GetTypeInfoFromHandle_OnlyCached(handle);
+    }
     TypeDefinitionIndex index = GetIndexForTypeDefinitionInternal(handle);
     return s_TypeInfoDefinitionTable[index];
 }
@@ -792,7 +865,7 @@ Il2CppTypeNameInfo il2cpp::vm::GlobalMetadata::GetTypeNameInfoFromType(const Il2
             if (!klass)
             {
                 // Build the name info directly from the metadata information
-                const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(type->data.typeHandle, s_SerializedIndexSizes);
+                const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(type->data.typeHandle);
                 nameInfo.namespaze = GetStringFromIndex(typeDefinition.namespaceIndex);
                 nameInfo.name = GetStringFromIndex(typeDefinition.nameIndex);
                 nameInfo.image = GetImageForTypeDefinitionIndex(GetIndexForTypeDefinitionInternal(type->data.typeHandle));
@@ -836,12 +909,26 @@ Il2CppTypeNameInfo il2cpp::vm::GlobalMetadata::GetTypeNameInfoFromType(const Il2
 Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromType_OnlyCached(const Il2CppType* type)
 {
     TypeDefinitionIndex index = GetIndexForTypeDefinitionInternal(type->data.typeHandle);
+
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetTypeInfoFromTypeDefinitionEncodeIndex_OnlyCached(index);
+    }
     return s_TypeInfoDefinitionTable[index];
 }
 
 const Il2CppType* il2cpp::vm::GlobalMetadata::GetInterfaceFromOffset(const Il2CppClass* klass, const TypeInterfaceIndex offset)
 {
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
+    return GetInterfaceFromOffset(klass->typeMetadataHandle, offset);
+}
+
+const Il2CppType* il2cpp::vm::GlobalMetadata::GetInterfaceFromOffset(const Il2CppMetadataTypeHandle typeHandle, TypeInterfaceIndex offset)
+{
+    if (hybridclr::metadata::IsInterpreterType(typeHandle))
+    {
+        return hybridclr::metadata::MetadataModule::GetInterfaceFromIndex(typeHandle, offset);
+    }
+    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(typeHandle, s_SerializedIndexSizes);
 
     IL2CPP_ASSERT(offset >= 0 && offset < typeDefinition.interfaces_count);
 
@@ -857,7 +944,16 @@ const Il2CppType* il2cpp::vm::GlobalMetadata::GetInterfaceFromOffset(const Il2Cp
 
 Il2CppInterfaceOffsetInfo il2cpp::vm::GlobalMetadata::GetInterfaceOffsetInfo(const Il2CppClass* klass, const TypeInterfaceOffsetIndex index)
 {
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
+    return GetInterfaceOffsetInfo(klass->typeMetadataHandle, index);
+}
+
+Il2CppInterfaceOffsetInfo il2cpp::vm::GlobalMetadata::GetInterfaceOffsetInfo(const Il2CppMetadataTypeHandle typeHandle, TypeInterfaceOffsetIndex index)
+{
+    if (hybridclr::metadata::IsInterpreterType(typeHandle))
+    {
+        return hybridclr::metadata::MetadataModule::GetInterfaceOffsetInfo(typeHandle, index);
+    }
+    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(typeHandle, s_SerializedIndexSizes);
 
     IL2CPP_ASSERT(index >= 0 && index < typeDefinition.interface_offsets_count);
 
@@ -872,10 +968,10 @@ Il2CppInterfaceOffsetInfo il2cpp::vm::GlobalMetadata::GetInterfaceOffsetInfo(con
     );
 
     return
-        {
-            GetIl2CppTypeFromIndex(interfaceOffset.interfaceTypeIndex),
-            interfaceOffset.offset
-        };
+    {
+        GetIl2CppTypeFromIndex(interfaceOffset.interfaceTypeIndex),
+        interfaceOffset.offset
+    };
 }
 
 Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetTypeHandleFromIndex(TypeDefinitionIndex typeIndex)
@@ -894,31 +990,31 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetTypeHandleFromType(const
 
 bool il2cpp::vm::GlobalMetadata::TypeIsNested(Il2CppMetadataTypeHandle handle)
 {
-    const auto typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
+    const auto typeDefinition = GetTypeDefinitionFromTypeHandle(handle);
     return typeDefinition.declaringTypeIndex != kTypeIndexInvalid;
 }
 
 bool il2cpp::vm::GlobalMetadata::TypeIsValueType(Il2CppMetadataTypeHandle handle)
 {
-    const auto typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
+    const auto typeDefinition = GetTypeDefinitionFromTypeHandle(handle);
     return (typeDefinition.bitfield >> (kBitIsValueType - 1)) & 0x1;
 }
 
 bool il2cpp::vm::GlobalMetadata::StructLayoutPackIsDefault(Il2CppMetadataTypeHandle handle)
 {
-    const auto typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
+    const auto typeDefinition = GetTypeDefinitionFromTypeHandle(handle);
     return (typeDefinition.bitfield >> (kPackingSizeIsDefault - 1)) & 0x1;
 }
 
 bool il2cpp::vm::GlobalMetadata::StructLayoutSizeIsDefault(Il2CppMetadataTypeHandle handle)
 {
-    const auto typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
+    const auto typeDefinition = GetTypeDefinitionFromTypeHandle(handle);
     return (typeDefinition.bitfield >> (kClassSizeIsDefault - 1)) & 0x1;
 }
 
 std::pair<const char*, const char*> il2cpp::vm::GlobalMetadata::GetTypeNamespaceAndName(Il2CppMetadataTypeHandle handle)
 {
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(handle);
     return std::make_pair
         (
         GetStringFromIndex(typeDefinition.namespaceIndex),
@@ -928,11 +1024,16 @@ std::pair<const char*, const char*> il2cpp::vm::GlobalMetadata::GetTypeNamespace
 
 Il2CppClass* il2cpp::vm::GlobalMetadata::GetNestedTypeFromOffset(const Il2CppClass* klass, TypeNestedTypeIndex offset)
 {
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(offset >= 0 && offset < typeDefinition.nested_type_count);
 
     NestedTypeIndex index = typeDefinition.nestedTypesStart + offset;
+
+    if (hybridclr::metadata::IsInterpreterType(klass))
+    {
+        return hybridclr::metadata::MetadataModule::GetNestedTypeFromOffset(klass, offset);
+    }
 
     IL2CPP_ASSERT(
         index >= 0
@@ -948,6 +1049,10 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetNestedTypes(Il2CppMetada
 {
     if (!iter)
         return NULL;
+    if (hybridclr::metadata::IsInterpreterType(handle))
+    {
+        return hybridclr::metadata::MetadataModule::GetNestedTypes(handle, iter);
+    }
 
     const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
 
@@ -991,6 +1096,10 @@ static int CompareTokens(const void* pkey, const void* pelem)
 
 static const Il2CppImageGlobalMetadata* GetImageForCustomAttributeIndex(CustomAttributeIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return reinterpret_cast<const Il2CppImageGlobalMetadata*>(hybridclr::metadata::MetadataModule::GetImageByEncodedIndex(index)->GetIl2CppImage()->metadataHandle);
+    }
     for (int32_t imageIndex = 0; imageIndex < s_MetadataImagesCount; imageIndex++)
     {
         const Il2CppImageGlobalMetadata* imageMetadta = s_MetadataImagesTable + imageIndex;
@@ -1010,7 +1119,11 @@ static CustomAttributeIndex GetCustomAttributeIndex(const Il2CppCustomAttributeD
 {
     if (attrDataRange == NULL)
         return kCustomAttributeIndexInvalid;
-
+    if (hybridclr::metadata::IsInterpreterIndex(GET_CUSTOM_ATTRIBUTE_TYPE_RANGE_START(*attrDataRange)))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(hybridclr::metadata::DecodeImageIndex(GET_CUSTOM_ATTRIBUTE_TYPE_RANGE_START(*attrDataRange)))
+            ->GetCustomAttributeIndex(attrDataRange->token);
+    }
     const Il2CppCustomAttributeDataRange* attributeTypeRangeStart = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRanges.offset, 0);
 
     CustomAttributeIndex index = (CustomAttributeIndex)(attrDataRange - attributeTypeRangeStart);
@@ -1043,6 +1156,10 @@ static CustomAttributeIndex GetCustomAttributeIndex(const Il2CppImage* image, ui
 
 Il2CppMetadataCustomAttributeHandle il2cpp::vm::GlobalMetadata::GetCustomAttributeTypeToken(const Il2CppImage* image, uint32_t token)
 {
+    if (hybridclr::metadata::IsInterpreterImage(image))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(image)->GetCustomAttributeTypeToken(token);
+    }
     const Il2CppCustomAttributeDataRange* attributeTypeRange = MetadataOffset<const Il2CppCustomAttributeDataRange*>(s_GlobalMetadata, s_GlobalMetadataHeader->attributeDataRanges.offset, 0);
 
     Il2CppCustomAttributeDataRange key = {0};
@@ -1057,7 +1174,11 @@ static il2cpp::metadata::CustomAttributeDataReader CreateCustomAttributeDataRead
 {
     if (handle == NULL)
         return il2cpp::metadata::CustomAttributeDataReader::Empty();
-
+    if (hybridclr::metadata::IsInterpreterImage(image))
+    {
+        auto dataTuple = hybridclr::metadata::MetadataModule::GetImage(image)->CreateCustomAttributeDataTuple((const Il2CppCustomAttributeDataRange*)handle);
+        return il2cpp::metadata::CustomAttributeDataReader(image, std::get<0>(dataTuple), std::get<1>(dataTuple));
+    }
     Il2CppCustomAttributeDataRange* range = (Il2CppCustomAttributeDataRange*)handle;
     const Il2CppCustomAttributeDataRange* next = range + 1;
 
@@ -1079,6 +1200,10 @@ il2cpp::metadata::CustomAttributeDataReader il2cpp::vm::GlobalMetadata::GetCusto
 
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromVTableSlot(const Il2CppClass* klass, int32_t vTableSlot)
 {
+    if (hybridclr::metadata::IsInterpreterType(klass))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodInfoFromVTableSlot(klass, vTableSlot);
+    }
     const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
 
     uint32_t index = typeDefinition.vtableStart + vTableSlot;
@@ -1102,8 +1227,12 @@ static const uint8_t* GetFieldDefaultValueEntry(const FieldInfo* field)
     if (il2cpp::vm::Type::IsGenericInstance(&parent->byval_arg))
         parent = il2cpp::vm::GenericClass::GetTypeDefinition(parent->generic_class);
 
-    const Il2CppTypeDefinition parentTypeDefinition = DeserializeTypeDefinition(parent->typeMetadataHandle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition parentTypeDefinition = il2cpp::vm::GlobalMetadata::GetTypeDefinitionFromTypeHandle(parent->typeMetadataHandle);
     fieldIndex += parentTypeDefinition.fieldStart;
+    if (hybridclr::metadata::IsInterpreterIndex((uint32_t)fieldIndex))
+    {
+        return (const uint8_t*)hybridclr::metadata::MetadataModule::GetFieldDefaultValueEntryByFieldIndex((uint32_t)fieldIndex);
+    }
 
     Il2CppFieldDefaultValue key;
     key.fieldIndex = fieldIndex;
@@ -1122,11 +1251,25 @@ static const uint8_t* GetFieldOrParameterDefaultValue(DefaultValueDataIndex inde
 {
     if (index == kDefaultValueIndexNull)
         return NULL;
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetFieldOrParameterDefaultValueByDataIndex(index);
+    }
 
     IL2CPP_ASSERT(index >= 0 && index <= (DefaultValueDataIndex)(s_GlobalMetadataHeader->fieldAndParameterDefaultValueData.size / sizeof(uint8_t)));
 
     const uint8_t* defaultValuesData =  (const uint8_t*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->fieldAndParameterDefaultValueData.offset);
     return defaultValuesData + static_cast<uint32_t>(index);
+}
+
+
+static const Il2CppFieldDefaultValue GetFieldDefaultValueByEntry(const uint8_t* entry)
+{
+    if (!il2cpp::vm::GlobalMetadata::IsAOTMetadata(entry))
+    {
+        return *(Il2CppFieldDefaultValue*)entry;
+    }
+    return DeserializeFieldDefaultValue(reinterpret_cast<const char*>(entry), s_SerializedIndexSizes);
 }
 
 const uint8_t* il2cpp::vm::GlobalMetadata::GetFieldDefaultValue(const FieldInfo* field, const Il2CppType** type)
@@ -1135,7 +1278,7 @@ const uint8_t* il2cpp::vm::GlobalMetadata::GetFieldDefaultValue(const FieldInfo*
 
     if (ptr != NULL)
     {
-        const Il2CppFieldDefaultValue entry = DeserializeFieldDefaultValue(reinterpret_cast<const char*>(ptr), s_SerializedIndexSizes);
+        const Il2CppFieldDefaultValue entry = GetFieldDefaultValueByEntry(ptr);
         *type = GetIl2CppTypeFromIndex(entry.typeIndex);
         return GetFieldOrParameterDefaultValue(entry.dataIndex);
     }
@@ -1159,8 +1302,14 @@ static const uint8_t* GetParameterDefaultValueEntry(const MethodInfo* method, co
     if (method->methodMetadataHandle == NULL)
         return NULL;
 
-    const Il2CppMethodDefinition methodDefinition = DeserializeMethodDefinition(method->methodMetadataHandle, s_SerializedIndexSizes);
+    if (hybridclr::metadata::IsInterpreterMethod(method->methodMetadataHandle))
+    {
+        return (const uint8_t*)hybridclr::metadata::MetadataModule::GetParameterDefaultValueEntryByParameterPosition(method, parameterPosition);
+    }
+
+    const Il2CppMethodDefinition methodDefinition = il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromHandle(method->methodMetadataHandle);
     ParameterIndex parameterIndex = methodDefinition.parameterStart + parameterPosition;
+
     Il2CppParameterDefaultValue key;
     key.parameterIndex = parameterIndex;
 
@@ -1171,6 +1320,15 @@ static const uint8_t* GetParameterDefaultValueEntry(const MethodInfo* method, co
     return res;
 }
 
+static const Il2CppParameterDefaultValue GetParameterDefaultValueByEntry(const uint8_t* entry)
+{
+    if (!il2cpp::vm::GlobalMetadata::IsAOTMetadata(entry))
+    {
+        return *(Il2CppParameterDefaultValue*)entry;
+    }
+    return DeserializeParameterDefaultValue(reinterpret_cast<const char*>(entry), s_SerializedIndexSizes);
+}
+
 const uint8_t* il2cpp::vm::GlobalMetadata::GetParameterDefaultValue(const MethodInfo* method, int32_t parameterPosition, const Il2CppType** type, bool* isExplicitlySetNullDefaultValue)
 {
     *isExplicitlySetNullDefaultValue = false;
@@ -1178,7 +1336,7 @@ const uint8_t* il2cpp::vm::GlobalMetadata::GetParameterDefaultValue(const Method
 
     if (ptr != NULL)
     {
-        const Il2CppParameterDefaultValue entry = DeserializeParameterDefaultValue(reinterpret_cast<const char*>(ptr), s_SerializedIndexSizes);
+        const Il2CppParameterDefaultValue entry = GetParameterDefaultValueByEntry(ptr);
         *type = GetIl2CppTypeFromIndex(entry.typeIndex);
         *isExplicitlySetNullDefaultValue = entry.dataIndex == kDefaultValueIndexNull;
         return GetFieldOrParameterDefaultValue(entry.dataIndex);
@@ -1187,13 +1345,17 @@ const uint8_t* il2cpp::vm::GlobalMetadata::GetParameterDefaultValue(const Method
     return NULL;
 }
 
-static TypeDefinitionIndex GetIndexForTypeDefinition(const Il2CppClass* klass)
+TypeDefinitionIndex il2cpp::vm::GlobalMetadata::GetIndexForTypeDefinition(const Il2CppClass* klass)
 {
     return GetIndexForTypeDefinitionInternal(klass->typeMetadataHandle);
 }
 
 uint32_t il2cpp::vm::GlobalMetadata::GetFieldOffset(const Il2CppClass* klass, int32_t fieldIndexInType, FieldInfo* field)
 {
+    if (hybridclr::metadata::IsInterpreterType(klass))
+    {
+        return hybridclr::metadata::MetadataModule::GetFieldOffset(klass, fieldIndexInType, field);
+    }
     const auto typeDefIndex = GetIndexForTypeDefinition(klass);
     IL2CPP_ASSERT(typeDefIndex <= s_Il2CppMetadataRegistration->typeDefinitionsSizesCount);
     int32_t offset = s_Il2CppMetadataRegistration->fieldOffsets[typeDefIndex][fieldIndexInType];
@@ -1208,6 +1370,10 @@ static int CompareFieldMarshaledSize(const void* pkey, const void* pelem)
 
 int il2cpp::vm::GlobalMetadata::GetFieldMarshaledSizeForField(const FieldInfo* field)
 {
+    if (hybridclr::metadata::IsInterpreterType(field->parent))
+    {
+        return -1;
+    }
     Il2CppClass* parent = field->parent;
     size_t fieldIndex = (field - parent->fields);
 
@@ -1265,8 +1431,12 @@ int32_t il2cpp::vm::GlobalMetadata::GetInlineArrayLengthForType(const Il2CppType
     return -1;
 }
 
-static const Il2CppFieldDefinition GetFieldDefinitionFromIndex(const Il2CppImage* image, const FieldIndex index)
+const Il2CppFieldDefinition il2cpp::vm::GlobalMetadata::GetFieldDefinitionFromIndex(const Il2CppImage* image, FieldIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetFieldDefinitionFromEncodeIndex(index);
+    }
     const auto numFields = s_GlobalMetadataHeader->fields.count;
     const auto fieldSize = s_GlobalMetadataHeader->fields.size / numFields;
     IL2CPP_ASSERT(index >= 0 && index < numFields);
@@ -1277,7 +1447,7 @@ static const Il2CppFieldDefinition GetFieldDefinitionFromIndex(const Il2CppImage
 Il2CppMetadataFieldInfo il2cpp::vm::GlobalMetadata::GetFieldInfo(const Il2CppClass* klass, TypeFieldIndex fieldIndex)
 {
     IL2CPP_ASSERT(klass->typeMetadataHandle != NULL);
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(fieldIndex >= 0 && fieldIndex < typeDefinition.field_count);
     IL2CPP_ASSERT(typeDefinition.fieldStart != kFieldIndexInvalid);
@@ -1296,13 +1466,13 @@ Il2CppMetadataMethodInfo il2cpp::vm::GlobalMetadata::GetMethodInfo(const Il2CppC
     const uint16_t kFlagIsUnmanagedCallersOnly = 0x8000;
 
     IL2CPP_ASSERT(klass->typeMetadataHandle != NULL);
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(index >= 0 && index < typeDefinition.method_count);
     IL2CPP_ASSERT(typeDefinition.methodStart != kMethodIndexInvalid);
 
     const Il2CppMetadataMethodDefinitionHandle handle = GetMethodDefinitionFromIndex(typeDefinition.methodStart + index);
-    const Il2CppMethodDefinition methodDefinition = DeserializeMethodDefinition(handle, s_SerializedIndexSizes);
+    const Il2CppMethodDefinition methodDefinition = GetMethodDefinitionFromHandle(handle);
 
     return {
             handle,
@@ -1343,7 +1513,7 @@ Il2CppMetadataParameterInfo il2cpp::vm::GlobalMetadata::GetParameterInfo(const I
 {
     IL2CPP_ASSERT(handle != NULL);
 
-    const Il2CppMethodDefinition methodDefinition = DeserializeMethodDefinition(handle, s_SerializedIndexSizes);
+    const Il2CppMethodDefinition methodDefinition = GetMethodDefinitionFromHandle(handle);
 
     IL2CPP_ASSERT(paramIndex >= 0 && paramIndex < methodDefinition.parameterCount);
 
@@ -1359,7 +1529,7 @@ Il2CppMetadataParameterInfo il2cpp::vm::GlobalMetadata::GetParameterInfo(const I
 Il2CppMetadataPropertyInfo il2cpp::vm::GlobalMetadata::GetPropertyInfo(const Il2CppClass* klass, TypePropertyIndex index)
 {
     IL2CPP_ASSERT(klass->typeMetadataHandle != NULL);
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(index >= 0 && index < typeDefinition.property_count);
     IL2CPP_ASSERT(typeDefinition.propertyStart != kPropertyIndexInvalid);
@@ -1378,7 +1548,7 @@ Il2CppMetadataPropertyInfo il2cpp::vm::GlobalMetadata::GetPropertyInfo(const Il2
 Il2CppMetadataEventInfo il2cpp::vm::GlobalMetadata::GetEventInfo(const Il2CppClass* klass, TypeEventIndex index)
 {
     IL2CPP_ASSERT(klass->typeMetadataHandle != NULL);
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(klass->typeMetadataHandle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(klass->typeMetadataHandle);
 
     IL2CPP_ASSERT(index >= 0 && index < typeDefinition.event_count);
 
@@ -1398,15 +1568,18 @@ uint32_t il2cpp::vm::GlobalMetadata::GetReturnParameterToken(Il2CppMetadataMetho
 {
     IL2CPP_ASSERT(handle != NULL);
 
-    const Il2CppMethodDefinition methodDefinition = DeserializeMethodDefinition(handle, s_SerializedIndexSizes);
+    const Il2CppMethodDefinition methodDefinition = GetMethodDefinitionFromHandle(handle);
     return methodDefinition.returnParameterToken;
 }
 
-static Il2CppMetadataGenericContainerHandle GetGenericContainerFromIndex(GenericContainerIndex index)
+Il2CppMetadataGenericContainerHandle il2cpp::vm::GlobalMetadata::GetGenericContainerFromIndex(GenericContainerIndex index)
 {
     if (index == kGenericContainerIndexInvalid)
         return NULL;
-
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetGenericContainerFromEncodeIndex(index);
+    }
     const auto genericContainersCount = s_GlobalMetadataHeader->genericContainers.count;
     IL2CPP_ASSERT(index >= 0 && index < genericContainersCount);
 
@@ -1418,13 +1591,13 @@ static Il2CppMetadataGenericContainerHandle GetGenericContainerFromIndex(Generic
 
 Il2CppMetadataGenericContainerHandle il2cpp::vm::GlobalMetadata::GetGenericContainerFromGenericClass(const Il2CppGenericClass* genericClass)
 {
-    const Il2CppTypeDefinition genericType = DeserializeTypeDefinition(GetTypeHandleFromType(genericClass->type), s_SerializedIndexSizes);
+    const Il2CppTypeDefinition genericType = GetTypeDefinitionFromTypeHandle(GetTypeHandleFromType(genericClass->type));
     return GetGenericContainerFromIndex(genericType.genericContainerIndex);
 }
 
 Il2CppMetadataGenericContainerHandle il2cpp::vm::GlobalMetadata::GetGenericContainerFromMethod(Il2CppMetadataMethodDefinitionHandle handle)
 {
-    const Il2CppMethodDefinition methodDefinition = DeserializeMethodDefinition(handle, s_SerializedIndexSizes);
+    const Il2CppMethodDefinition methodDefinition = GetMethodDefinitionFromHandle(handle);
     return GetGenericContainerFromIndex(methodDefinition.genericContainerIndex);
 }
 
@@ -1465,9 +1638,18 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetContainerDeclaringType(Il2CppMetadat
     return GetTypeInfoFromTypeDefinitionIndex(genericContainer.ownerIndex);
 }
 
+const Il2CppGenericParameter il2cpp::vm::GlobalMetadata::GetGenericParameterFromHandle(Il2CppMetadataGenericParameterHandle handle)
+{
+    if (!il2cpp::vm::GlobalMetadata::IsAOTMetadata(handle))
+    {
+        return hybridclr::metadata::MetadataModule::GetGenericParameterFromHandle(handle);
+    }
+    return DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+}
+
 Il2CppClass* il2cpp::vm::GlobalMetadata::GetParameterDeclaringType(Il2CppMetadataGenericParameterHandle handle)
 {
-    const Il2CppGenericParameter genericParameter = DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+    const Il2CppGenericParameter genericParameter = GetGenericParameterFromHandle(handle);
 
     const Il2CppMetadataGenericContainerHandle genericContainerHandle =  GetGenericContainerFromIndex(genericParameter.ownerIndex);
     const Il2CppGenericContainer genericContainer = DeserializeGenericContainer(genericContainerHandle, s_SerializedIndexSizes);
@@ -1480,7 +1662,7 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetParameterDeclaringType(Il2CppMetadat
 
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetParameterDeclaringMethod(Il2CppMetadataGenericParameterHandle handle)
 {
-    const Il2CppGenericParameter genericParameter = DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+    const Il2CppGenericParameter genericParameter = GetGenericParameterFromHandle(handle);
 
     const Il2CppMetadataGenericContainerHandle genericContainerHandle =  GetGenericContainerFromIndex(genericParameter.ownerIndex);
     const Il2CppGenericContainer genericContainer = DeserializeGenericContainer(genericContainerHandle, s_SerializedIndexSizes);
@@ -1496,13 +1678,21 @@ Il2CppMetadataGenericParameterHandle il2cpp::vm::GlobalMetadata::GetGenericParam
     const auto genericContainer = DeserializeGenericContainer(handle, s_SerializedIndexSizes);
 
     IL2CPP_ASSERT(index >= 0 && index < genericContainer.type_argc);
+    if (hybridclr::metadata::IsInterpreterIndex(genericContainer.ownerIndex))
+    {
+        return (Il2CppMetadataGenericParameterHandle)hybridclr::metadata::MetadataModule::GetGenericParameterByRawIndex(handle, index);
+    }
 
     return GetGenericParameterFromIndexInternal(genericContainer.genericParameterStart + index);
 }
 
 const Il2CppType* il2cpp::vm::GlobalMetadata::GetGenericParameterConstraintFromIndex(Il2CppMetadataGenericParameterHandle handle, const GenericParameterConstraintIndex index)
 {
-    const Il2CppGenericParameter genericParameter = DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+    const Il2CppGenericParameter genericParameter = GetGenericParameterFromHandle(handle);
+    if (hybridclr::metadata::IsInterpreterIndex(genericParameter.ownerIndex))
+    {
+        return hybridclr::metadata::MetadataModule::GetGenericParameterConstraintFromIndex(genericParameter.ownerIndex, index);
+    }
 
     IL2CPP_ASSERT(index >= 0 && index < genericParameter.constraintsCount);
 
@@ -1573,55 +1763,18 @@ std::pair<const Il2CppType*, const MethodInfo*> il2cpp::vm::GlobalMetadata::GetC
     return std::make_pair(type, method);
 }
 
-enum PackingSize
-{
-    Zero,
-    One,
-    Two,
-    Four,
-    Eight,
-    Sixteen,
-    ThirtyTwo,
-    SixtyFour,
-    OneHundredTwentyEight
-};
-
-static uint8_t ConvertPackingSizeEnumToValue(PackingSize packingSize)
-{
-    switch (packingSize)
-    {
-        case Zero:
-            return 0;
-        case One:
-            return 1;
-        case Two:
-            return 2;
-        case Four:
-            return 4;
-        case Eight:
-            return 8;
-        case Sixteen:
-            return 16;
-        case ThirtyTwo:
-            return 32;
-        case SixtyFour:
-            return 64;
-        case OneHundredTwentyEight:
-            return 128;
-        default:
-            Assert(0 && "Invalid packing size!");
-            return 0;
-    }
-}
-
 int32_t il2cpp::vm::GlobalMetadata::StructLayoutPack(Il2CppMetadataTypeHandle handle)
 {
-    const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(handle, s_SerializedIndexSizes);
+    const Il2CppTypeDefinition typeDefinition = GetTypeDefinitionFromTypeHandle(handle);
     return ConvertPackingSizeEnumToValue(static_cast<PackingSize>((typeDefinition.bitfield >> (kSpecifiedPackingSize - 1)) & 0xF));
 }
 
-static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex index)
+const Il2CppImage* il2cpp::vm::GlobalMetadata::GetImageForTypeDefinitionIndex(TypeDefinitionIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetImage(hybridclr::metadata::DecodeImageIndex(index))->GetIl2CppImage();
+    }
     for (int32_t imageIndex = 0; imageIndex < s_MetadataImagesCount; imageIndex++)
     {
         const Il2CppImageGlobalMetadata* imageMetadata = s_MetadataImagesTable + imageIndex;
@@ -1637,8 +1790,23 @@ static const Il2CppImage* GetImageForTypeDefinitionIndex(TypeDefinitionIndex ind
     return NULL;
 }
 
+const Il2CppImage* il2cpp::vm::GlobalMetadata::GetImageForTypeHandle(Il2CppMetadataTypeHandle typeHandle)
+{
+    auto typeIndex = GetIndexForTypeDefinitionInternal(typeHandle);
+    return GetImageForTypeDefinitionIndex(typeIndex);
+}
+
+const Il2CppImage* il2cpp::vm::GlobalMetadata::GetImageForTypeDefinition(const Il2CppTypeDefinition& typeDef)
+{
+    return GetImageForTypeHandle(typeDef.typeHandle);
+}
+
 Il2CppMetadataTypeHandle GetTypeHandle(TypeDefinitionIndex index)
 {
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetAssemblyTypeHandleFromEncodeIndex(index);
+    }
     const auto numTypeDefinitions = s_GlobalMetadataHeader->typeDefinitions.count;
     IL2CPP_ASSERT(index >= 0 && index < numTypeDefinitions);
     const auto typeDefinitionSize = s_GlobalMetadataHeader->typeDefinitions.size / numTypeDefinitions;
@@ -1646,11 +1814,19 @@ Il2CppMetadataTypeHandle GetTypeHandle(TypeDefinitionIndex index)
     return reinterpret_cast<const Il2CppMetadataTypeHandle>(typeDefinitions + index * typeDefinitionSize);
 }
 
-static Il2CppClass* FromTypeDefinition(TypeDefinitionIndex index)
+Il2CppClass* il2cpp::vm::GlobalMetadata::FromTypeDefinition(TypeDefinitionIndex index)
 {
     const auto typeHandle = GetTypeHandle(index);
-    const auto typeDefinition = DeserializeTypeDefinition(typeHandle, s_SerializedIndexSizes);
-    const Il2CppTypeDefinitionSizes* typeDefinitionSizes = s_Il2CppMetadataRegistration->typeDefinitionsSizes[index];
+    const auto typeDefinition = GetTypeDefinitionFromTypeHandle(typeHandle);
+    const Il2CppTypeDefinitionSizes* typeDefinitionSizes;
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        typeDefinitionSizes = hybridclr::metadata::MetadataModule::GetTypeDefinitionSizesFromEncodeIndex(index);
+    }
+    else
+    {
+        typeDefinitionSizes = s_Il2CppMetadataRegistration->typeDefinitionsSizes[index];
+    }
     Il2CppClass* typeInfo = (Il2CppClass*)IL2CPP_CALLOC(1, sizeof(Il2CppClass) + (sizeof(VirtualInvokeData) * typeDefinition.vtable_count));
     typeInfo->klass = typeInfo;
     typeInfo->image = GetImageForTypeDefinitionIndex(index);
@@ -1712,6 +1888,10 @@ const Il2CppType* il2cpp::vm::GlobalMetadata::GetIl2CppTypeFromIndex(TypeIndex i
 {
     if (index == kTypeIndexInvalid)
         return NULL;
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetIl2CppTypeFromEncodeIndex(index);
+    }
 
     IL2CPP_ASSERT(index < s_Il2CppMetadataRegistration->typesCount && "Invalid type index ");
 
@@ -1746,19 +1926,19 @@ bool il2cpp::vm::GlobalMetadata::GetGenericContainerIsMethod(Il2CppMetadataGener
 
 int16_t il2cpp::vm::GlobalMetadata::GetGenericConstraintCount(Il2CppMetadataGenericParameterHandle handle)
 {
-    const Il2CppGenericParameter genericParameter = DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+    const Il2CppGenericParameter genericParameter = GetGenericParameterFromHandle(handle);
     return genericParameter.constraintsCount;
 }
 
 const char* il2cpp::vm::GlobalMetadata::GetGenericParameterName(Il2CppMetadataGenericParameterHandle handle)
 {
-    const Il2CppGenericParameter genericParameter = DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+    const Il2CppGenericParameter genericParameter = GetGenericParameterFromHandle(handle);
     return GetStringFromIndex(genericParameter.nameIndex);
 }
 
 Il2CppGenericParameterInfo il2cpp::vm::GlobalMetadata::GetGenericParameterInfo(Il2CppMetadataGenericParameterHandle handle)
 {
-    const Il2CppGenericParameter genericParameter = DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+    const Il2CppGenericParameter genericParameter = GetGenericParameterFromHandle(handle);
 
     return {
             GetGenericContainerFromIndex(genericParameter.ownerIndex),
@@ -1770,7 +1950,7 @@ Il2CppGenericParameterInfo il2cpp::vm::GlobalMetadata::GetGenericParameterInfo(I
 
 uint16_t il2cpp::vm::GlobalMetadata::GetGenericParameterFlags(Il2CppMetadataGenericParameterHandle handle)
 {
-    const Il2CppGenericParameter genericParameter = DeserializeGenericParameter(handle, s_SerializedIndexSizes);
+    const Il2CppGenericParameter genericParameter = GetGenericParameterFromHandle(handle);
     return genericParameter.flags;
 }
 
@@ -1794,6 +1974,13 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(TypeIndex inde
     if (index == kTypeIndexInvalid)
         return NULL;
 
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        Il2CppClass* klass = il2cpp::vm::Class::FromIl2CppType(hybridclr::metadata::MetadataModule::GetIl2CppTypeFromEncodeIndex(index));
+        ClassInlines::InitFromCodegen(klass);
+        return klass;
+    }
+
     IL2CPP_ASSERT(index < s_Il2CppMetadataRegistration->typesCount && "Invalid type index ");
 
     return utils::InitOnce(&s_TypeInfoTable[index], &g_MetadataLock, [index, throwOnError](il2cpp::os::FastAutoLock& _)
@@ -1816,6 +2003,10 @@ Il2CppClass* il2cpp::vm::GlobalMetadata::GetTypeInfoFromTypeIndex(TypeIndex inde
 
 const MethodInfo* il2cpp::vm::GlobalMetadata::GetMethodInfoFromMethodHandle(Il2CppMetadataMethodDefinitionHandle handle)
 {
+    if (hybridclr::metadata::IsInterpreterMethod(handle))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodInfoFromMethodDefinition(handle);
+    }
     const auto* methods = static_cast<const char*>(s_GlobalMetadata) + s_GlobalMetadataHeader->methods.offset;
     const auto* method = reinterpret_cast<const char*>(handle);
     const auto numMethods = s_GlobalMetadataHeader->methods.count;
@@ -1875,3 +2066,145 @@ void il2cpp::vm::GlobalMetadata::GetAllManagedMethods(std::vector<MethodDefiniti
 }
 
 #endif
+
+const Il2CppMetadataMethodDefinitionHandle il2cpp::vm::GlobalMetadata::GetMethodHandleFromIndex(MethodIndex index)
+{
+    return GetMethodDefinitionFromIndex(index);
+}
+
+const Il2CppMethodDefinition il2cpp::vm::GlobalMetadata::GetMethodDefinitionDataFromIndex(MethodIndex index)
+{
+    Il2CppMetadataMethodDefinitionHandle methodHandle = GetMethodHandleFromIndex(index);
+    if (hybridclr::metadata::IsInterpreterIndex(index))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodDefinitionFromHandle(methodHandle);
+    }
+    return DeserializeMethodDefinition(methodHandle, s_SerializedIndexSizes);
+}
+
+const Il2CppMethodDefinition il2cpp::vm::GlobalMetadata::GetMethodDefinitionFromHandle(const Il2CppMetadataMethodDefinitionHandle methodHandle)
+{
+    if (hybridclr::metadata::IsInterpreterMethod(methodHandle))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodDefinitionFromHandle(methodHandle);
+    }
+    return DeserializeMethodDefinition(methodHandle, s_SerializedIndexSizes);
+}
+
+MethodIndex il2cpp::vm::GlobalMetadata::GetMethodIndexFromMethodHandle(const Il2CppMetadataMethodDefinitionHandle methodHandle)
+{
+    if (hybridclr::metadata::IsInterpreterMethod(methodHandle))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodIndexFromMethodHandle(methodHandle);
+    }
+    else
+    {
+        const auto* methods = static_cast<const char*>(s_GlobalMetadata) + s_GlobalMetadataHeader->methods.offset;
+        const auto* method = reinterpret_cast<const char*>(methodHandle);
+        const auto numMethods = s_GlobalMetadataHeader->methods.count;
+        const auto serializedSize = s_GlobalMetadataHeader->methods.size / numMethods;
+
+        return static_cast<MethodIndex>((method - methods) / serializedSize);
+    }
+}
+
+static const Il2CppMetadataMethodDefinitionHandle GetMethodHandleFromMethodInfo(const MethodInfo* methodInfo)
+{
+    if (!methodInfo)
+    {
+        return nullptr;
+    }
+    if (methodInfo->is_inflated)
+    {
+        methodInfo = methodInfo->genericMethod->methodDefinition;
+    }
+    return methodInfo->methodMetadataHandle;
+}
+
+const Il2CppMetadataMethodDefinitionHandle il2cpp::vm::GlobalMetadata::GetMethodHandleFromVTableSlot(const Il2CppMetadataTypeHandle typeHandle, int32_t vTableSlot)
+{
+    if (hybridclr::metadata::IsInterpreterType(typeHandle))
+    {
+        return hybridclr::metadata::MetadataModule::GetMethodDefinitionFromVTableSlot(typeHandle, vTableSlot);
+    }
+    else
+    {
+        const Il2CppTypeDefinition typeDefinition = DeserializeTypeDefinition(typeHandle, s_SerializedIndexSizes);
+
+        uint32_t index = typeDefinition.vtableStart + vTableSlot;
+        IL2CPP_ASSERT(index >= 0 && index <= s_GlobalMetadataHeader->vtableMethods.size / sizeof(EncodedMethodIndex));
+        const EncodedMethodIndex* vTableMethodReferences = (const EncodedMethodIndex*)((const char*)s_GlobalMetadata + s_GlobalMetadataHeader->vtableMethods.offset);
+        EncodedMethodIndex vTableMethodReference = vTableMethodReferences[index];
+        const MethodInfo* method =  GetMethodInfoFromEncodedIndex(vTableMethodReference);
+        return GetMethodHandleFromMethodInfo(method);
+    }
+}
+
+const Il2CppTypeDefinition il2cpp::vm::GlobalMetadata::GetTypeDefinitionFromTypeHandle(Il2CppMetadataTypeHandle typeHandle)
+{
+    if (hybridclr::metadata::IsInterpreterType(typeHandle))
+    {
+        return hybridclr::metadata::MetadataModule::GetTypeDefinitionFromHandle(typeHandle);
+    }
+    else
+    {
+        return DeserializeTypeDefinition(typeHandle, s_SerializedIndexSizes);
+    }
+}
+
+
+uint8_t il2cpp::vm::GlobalMetadata::ConvertPackingSizeEnumToValue(PackingSize packingSize)
+{
+    switch (packingSize)
+    {
+    case Zero:
+        return 0;
+    case One:
+        return 1;
+    case Two:
+        return 2;
+    case Four:
+        return 4;
+    case Eight:
+        return 8;
+    case Sixteen:
+        return 16;
+    case ThirtyTwo:
+        return 32;
+    case SixtyFour:
+        return 64;
+    case OneHundredTwentyEight:
+        return 128;
+    default:
+        Assert(0 && "Invalid packing size!");
+        return 0;
+    }
+}
+
+il2cpp::vm::PackingSize il2cpp::vm::GlobalMetadata::ConvertPackingSizeToEnum(uint8_t packingSize)
+{
+    switch (packingSize)
+    {
+    case 0:
+        return PackingSize::Zero;
+    case 1:
+        return PackingSize::One;
+    case 2:
+        return PackingSize::Two;
+    case 4:
+        return PackingSize::Four;
+    case 8:
+        return PackingSize::Eight;
+    case 16:
+        return PackingSize::Sixteen;
+    case 32:
+        return PackingSize::ThirtyTwo;
+    case 64:
+        return PackingSize::SixtyFour;
+    case 128:
+        return OneHundredTwentyEight;
+    default:
+        Assert(0 && "Invalid packing size!");
+        return PackingSize::Zero;
+    }
+}

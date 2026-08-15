@@ -17,6 +17,7 @@ namespace utils
 
         static void SetRegionSize(size_t size);
         static size_t GetRegionSize();
+        bool Contains(const void* data) const;
     private:
         struct Region;
         typedef std::list<Region*> RegionList;

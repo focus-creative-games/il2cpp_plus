@@ -306,7 +306,9 @@ namespace metadata
         // Ensure that the metadata token is zero (and not copied from the method definition) so any
         // metadata lookup (e.g. custom attributes) will not find anything
         inflatedMethod->klass = klass;
-        inflatedMethod->token = 0;
+        // hybridclr need original token for aot methods
+        // inflatedMethod->token = 0;
+        inflatedMethod->token = genericArrayMethod.method->token;
 
         return inflatedMethod;
     }

@@ -29,6 +29,9 @@
 #include "Baselib.h"
 #include "Cpp/ReentrantLock.h"
 
+#include "hybridclr/metadata/MetadataUtil.h"
+#include "hybridclr/metadata/MetadataPool.h"
+
 using namespace il2cpp::vm;
 using il2cpp::metadata::GenericMethod;
 using il2cpp::os::FastAutoLock;
@@ -64,10 +67,16 @@ namespace metadata
         if (genericArgument->attrs == type->attrs && genericArgument->byref == type->byref)
             return genericArgument;
 
-        Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
-        memcpy(inflatedType,  genericArgument, sizeof(Il2CppType));
-        inflatedType->byref = type->byref;
-        inflatedType->attrs = type->attrs;
+        //Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
+        //memcpy(inflatedType, genericArgument, sizeof(Il2CppType));
+        //inflatedType->byref = type->byref;
+        //inflatedType->attrs = type->attrs;
+        Il2CppType tempInflatedType = *genericArgument;
+        //Il2CppType* inflatedType = &tempInflatedType; //(Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
+        tempInflatedType.byref = type->byref;
+        tempInflatedType.attrs = type->attrs;
+
+        const Il2CppType* inflatedType = (Il2CppType*)hybridclr::metadata::MetadataPool::GetPooledIl2CppType(tempInflatedType);
 
         ++il2cpp_runtime_stats.inflated_type_count;
 
@@ -91,17 +100,28 @@ namespace metadata
                 const Il2CppType* inflatedElementType = InflateIfNeeded(type->data.array->etype, context, inflateMethodVars);
                 if (!Il2CppTypeEqualityComparer::AreEqual(inflatedElementType, type->data.array->etype))
                 {
-                    Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
-                    memcpy(inflatedType, type, sizeof(Il2CppType));
+                    Il2CppArrayType* arrType = type->data.array;
 
-                    Il2CppArrayType* arrayType = (Il2CppArrayType*)MetadataMalloc(sizeof(Il2CppArrayType));
-                    memcpy(arrayType, type->data.array, sizeof(Il2CppArrayType));
-                    arrayType->etype = inflatedElementType;
-                    inflatedType->data.array = arrayType;
+                    if (arrType->numlobounds == 0 && arrType->numsizes == 0)
+                    {
+                        Il2CppType tempType = *type;
+                        tempType.data.array = (Il2CppArrayType*)hybridclr::metadata::MetadataPool::GetPooledIl2CppArrayType(inflatedElementType, arrType->rank);
+                        return hybridclr::metadata::MetadataPool::GetPooledIl2CppType(tempType);
+                    }
+                    else
+                    {
+                        Il2CppType* inflatedType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
+                        memcpy(inflatedType, type, sizeof(Il2CppType));
 
-                    ++il2cpp_runtime_stats.inflated_type_count;
+                        Il2CppArrayType* arrayType = (Il2CppArrayType*)MetadataMalloc(sizeof(Il2CppArrayType));
+                        memcpy(arrayType, type->data.array, sizeof(Il2CppArrayType));
+                        arrayType->etype = inflatedElementType;
+                        inflatedType->data.array = arrayType;
 
-                    return inflatedType;
+                        ++il2cpp_runtime_stats.inflated_type_count;
+
+                        return inflatedType;
+                    }
                 }
                 return type;
             }
@@ -111,9 +131,9 @@ namespace metadata
                 const Il2CppType* inflatedElementType = InflateIfNeeded(type->data.type, context, inflateMethodVars);
                 if (!Il2CppTypeEqualityComparer::AreEqual(inflatedElementType, type->data.type))
                 {
-                    Il2CppType* arrayType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
-                    memcpy(arrayType, type, sizeof(Il2CppType));
-                    arrayType->data.type = inflatedElementType;
+                    Il2CppType tempType = *type;
+                    tempType.data.type = inflatedElementType;
+                    const Il2CppType* arrayType = hybridclr::metadata::MetadataPool::GetPooledIl2CppType(tempType);
 
                     ++il2cpp_runtime_stats.inflated_type_count;
 
@@ -128,7 +148,7 @@ namespace metadata
                     return NULL; // This is a generic type that was too deeply nested to generate
 
                 const Il2CppGenericInst* inflatedInst = GetInflatedGenericIntance(inst, context, inflateMethodVars);
-                Il2CppGenericClass* genericClass = GenericMetadata::GetGenericClass(GenericClass::GetTypeDefinition(type->data.generic_class), inflatedInst);
+                Il2CppGenericClass* genericClass = GenericMetadata::GetGenericClass(type->data.generic_class->type, inflatedInst);
                 if (genericClass != type->data.generic_class)
                 {
                     Il2CppType* genericType = (Il2CppType*)MetadataMalloc(sizeof(Il2CppType));
@@ -160,7 +180,7 @@ namespace metadata
     Il2CppGenericClass* GenericMetadata::GetGenericClass(const Il2CppType* genericTypeDefinition, const Il2CppGenericInst* inst)
     {
         // Assert that the element type is a non-inflated generic type defintion
-        IL2CPP_ASSERT(il2cpp::vm::Class::IsGenericTypeDefinition(vm::Class::FromIl2CppType(genericTypeDefinition)));
+        IL2CPP_ASSERT(genericTypeDefinition->type == IL2CPP_TYPE_CLASS || genericTypeDefinition->type == IL2CPP_TYPE_VALUETYPE);
 
         // temporary inst to lookup a permanent one that may already exist
         Il2CppGenericClass genericClass = { 0 };
@@ -258,6 +278,10 @@ namespace metadata
     {
         // This method assumes that it has the g_MetadataLock
         *exc = NULL;
+        if (hybridclr::metadata::IsInterpreterImage(image))
+        {
+            return nullptr;
+        }
 
         RGCTXCollection collection = MetadataCache::GetRGCTXs(image, token);
         if (collection.count == 0)
