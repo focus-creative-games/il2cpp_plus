@@ -1423,8 +1423,10 @@ namespace vm
         }
         else if (klass->event_count != 0)
         {
+#if !IL2CPP_ENABLE_LAZY_INIT
             // we need methods initialized since we reference them via index below
-            //SetupMethodsLocked(klass, lock);
+            SetupMethodsLocked(klass, lock);
+#endif
 
             EventInfo* events = (EventInfo*)MetadataCalloc(klass->event_count, sizeof(EventInfo), IL2CPP_MSTAT_EVENT);
             EventInfo* newEvent = events;
