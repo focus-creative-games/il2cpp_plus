@@ -175,8 +175,8 @@ namespace metadata
                     newMethod->virtualMethodPointerCallByInterp = newMethod->methodPointerCallByInterp;
                 }
                 newMethod->methodPointer = newMethod->virtualMethodPointerCallByInterp;
-                newMethod->isInterpterImpl = true;
-                newMethod->initInterpCallMethodPointer = true;
+                newMethod->isInterpterImpl = 1;
+                newMethod->initInterpCallMethodPointer = 1;
             }
             else
             {
@@ -187,7 +187,7 @@ namespace metadata
         {
             newMethod->virtualMethodPointerCallByInterp = newMethod->methodPointer;
             newMethod->methodPointerCallByInterp = isAdjustorThunkMethod ? MetadataCache::GetMethodPointer(methodDefinition, &gmethod->context, false, true) : newMethod->methodPointer;
-            newMethod->initInterpCallMethodPointer = true;
+            newMethod->initInterpCallMethodPointer = 1;
         }
 
         ++il2cpp_runtime_stats.inflated_method_count;
