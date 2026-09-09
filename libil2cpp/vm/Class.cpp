@@ -1126,7 +1126,7 @@ namespace vm
                 // We did not find an adjustor thunk, or maybe did not need to look for one. Let's get the real method pointer.
                 if (newMethod->virtualMethodPointer == NULL)
                     newMethod->virtualMethodPointer = newMethod->methodPointer;
-                newMethod->initInterpCallMethodPointer = true;
+                newMethod->initInterpCallMethodPointer = 1;
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
 

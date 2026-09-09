@@ -304,8 +304,8 @@ namespace metadata
                     hybridclr::interpreter::InterpreterModule::GetAdjustThunkMethodPointer(newMethod) :
                     (newMethod->methodPointerCallByInterp != hybridclr::interpreter::InterpreterModule::NotSupportNative2Managed ?
                         newMethod->methodPointerCallByInterp : hybridclr::interpreter::InterpreterModule::NotSupportAdjustorThunk);
-                newMethod->isInterpterImpl = true;
-                newMethod->initInterpCallMethodPointer = true;
+                newMethod->isInterpterImpl = 1;
+                newMethod->initInterpCallMethodPointer = 1;
             }
         }
         else
@@ -320,8 +320,8 @@ namespace metadata
                 newMethod->invoker_method = hybridclr::interpreter::InterpreterModule::GetMethodInvoker(newMethod);
                 newMethod->methodPointer = newMethod->methodPointerCallByInterp;
                 newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp;
-                newMethod->isInterpterImpl = true;
-                newMethod->initInterpCallMethodPointer = true;
+                newMethod->isInterpterImpl = 1;
+                newMethod->initInterpCallMethodPointer = 1;
             }
         }
 
