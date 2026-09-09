@@ -1153,7 +1153,7 @@ namespace vm
 
                 newMethod->invoker_method = MetadataCache::GetMethodInvoker(klass->image, methodDefinition->token);
                 newMethod->isInterpterImpl = hybridclr::interpreter::InterpreterModule::IsImplementsByInterpreter(newMethod);
-                newMethod->initInterpCallMethodPointer = true;
+                newMethod->initInterpCallMethodPointer = 1;
 
                 newMethod->klass = klass;
                 newMethod->return_type = MetadataCache::GetIl2CppTypeFromIndex(methodDefinition->returnType);
