@@ -352,8 +352,8 @@ typedef struct MethodInfo
     uint8_t is_unmanaged_callers_only : 1;
 
     // ==={{ hybridclr
-    bool initInterpCallMethodPointer : 1;
-    bool isInterpterImpl : 1;
+    uint8_t initInterpCallMethodPointer : 1;
+    uint8_t isInterpterImpl : 1;
     void* interpData;
     Il2CppMethodPointer methodPointerCallByInterp;
     Il2CppMethodPointer virtualMethodPointerCallByInterp;
