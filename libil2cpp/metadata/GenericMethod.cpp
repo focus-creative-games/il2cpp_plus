@@ -403,8 +403,8 @@ namespace metadata
                     newMethod->virtualMethodPointer = newMethod->virtualMethodPointerCallByInterp = sharedMethodInfo->rawVirtualMethodPointer;
                 }
             }
-            newMethod->initInterpCallMethodPointer = true;
-            newMethod->isInterpterImpl = true;
+            newMethod->initInterpCallMethodPointer = 1;
+            newMethod->isInterpterImpl = 1;
         }
         else if (newMethod->methodPointer != AnUnresolvedCallStubWasNotFound && newMethod->methodPointer != (Il2CppMethodPointer)AnUnresolvedCallStubWasNotFoundValueType)
         {

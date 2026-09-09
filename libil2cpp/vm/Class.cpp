@@ -1166,7 +1166,7 @@ namespace vm
 
                 newMethod->methodPointerCallByInterp = newMethod->methodPointer;
                 newMethod->virtualMethodPointerCallByInterp = newMethod->virtualMethodPointer;
-                newMethod->initInterpCallMethodPointer = true;
+                newMethod->initInterpCallMethodPointer = 1;
                 newMethod->klass = klass;
                 newMethod->return_type = methodInfo.return_type;
 
