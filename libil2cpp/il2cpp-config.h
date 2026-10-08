@@ -1,7 +1,8 @@
 #pragma once
 
 #include <string.h>
-#include "hybridclr/generated/UnityVersion.h"
+
+#include "hybridclr/Il2CppVersionCompatibleDefs.h"
 
 /* first setup platform defines*/
 #include "os/c-api/il2cpp-config-platforms.h"
