@@ -2,13 +2,7 @@
 
 #include <string.h>
 
-#define UNITY_ENGINE_TUANJIE 1
-
-#include "hybridclr/generated/UnityVersion.h"
-
-#if HYBRIDCLR_TUANJIE_VERSION >= 10301
-#define SUPPORT_METHOD_RETURN_TYPE_CUSTOM_ATTRIBUTE 1
-#endif
+#include "hybridclr/Il2CppVersionCompatibleDefs.h"
 
 /* first setup platform defines*/
 #include "os/c-api/il2cpp-config-platforms.h"
