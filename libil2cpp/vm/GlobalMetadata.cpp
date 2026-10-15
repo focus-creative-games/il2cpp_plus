@@ -722,9 +722,9 @@ Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyExportedTypeHand
 {
     if (index == kTypeDefinitionIndexInvalid)
         return NULL;
-    if (hybridclr::metadata::IsInterpreterIndex(index))
+    if (hybridclr::metadata::IsInterpreterImage(image))
     {
-        return hybridclr::metadata::MetadataModule::GetAssemblyExportedTypeHandleFromEncodeIndex(index);
+        return hybridclr::metadata::MetadataModule::GetAssemblyExportedTypeHandleFromEncodeIndex(image, index);
     }
 
     IL2CPP_ASSERT(index >= 0 && index < static_cast<AssemblyExportedTypeIndex>(image->exportedTypeCount));
