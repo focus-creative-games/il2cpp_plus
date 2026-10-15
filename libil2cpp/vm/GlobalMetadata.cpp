@@ -719,9 +719,9 @@ const Il2CppAssembly* il2cpp::vm::GlobalMetadata::GetReferencedAssembly(const Il
 
 Il2CppMetadataTypeHandle il2cpp::vm::GlobalMetadata::GetAssemblyExportedTypeHandle(const Il2CppImage* image, AssemblyExportedTypeIndex index)
 {
-    if (hybridclr::metadata::IsInterpreterIndex(index))
+    if (hybridclr::metadata::IsInterpreterImage(image))
     {
-        return hybridclr::metadata::MetadataModule::GetAssemblyExportedTypeHandleFromEncodeIndex(index);
+        return hybridclr::metadata::MetadataModule::GetAssemblyExportedTypeHandleFromEncodeIndex(image, index);
     }
 
     if (index == kTypeDefinitionIndexInvalid)
